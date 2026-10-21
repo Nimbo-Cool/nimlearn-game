@@ -31,6 +31,16 @@
         .opt-reveal { background:rgba(22,163,74,.25) !important; border-color:#4ade80 !important; border-style:dashed !important; }
         .opt-dim { opacity:.35; }
         .panel-flash-ok { box-shadow:0 0 0 4px #4ade80, 0 0 30px rgba(74,222,128,.5) !important; }
+        /* 矮螢幕（投影機 1280×720、1024×768）：壓縮間距，四個選項都看得到 */
+        @media (max-height: 860px) {
+            main { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+            main > div:first-child { padding: .6rem 1rem !important; margin-bottom: .5rem !important; }
+            main > div:first-child .h-20 { height: 3.75rem !important; }
+            main > div:nth-child(2) { padding: .9rem 1.2rem !important; min-height: 100px !important; margin: .25rem 0 !important; }
+            #leftPanel, #rightPanel { padding: .6rem .8rem !important; }
+            #leftOptions button, #rightOptions button { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+            main > .grid { margin: .25rem 0 !important; gap: 1rem !important; }
+        }
         .panel-flash-bad { box-shadow:0 0 0 4px #f87171, 0 0 30px rgba(248,113,113,.5) !important; }
     </style>
 </head>
@@ -220,6 +230,8 @@
                         <option value="0">只考課本</option>
                         <option value="3">微延伸</option>
                         <option value="5">多延伸</option>
+                                <option value="7">課外為主</option>
+                                <option value="9">全課外（只看主題）</option>
                     </select>
                 </div>
                 <div class="col-span-2">
@@ -409,6 +421,15 @@
 
         // ===== 出題設定（年級、延伸程度）=====
         const GRADE_NAMES = ['', '一', '二', '三', '四', '五', '六'];
+        // 各年級出題程度（題目長度、用字、思考步驟、數學範圍）
+        const GRADE_GUIDE = {
+            1: '一年級：題目 20 字以內、句子簡單口語，只用常見字，不用成語和艱深詞；選項盡量 1～6 個字；只考看得到、摸得到的具體事物，不考抽象概念；有數字時在 100 以內、只用加減。',
+            2: '二年級：題目 25 字以內，用常見字和生活用語；選項簡短；以具體的生活情境為主；有數字時在 1000 以內，只用加減和九九乘法。',
+            3: '三年級：題目 30 字以內；可以考簡單的比較、分類和原因，但只要想一步；有數字時在 10000 以內，可用簡單乘除和簡單分數。',
+            4: '四年級：題目 40 字以內；可以考因果關係和一步推理；有數字時可用大數、簡單分數和一位小數；專有名詞以課本出現過的為主。',
+            5: '五年級：題目 50 字以內；可以考兩步推理、比較資料、判斷原因；有數字時可用分數、小數四則運算和簡單比率。',
+            6: '六年級：題目 60 字以內；可以考抽象概念、多步推理和生活應用；有數字時可用比與比值、速率、百分率等六年級概念。'
+        };
         function clampTime(v) {
             if (v === '' || v === null || v === undefined) return 15;
             v = Math.round(Number(v));
@@ -478,6 +499,9 @@ source 標示題目來源："課本" 或 "延伸"：
 
         function tierExtendRule(tier, extend, gradeName) {
             const rule = `延伸題必須和課本主題直接相關，只往外多走一小步（生活應用、常見例子、簡單原因），${gradeName}年級學生想一想答得出來；只能用教科書等級、公認正確的事實，不確定或會變動的內容（最新紀錄、精確統計數字）一律不要出；延伸題的 explanation 要說明和課本哪個概念有關。`;
+            const far = `課外題可以走得比較遠：和這個單元相關的有趣知識、有名的例子、生活與社會上的應用、相關的自然或歷史現象都可以，但仍然要在同一個主題裡、${gradeName}年級學生聽得懂；只能用教科書或百科等級、公認正確的事實，不確定或會變動的內容（最新紀錄、精確統計數字、時事）一律不要出；explanation 要用一句話說明這個知識和單元主題的關係。`;
+            if (extend === 9) return `\n- 全部都出「課外題」（source 一律填 "延伸"）：教材只用來確定這個單元的主題和範圍，題目考的內容必須是課本「沒有寫到」的相關知識，不要直接考課本裡的句子或答案。${far}`;
+            if (extend === 7) return tier === 1 ? `\n- 其中約三分之一是課外題（source 填 "延伸"），其餘根據課本。${far}` : tier === 2 ? `\n- 其中約一半是課外題（source 填 "延伸"），其餘根據課本。${far}` : `\n- 其中大部分是課外題（source 填 "延伸"）。${far}`;
             if (!extend || tier === 1) return `\n- 全部只能根據上述內容出題，source 一律填 "課本"。`;
             if (extend === 3) return tier === 3 ? `\n- 其中約一半可以是「微加深加廣」的延伸題（source 填 "延伸"），其餘根據課本。${rule}` : `\n- 全部根據課本內容，source 填 "課本"。`;
             return tier === 3 ? `\n- 其中大部分可以是延伸題（source 填 "延伸"）。${rule}` : `\n- 其中約三分之一可以是延伸題（source 填 "延伸"），其餘根據課本。${rule}`;
@@ -490,6 +514,8 @@ source 標示題目來源："課本" 或 "延伸"：
             const T = TIERS[tier];
             const quality = `\n\n【品質要求】
 - 用繁體中文、台灣用語，用字符合${gradeName}年級程度，題目敘述簡短，適合投影在大螢幕上全班一起看。
+- 年級程度：${GRADE_GUIDE[grade]}
+- 不要考${gradeName}年級還沒學過的概念或專有名詞（教材內文有寫到的除外）；題目和選項不要用比${gradeName}年級更難的字詞。
 - 每題只有一個正確答案，三個錯誤選項要看起來合理但明確是錯的，不可以有兩個都算對的選項。
 - 避免「以上皆是」「以上皆非」與否定句考法。
 - 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。`;
@@ -498,9 +524,10 @@ source 標示題目來源："課本" 或 "延伸"：
                 : '';
             const tierText = `\n\n【難度：${T.name}】${T.desc}`;
             if (src.type === 'pdf') {
+                if (extend === 9) return `以下是課本某個單元的內文。請先從中整理出這個單元的主題、目錄和重要概念（不用輸出），再依照這些主題，為${audience}出 ${n} 道四選一的「課外延伸」選擇題。\n\n【課本單元內文（只用來確定主題範圍）】\n${src.text}${tierText}\n【出題範圍】${tierExtendRule(tier, extend, gradeName)}${quality}${avoid}\n\n${JSON_FORMAT}`;
                 return `請根據以下教材內文，為${audience}出 ${n} 道四選一選擇題。\n\n【教材內文】\n${src.text}${tierText}\n【出題範圍】${tierExtendRule(tier, extend, gradeName)}${quality}${avoid}\n\n${JSON_FORMAT}`;
             }
-            return `請針對主題「${src.topic}」，為${audience}設計 ${n} 道四選一單選題，可以生活化、有趣一點。source 一律填 "課本"。${tierText}${quality}${avoid}\n\n${JSON_FORMAT}`;
+            return `請針對主題「${src.topic}」，為${audience}設計 ${n} 道四選一單選題，可以生活化、有趣一點。source 一律填 "課本"。${extend >= 7 ? '可以多出一些課本以外、和這個主題相關的有趣知識（仍要公認正確）。' : ''}${tierText}${quality}${avoid}\n\n${JSON_FORMAT}`;
         }
 
         // ===== 答案檢查：請 AI 當審題老師，獨立重做一遍 =====
@@ -510,7 +537,8 @@ source 標示題目來源："課本" 或 "延伸"：
             const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（不要猜出題者的意思，依照公認正確的知識判斷），並檢查每題品質。
 對每一題回報：
 - best：你認為唯一正確的選項索引（0~3）
-- ok：true 代表這題事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級太多）就填 false
+- ok：true 代表這題事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級程度、用字太難）就填 false
+- 年級程度參考：${GRADE_GUIDE[grade]}
 
 題目：
 ${JSON.stringify(list)}

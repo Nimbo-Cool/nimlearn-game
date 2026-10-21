@@ -717,7 +717,7 @@ const EVENTS = [
         { t: '獻上 30 魂火', need: R => R.souls >= 30, fx: R => { R.souls -= 30; const k = grantRelic(R); return `祭壇發光了！獲得遺物 ${RELICS[k].i} ${RELICS[k].n}。`; } },
         { t: '離開', fx: () => '你們悄悄離開了。' }] },
     { id: 'chest', t: '可疑的寶箱', i: '📦', d: '角落有個上鎖的寶箱，鎖頭看起來不太牢。', o: [
-        { t: '撬開', fx: R => Math.random() < 0.65 ? (R.souls += 45, '裡面有 45 魂火！') : (R.party.forEach(h => { if (!h.dead) h.hp = Math.max(1, h.hp - 5); }), '是陷阱！毒針射出，全隊 −5 血。') },
+        { t: '撬開', fx: R => Math.random() < 0.65 ? (R.souls += 45, '裡面有 45 魂火！') : (R.party.forEach(h => { if (!h.dead && !h.door) h.hp = Math.max(1, h.hp - 5); }), '是陷阱！毒針射出，全隊 −5 血。') },
         { t: '用火把照一照再開（火光 −20）', fx: R => { R.light = Math.max(0, R.light - 20); R.souls += 40; return '看清楚陷阱後安全打開，拿到 40 魂火。'; } },
         { t: '不碰', fx: () => '小心駛得萬年船。' }] },
     { id: 'traveler', t: '迷路的旅人', i: '🧙', d: '一位老旅人坐在牆邊：「年輕人，能分我一點魂火取暖嗎？」', o: [
@@ -1575,7 +1575,7 @@ function showRest() {
             <button class="opt" onclick="restDo('forge')" ${upgradeOptions(RUN).length ? '' : 'disabled'}><b>⚔️ 修練</b><span>挑一招升一級</span></button>
             <button class="opt" onclick="restDo('kindle')"><b>🔥 添柴</b><span>火光 +60，再拿一支火把</span></button>
             <button class="opt" onclick="restDo('talk')"><b>💬 談心</b><span>全隊壓力 −30，解除恐慌</span></button>
-        </div><p class="sub">（離開營火前，也可以按上面的「👥 隊伍」調整站位和技能）</p>`);
+        </div><div class="btns"><button class="btn gray small" onclick="showParty()">👥 先調整站位和技能</button></div>`);
     SFX.fire();
 }
 function restDo(k) {
@@ -1795,6 +1795,8 @@ function showHelp() {
 // =====================================================================
 function showParty() {
     if (!RUN || B) return;
+    // 從其他視窗（營火、獎勵）打開時，關掉後要回到原本的視窗
+    if (!$('modalBox').querySelector('.partylist')) window.__partyBack = $('modal').classList.contains('on') ? $('modalBox').innerHTML : null;
     const H = RUN.party.slice().sort((a, b) => (a.dead - b.dead) || a.rank - b.rank);
     showModal(`<h2>👥 隊伍</h2><p class="sub">用 ▲▼ 調整站位（第 1 排最前面）。點技能可以換上／換下，每人最多帶 4 招。</p>
         <div class="partylist">${H.map(h => {
@@ -1816,7 +1818,10 @@ function showParty() {
         <p class="sub">背包：${ITEM_KEYS.map(k => `${ITEMS[k].i}${ITEMS[k].n}×${RUN.items[k] || 0}`).join('　')}</p>
         <div class="btns"><button class="btn gold" onclick="closeParty()">好了</button></div>`, true);
 }
-function closeParty() { closeModal(); saveRun(); if (document.body.dataset.screen === 'map') renderMap(); if (window.__afterParty) { const f = window.__afterParty; window.__afterParty = null; f(); } }
+function closeParty() {
+    const back = window.__partyBack; window.__partyBack = null;
+    if (back) { saveRun(); if (document.body.dataset.screen === 'map') renderMap(); showModal(back); return; }
+    closeModal(); saveRun(); if (document.body.dataset.screen === 'map') renderMap(); if (window.__afterParty) { const f = window.__afterParty; window.__afterParty = null; f(); } }
 function partyMove(uid, d) {
     const h = RUN.party.find(x => x.uid === uid);
     const L = alive(), i = L.indexOf(h), j = i + d;
