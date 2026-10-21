@@ -316,7 +316,7 @@
             openai: {
                 name: 'GPT',
                 // 便宜又快的 mini 等級，失敗時自動往下換
-                models: ['gpt-5.4-mini', 'gpt-mini-latest', 'gpt-5-mini'],
+                models: ['gpt-5.4-mini', 'gpt-4.1-mini', 'gpt-5-mini'],
                 placeholder: '請貼上您的 OpenAI API Key（sk- 開頭）...',
                 keyHint: 'sk- 開頭',
                 base: 'https://api.openai.com/v1',
@@ -480,6 +480,7 @@
         }
 
         // 單一模型呼叫：回傳 {ok, status, text, msg, reason}
+        const noReasoningParam = new Set();   // 不支援 reasoning_effort 的模型
         async function requestModel(model, promptText) {
             let url, options;
             if (provider === 'gemini') {
@@ -504,6 +505,8 @@
                     ]
                 };
                 if (P.jsonMode) body.response_format = { type: 'json_object' };
+                // GPT-5 系列是「推理模型」，預設會想很久，出一整批題目常常超過時間 → 改成低推理量，快很多
+                if (provider === 'openai' && /^(gpt-5|o\d)/i.test(model) && !noReasoningParam.has(model)) body.reasoning_effort = 'low';
                 options = {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -513,7 +516,7 @@
 
             // 最多等 60 秒，避免畫面永遠卡在「出題中」
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 60000);
+            const timer = setTimeout(() => controller.abort(), provider === 'gemini' ? 60000 : 120000);
             options.signal = controller.signal;
 
             let response;
@@ -522,7 +525,7 @@
             } catch (e) {
                 clearTimeout(timer);
                 if (e.name === 'AbortError') {
-                    return { ok: false, status: 408, msg: `${model} 超過 60 秒沒回應` };
+                    return { ok: false, status: 408, msg: `${model} 太久沒回應` };
                 }
                 return { ok: false, status: 0, msg: `網路連不到 ${PROVIDERS[provider].name}（可能被學校網路/防火牆擋住，或目前離線）` };
             }
@@ -596,6 +599,13 @@
 
                     lastMsg = res.msg;
                     const detail = (res.reason || '') + res.msg;
+
+                    // 這個模型不接受 reasoning_effort：記下來，拿掉參數立刻重試
+                    if (res.status === 400 && /reasoning_effort|reasoning\.effort|Unsupported parameter|unsupported_parameter|Unsupported value/i.test(detail) && !noReasoningParam.has(model)) {
+                        noReasoningParam.add(model); i--; continue;
+                    }
+                    // 其他 400（格式不合）：重試也一樣，直接換下一個模型
+                    if (res.status === 400 && !/API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) break;
 
                     // Key 問題：不必重試、不必換模型
                     if ((res.status === 400 && /API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) || res.status === 401) {

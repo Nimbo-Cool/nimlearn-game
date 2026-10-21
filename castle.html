@@ -112,6 +112,7 @@
             <p>👾 <b class="text-amber-300">從上面踩怪物，就要回答一題</b>：答對才能打倒牠；答錯會被彈開，再踩一次換新題目。從旁邊撞到怪物會受傷。</p>
             <p>🟦 <b>知識磚</b>：從下面頂藍色的問號磚要答題，答對會跑出 🍊 能量果，吃了變大，被打到只會變小。黃色問號磚有金幣，100 枚換一條命。</p>
             <p>🚩 三關：<b>知識草原 → 地下水道 → 魔龍城堡</b>。前兩關跳上旗竿過關，跳越高分數越多；第三關要打倒混亂魔龍：踩牠答對 3 題，或碰到斧頭連續答對 3 題斬斷吊橋。</p>
+            <p>👾 怪物有好幾種：墨點怪、盔甲蟲（答對變成龜殼可以踢）、🐸 跳跳蛙會跳、🐝 嗡嗡蜂在空中飛，都可以踩；紅色的 🦔 <b>刺刺球不能踩</b>，要跳過去或用龜殼撞牠。</p>
             <p>🟩 有些水管站上去按 <b>↓</b>（或畫面上的 ▼）可以鑽下去，上面會出現黃色箭頭，裡面藏很多金幣！有 🌺 食人花的水管，要等花縮回去再過。</p>
             <p>⚠️ 掉進洞裡、碰到岩漿、時間用完都會少一條命，但會<b>在附近原地復活</b>，不用整關重來。答完題會短暫無敵（勇者閃爍）。</p>
             <div class="text-right"><button onclick="closeRules()" class="px-6 py-2.5 rounded-xl bg-emerald-500 text-slate-900 font-black">知道了</button></div>
@@ -326,7 +327,7 @@
             openai: {
                 name: 'GPT',
                 // 便宜又快的 mini 等級，失敗時自動往下換
-                models: ['gpt-5.4-mini', 'gpt-mini-latest', 'gpt-5-mini'],
+                models: ['gpt-5.4-mini', 'gpt-4.1-mini', 'gpt-5-mini'],
                 placeholder: '請貼上您的 OpenAI API Key（sk- 開頭）...',
                 keyHint: 'sk- 開頭',
                 base: 'https://api.openai.com/v1',
@@ -490,6 +491,7 @@
         }
 
         // 單一模型呼叫：回傳 {ok, status, text, msg, reason}
+        const noReasoningParam = new Set();   // 不支援 reasoning_effort 的模型
         async function requestModel(model, promptText) {
             let url, options;
             if (provider === 'gemini') {
@@ -514,6 +516,8 @@
                     ]
                 };
                 if (P.jsonMode) body.response_format = { type: 'json_object' };
+                // GPT-5 系列是「推理模型」，預設會想很久，出一整批題目常常超過時間 → 改成低推理量，快很多
+                if (provider === 'openai' && /^(gpt-5|o\d)/i.test(model) && !noReasoningParam.has(model)) body.reasoning_effort = 'low';
                 options = {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -523,7 +527,7 @@
 
             // 最多等 60 秒，避免畫面永遠卡在「出題中」
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 60000);
+            const timer = setTimeout(() => controller.abort(), provider === 'gemini' ? 60000 : 120000);
             options.signal = controller.signal;
 
             let response;
@@ -532,7 +536,7 @@
             } catch (e) {
                 clearTimeout(timer);
                 if (e.name === 'AbortError') {
-                    return { ok: false, status: 408, msg: `${model} 超過 60 秒沒回應` };
+                    return { ok: false, status: 408, msg: `${model} 太久沒回應` };
                 }
                 return { ok: false, status: 0, msg: `網路連不到 ${PROVIDERS[provider].name}（可能被學校網路/防火牆擋住，或目前離線）` };
             }
@@ -606,6 +610,13 @@
 
                     lastMsg = res.msg;
                     const detail = (res.reason || '') + res.msg;
+
+                    // 這個模型不接受 reasoning_effort：記下來，拿掉參數立刻重試
+                    if (res.status === 400 && /reasoning_effort|reasoning\.effort|Unsupported parameter|unsupported_parameter|Unsupported value/i.test(detail) && !noReasoningParam.has(model)) {
+                        noReasoningParam.add(model); i--; continue;
+                    }
+                    // 其他 400（格式不合）：重試也一樣，直接換下一個模型
+                    if (res.status === 400 && !/API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) break;
 
                     // Key 問題：不必重試、不必換模型
                     if ((res.status === 400 && /API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) || res.status === 401) {
@@ -1125,7 +1136,8 @@ ${JSON.stringify(list)}
         const T = 16, VW = 400, VH = 224, ROWS = 14;
         // 1 地面 2 磚塊 3 金幣問號磚 4 知識磚 5 用過的磚 6 硬磚 7-10 水管 11 城堡磚 12 吊橋 13 岩漿 14/15 橫向水管口
         const SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15]);
-        const ENEMY_NAME = { blob: '墨點怪', beetle: '盔甲蟲', boss: '混亂魔龍' };
+        const ENEMY_NAME = { blob: '墨點怪', beetle: '盔甲蟲', hopper: '跳跳蛙', flyer: '嗡嗡蜂', spiky: '刺刺球', boss: '混亂魔龍' };
+        const WALKERS = ['blob', 'beetle', 'hopper', 'spiky'];
 
         const THEMES = {
             over:   { sky: '#7cc4ff', g1: '#c8733a', g2: '#7a3e17', g3: '#f0a868', b1: '#c0582c', b2: '#5a2410', h1: '#b0703c', h2: '#e8a870', h3: '#5a3014', grass: true },
@@ -1160,8 +1172,8 @@ ${JSON.stringify(list)}
                     B.sidePipe(232); B.fill(236, 239, 2, 11, 2);
                     lv.warps.push({ kind: 'down', tx: 57, top: 8 * T, to: { x: 216 * T, y: 3 * T, mode: 'drop' } });
                     lv.warps.push({ kind: 'side', x: 232 * T, to: { x: 163 * T + 16, y: 10 * T, mode: 'rise' } });
-                    ['blob,22', 'blob,40', 'blob,51', 'blob,53', 'blob,82,3', 'blob,97', 'blob,99', 'beetle,107',
-                        'blob,115', 'blob,125', 'blob,131', 'blob,172'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
+                    ['blob,22', 'hopper,40', 'blob,51', 'blob,53', 'blob,82,3', 'flyer,97,8', 'blob,99', 'beetle,107',
+                        'spiky,115', 'blob,125', 'hopper,131', 'flyer,172,8'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
                 }
             },
             2: {
@@ -1200,8 +1212,8 @@ ${JSON.stringify(list)}
                     B.set(205, 11, 6);
                     lv.flag = { x: 205 * T + 8, top: 3 * T, bottom: 11 * T, fy: 3 * T + 4 };
                     lv.castle = 209;
-                    ['blob,38', 'blob,40', 'beetle,52', 'blob,60', 'blob,62', 'blob,95', 'blob,108', 'blob,110',
-                        'beetle,128', 'blob,154', 'blob,156'].forEach(s => { const [t, x] = s.split(','); B.en(t, +x); });
+                    ['blob,38', 'hopper,40', 'beetle,52', 'blob,60', 'spiky,62', 'flyer,95,7', 'blob,108', 'hopper,110',
+                        'beetle,128', 'spiky,154', 'blob,156', 'flyer,165,8'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
                 }
             },
             3: {
@@ -1232,7 +1244,7 @@ ${JSON.stringify(list)}
                     lv.bridge = [126, 145];
                     lv.axe = { x: 146 * T + 2, y: 4 * T, w: 14, h: 6 * T, dy: 8 * T };
                     lv.friend = { x: 158 * T, y: 8 * T };
-                    B.en('blob', 42, 9); B.en('blob', 47, 9); B.en('beetle', 70, 9); B.en('blob', 86, 9); B.en('blob', 88, 9);
+                    B.en('blob', 42, 9); B.en('hopper', 47, 9); B.en('beetle', 70, 9); B.en('spiky', 86, 9); B.en('flyer', 92, 7);
                     B.en('blob', 102, 9); B.en('beetle', 106, 9);
                     B.en('boss', 138, 9);
                 }
@@ -1243,7 +1255,8 @@ ${JSON.stringify(list)}
         function mkEnemy(type, x, bottom) {
             const h = type === 'beetle' ? 22 : type === 'boss' ? 30 : 14;
             const w = type === 'boss' ? 28 : 14;
-            const e = { type, x, y: bottom - h, w, h, vx: type === 'boss' ? 0 : -0.5, vy: 0, active: false, dead: false, t: 0, dir: -1 };
+            const e = { type, x, y: bottom - h, w, h, vx: type === 'boss' ? 0 : type === 'spiky' ? -0.4 : -0.5, vy: 0, active: false, dead: false, t: Math.floor(Math.random() * 60), dir: -1, edgeTurn: WALKERS.includes(type) };
+            if (type === 'flyer') Object.assign(e, { baseY: e.y, x0: x, vx: -0.6 });
             if (type === 'boss') Object.assign(e, { hp: 3, inv: 0, fireT: 150, minX: 130 * T, maxX: 143 * T });
             return e;
         }
@@ -1457,8 +1470,10 @@ ${JSON.stringify(list)}
 
         function updateCamera() {
             const r = regionAt(hero.x);
-            const target = hero.x + hero.w / 2 - VW * 0.42;
-            camX = Math.max(camX, target);
+            // 勇者保持在畫面 35%～55% 之間：往右走畫面跟著右捲，往回走也會往左捲
+            const cx = hero.x + hero.w / 2;
+            if (cx - camX > VW * 0.55) camX = cx - VW * 0.55;
+            if (cx - camX < VW * 0.35) camX = cx - VW * 0.35;
             camX = Math.max(r.x0 * T, Math.min(camX, r.x1 * T - VW));
         }
 
@@ -1490,7 +1505,8 @@ ${JSON.stringify(list)}
             if (h.onLift) { h.x += h.onLift.dx; h.y += h.onLift.dy; }
             // 橫向
             h.x += h.vx;
-            if (h.x < camX) { h.x = camX; if (h.vx < 0) h.vx = 0; }
+            const rg = regionAt(h.x + h.w / 2);
+            if (h.x < rg.x0 * T) { h.x = rg.x0 * T; if (h.vx < 0) h.vx = 0; }
             const pts = [h.y + 2, h.y + h.h / 2, h.y + h.h - 2];
             if (h.vx > 0 || dirIn > 0) {
                 if (pts.some(py => solidPx(h.x + h.w, py))) { h.x = Math.floor((h.x + h.w) / T) * T - h.w; if (h.vx > 0) h.vx = 0; }
@@ -1596,12 +1612,17 @@ ${JSON.stringify(list)}
                 const fy = e.y + e.h;
                 if (solidPx(e.x + 2, fy) || solidPx(e.x + e.w - 2, fy)) { e.y = Math.floor(fy / T) * T - e.h; e.vy = 0; e.onGround = true; }
             } else if (solidPx(e.x + 2, e.y) || solidPx(e.x + e.w - 2, e.y)) { e.y = (Math.floor(e.y / T) + 1) * T; e.vy = 0; }
+            if (e.edgeTurn && e.onGround && e.vx) {
+                const ax = e.vx > 0 ? e.x + e.w + 1 : e.x - 1;
+                if (!solidPx(ax, e.y + e.h + 2)) e.vx = -e.vx;
+            }
         }
 
         function updateEnts() {
             for (const e of lv.ents) {
                 if (e.removed) continue;
-                if (!e.active) { if (e.x < camX + VW + 24) e.active = true; else continue; }
+                if (!e.active) { if (e.x < camX + VW + 24 && e.x > camX - 40) e.active = true; else continue; }
+                if (!e.dead && (e.x < camX - 64 || e.x > camX + VW + 64)) continue;
                 e.t++;
                 if (e.flat) { if (--e.flat <= 0) e.removed = true; continue; }
                 if (e.dead) { e.vy += 0.25; e.y += e.vy; e.x += e.vx; if (e.y > VH + 40) e.removed = true; continue; }
@@ -1610,12 +1631,26 @@ ${JSON.stringify(list)}
                 if (e.type === 'plant') { updatePlant(e); continue; }
                 if (e.type === 'boss') { updateBoss(e); continue; }
                 if (e.type === 'shell' && e.kickT > 0) e.kickT--;
+                if (e.type === 'flyer') {
+                    e.x += e.vx;
+                    if (e.x < e.x0 - 56 || e.x > e.x0 + 40 || solidPx(e.vx > 0 ? e.x + e.w : e.x, e.y + 7)) e.vx = -e.vx;
+                    e.y = e.baseY + Math.sin(e.t / 22) * 14;
+                    e.dir = Math.sign(e.vx);
+                    continue;
+                }
+                if (e.type === 'hopper' && e.onGround && e.t % 100 === 0) {
+                    e.vy = -4.3;
+                    const d = hero.x < e.x ? -1 : 1;
+                    // 跳之前先看落點有沒有地板，沒有就原地跳，不會跳下懸崖
+                    e.vx = solidPx(e.x + e.w / 2 + d * 28, e.y + e.h + 2) && !solidPx(e.x + e.w / 2 + d * 28, e.y + 4) ? d * 0.7 : 0;
+                }
                 moveEnt(e);
+                if (e.type === 'hopper' && e.onGround && Math.abs(e.vx) > 0.4) e.vx = Math.sign(e.vx) * 0.3;
                 if (e.vx) e.dir = Math.sign(e.vx);
-                if (e.y > VH + 32 || e.x < camX - 80) { e.removed = true; continue; }
+                if (e.y > VH + 32) { e.removed = true; continue; }
             }
             // 怪物互撞、龜殼撞怪
-            const list = lv.ents.filter(e => e.active && !e.dead && !e.removed && !e.flat && !e.stun && (e.type === 'blob' || e.type === 'beetle' || e.type === 'shell'));
+            const list = lv.ents.filter(e => e.active && !e.dead && !e.removed && !e.flat && !e.stun && (WALKERS.includes(e.type) || e.type === 'shell'));
             for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
                 const a = list[i], b = list[j];
                 if (!overlap(a, b)) continue;
@@ -1706,6 +1741,12 @@ ${JSON.stringify(list)}
                         if (stomp) h.vy = -3;
                     } else if (stomp) { e.vx = 0; h.vy = -3.5; h.y = e.y - h.h; SFX.stomp(); }
                     else if (!e.kickT) hurt();
+                    if (game.mode !== 'play') return;
+                    continue;
+                }
+                if (e.type === 'spiky') {
+                    if (stomp) { h.vy = -3.5; toast('🦔 刺刺球不能踩！跳過去或用龜殼撞牠', '#f87171'); }
+                    hurt();
                     if (game.mode !== 'play') return;
                     continue;
                 }
@@ -1902,7 +1943,7 @@ ${JSON.stringify(list)}
         }
         function renderQ() {
             const c = game.qc, q = c.q;
-            const icon = c.kind === 'enemy' ? (c.payload.type === 'beetle' ? '🐢' : '👾') : c.kind === 'block' ? '🟦' : c.kind === 'boss' ? '🐉' : '🪓';
+            const icon = c.kind === 'enemy' ? ({ beetle: '🐢', hopper: '🐸', flyer: '🐝' }[c.payload.type] || '👾') : c.kind === 'block' ? '🟦' : c.kind === 'boss' ? '🐉' : '🪓';
             const head = c.kind === 'enemy' ? `踩到 ${c.where}！答對才能打倒牠`
                 : c.kind === 'block' ? '知識磚！答對就有能量果'
                 : c.kind === 'boss' ? `踩中魔龍！答對打掉 1 顆心（還有 ${'❤️'.repeat(c.payload.hp)}）`
@@ -1985,11 +2026,12 @@ ${JSON.stringify(list)}
                 const e = c.payload;
                 e.stun = false; e.squash = 0;
                 if (ok) {
-                    if (e.type === 'blob') { e.flat = 40; addScore(100, e.x + 7, e.y); }
-                    else { e.type = 'shell'; e.y += e.h - 14; e.h = 14; e.vx = 0; e.kickT = 0; addScore(100, e.x + 7, e.y); }
+                    if (e.type === 'blob' || e.type === 'hopper') { e.flat = 40; addScore(100, e.x + 7, e.y); }
+                    else if (e.type === 'flyer') { e.dead = true; e.flip = true; e.vy = 0; e.vx = 0; addScore(100, e.x + 7, e.y); }
+                    else { e.type = 'shell'; e.edgeTurn = false; e.y += e.h - 14; e.h = 14; e.vx = 0; e.kickT = 0; addScore(100, e.x + 7, e.y); }
                     h.vy = -4; h.jumping = false;
                     SFX.stomp();
-                } else { e.vy = -2; bounceOff(e); }
+                } else { if (e.type !== 'flyer') e.vy = -2; bounceOff(e); }
             } else if (c.kind === 'block') {
                 const { tx, ty } = c.payload;
                 if (ok) {
@@ -2339,6 +2381,47 @@ ${JSON.stringify(list)}
             if (st) { R(x + 1, y + 12, 5, 4, feet); R(x + 10, y + 13, 5, 3, feet); } else { R(x + 1, y + 13, 5, 3, feet); R(x + 10, y + 12, 5, 4, feet); }
             ctx.restore();
         }
+        function drawHopper(e) {
+            const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 16;
+            const g = '#3ccf6a', g2 = '#1e8a42', belly = '#e9f7c8';
+            if (e.flat || e.squash) { R(x + 1, y + 10, 14, 5, g); R(x + 3, y + 11, 3, 1, '#fff'); R(x + 10, y + 11, 3, 1, '#fff'); if (e.squash) { R(x + 4, y + 5, 2, 2, '#ffd23a'); R(x + 10, y + 4, 2, 2, '#ffd23a'); } return; }
+            ctx.save();
+            if (e.dir > 0) { ctx.translate(x + 16, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+            if (e.flip) { ctx.translate(0, y * 2 + 16); ctx.scale(1, -1); }
+            const air = !e.onGround;
+            R(x + 2, y + 5, 12, 8, g); R(x + 4, y + 9, 8, 4, belly);
+            R(x + 2, y + 2, 5, 5, g); R(x + 9, y + 2, 5, 5, g);
+            R(x + 3, y + 3, 3, 3, '#fff'); R(x + 10, y + 3, 3, 3, '#fff'); R(x + 3, y + 4, 2, 2, '#111'); R(x + 10, y + 4, 2, 2, '#111');
+            R(x + 5, y + 8, 6, 1, g2);
+            if (air) { R(x, y + 12, 3, 4, g2); R(x + 13, y + 12, 3, 4, g2); }
+            else { R(x + 1, y + 13, 5, 3, g2); R(x + 10, y + 13, 5, 3, g2); }
+            ctx.restore();
+        }
+        function drawFlyer(e) {
+            const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 16;
+            ctx.save();
+            if (e.dir > 0) { ctx.translate(x + 16, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+            if (e.flip) { ctx.translate(0, y * 2 + 16); ctx.scale(1, -1); }
+            const wing = Math.floor(e.t / 4) % 2;
+            R(x + 5, y + (wing ? 0 : 2), 5, 4, 'rgba(220,240,255,.9)'); R(x + 9, y + (wing ? 1 : 3), 4, 3, 'rgba(220,240,255,.8)');
+            R(x + 2, y + 6, 12, 8, '#facc15'); R(x + 5, y + 6, 2, 8, '#1f1f1f'); R(x + 9, y + 6, 2, 8, '#1f1f1f');
+            R(x + 1, y + 7, 3, 5, '#facc15'); R(x + 2, y + 8, 1, 1, '#111'); R(x, y + 5, 1, 2, '#1f1f1f');
+            R(x + 14, y + 9, 2, 1, '#1f1f1f');
+            if (e.stun || e.squash) { R(x + 3, y + 2, 2, 2, '#ffd23a'); R(x + 11, y + 1, 2, 2, '#ffd23a'); }
+            ctx.restore();
+        }
+        function drawSpiky(e) {
+            const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 16;
+            ctx.save();
+            if (e.dir > 0) { ctx.translate(x + 16, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+            if (e.flip) { ctx.translate(0, y * 2 + 16); ctx.scale(1, -1); }
+            R(x + 3, y + 4, 10, 9, '#dc2626'); R(x + 2, y + 6, 12, 6, '#dc2626'); R(x + 5, y + 5, 3, 2, '#fca5a5');
+            for (const [sx, sy] of [[3, 2], [7, 1], [11, 2], [1, 5], [14, 6], [13, 3]]) { R(x + sx, y + sy, 2, 2, '#f8fafc'); }
+            R(x + 1, y + 9, 3, 3, '#fde68a'); R(x + 1, y + 9, 1, 1, '#111');
+            const st = Math.floor(e.t / 8) % 2;
+            R(x + (st ? 3 : 5), y + 13, 3, 3, '#7f1d1d'); R(x + (st ? 10 : 8), y + 13, 3, 3, '#7f1d1d');
+            ctx.restore();
+        }
         function drawBeetle(e) {
             if (e.squash) { drawShell(e); return; }
             const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 24;
@@ -2498,6 +2581,9 @@ ${JSON.stringify(list)}
                 if (e.removed || !e.active || e.type === 'plant') continue;
                 if (e.type === 'blob') drawBlob(e, game.level === 3);
                 else if (e.type === 'beetle') drawBeetle(e);
+                else if (e.type === 'hopper') drawHopper(e);
+                else if (e.type === 'flyer') drawFlyer(e);
+                else if (e.type === 'spiky') drawSpiky(e);
                 else if (e.type === 'shell') drawShell(e);
                 else if (e.type === 'boss') drawBoss(e);
             }
