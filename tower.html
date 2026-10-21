@@ -62,7 +62,7 @@ header .hbtn { background: var(--panel2); border: 1px solid var(--line); border-
 .diff b, .cls b, .opt b { font-size: 17px; }
 .diff span, .cls span, .opt span, .cls small { color: var(--sub); font-size: 14px; line-height: 1.4; }
 .diff.on { border-color: var(--gold); background: #2d2210; }
-.classes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.classes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .cls { align-items: center; text-align: center; }
 .cls img { width: 64px; height: 64px; }
 .cls.on { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 18%, var(--panel2)); box-shadow: 0 0 14px color-mix(in srgb, var(--cc) 40%, transparent); }
@@ -229,6 +229,109 @@ header .hbtn { background: var(--panel2); border: 1px solid var(--line); border-
     .hand { order: 3; flex-basis: 100%; }
 }
 
+/* ---------- 黑暗地牢式戰鬥 ---------- */
+.orderbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #0008; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.olabel { color: var(--sub); font-size: 13px; white-space: nowrap; margin-right: 4px; }
+.ochip { width: 38px; height: 38px; border-radius: 10px; border: 2px solid; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #17141f; }
+.ochip img { width: 30px; height: 30px; }
+.ochip.h { border-color: #38bdf8; }
+.ochip.e { border-color: #ef4444; }
+.ochip.now { transform: scale(1.18); box-shadow: 0 0 12px var(--gold); border-color: var(--gold); margin: 0 6px; }
+.unit.cur { border-color: var(--gold); background: #fbbf2410; }
+.unit.cur::after { content: '▼'; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); color: var(--gold); font-size: 16px; animation: bob .8s infinite alternate; }
+.unit.enemy.cur::after { top: auto; bottom: -18px; content: '▲'; }
+@keyframes bob { to { translate: 0 4px; } }
+.actbar { display: flex; gap: 12px; align-items: stretch; padding: 8px 12px 12px; background: linear-gradient(transparent, #000a); min-height: 150px; }
+.actbar .curwho { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 96px; flex-shrink: 0; text-align: center; }
+.actbar .curwho img { width: 64px; height: 64px; }
+.actbar .curwho span { display: block; font-size: 12px; color: var(--sub); }
+.actbar .waiting { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 18px; }
+.skills { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.skill { position: relative; background: var(--panel2); border: 2px solid var(--line); border-radius: 12px; padding: 8px 8px 6px; text-align: left; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.skill b { font-size: 17px; }
+.skill small { color: var(--gold); font-weight: 700; margin-left: 4px; }
+.skill .kn { position: absolute; top: 4px; right: 8px; color: #6b6378; font-size: 12px; font-weight: 800; }
+.skill:hover:not(.no) { border-color: #8b7aa3; transform: translateY(-2px); }
+.skill.sel { border-color: var(--gold); box-shadow: 0 0 14px #fbbf2466; }
+.skill.no { opacity: .45; }
+.skd { font-size: 13px; color: #d6cfe0; line-height: 1.35; }
+.side-acts { display: flex; flex-direction: column; gap: 6px; width: 150px; flex-shrink: 0; }
+.side-acts .btn { width: 100%; }
+.side-acts .btn small { opacity: .6; font-size: 11px; }
+.btn.sel { border-color: var(--gold); box-shadow: 0 0 10px #fbbf2466; }
+.btn.wide { width: 100%; margin-top: 8px; }
+.items { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.item { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; font-size: 18px; padding: 3px 0; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.item b { font-size: 11px; }
+.item:disabled { opacity: .3; }
+.item.sel { border-color: var(--gold); }
+.pips { display: inline-flex; gap: 2px; align-items: center; vertical-align: middle; }
+.pips i { width: 10px; height: 10px; border-radius: 50%; background: #3a3048; display: inline-block; }
+.pips i.u { background: #facc15; }
+.pips i.t { background: #ef4444; }
+.pips em { color: #6b6378; font-style: normal; margin: 0 2px; font-size: 11px; }
+.skillname { position: fixed; z-index: 41; transform: translate(-50%, -100%); padding: 3px 12px; border-radius: 8px; font-weight: 900; font-size: 16px; pointer-events: none; white-space: nowrap; animation: fadeout 1s forwards; }
+.skillname.h { background: #0c4a6e; border: 2px solid #38bdf8; }
+.skillname.e { background: #7f1d1d; border: 2px solid #f87171; }
+@keyframes fadeout { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+.partylist { display: flex; flex-direction: column; gap: 10px; max-height: 62vh; overflow-y: auto; }
+.prow { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.prow.dead { opacity: .4; }
+.phead { display: flex; align-items: center; gap: 10px; }
+.phead img { width: 44px; height: 44px; }
+.phead > div { flex: 1; }
+.phead .rk { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #000; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+.arrows { display: flex; gap: 4px; }
+.arrows button { width: 40px; height: 36px; border-radius: 8px; background: #2d2638; border: 1px solid var(--line); font-size: 16px; }
+.pskills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.sk { background: #17141f; border: 2px solid var(--line); border-radius: 10px; padding: 6px 8px; text-align: left; font-size: 14px; display: flex; flex-direction: column; gap: 2px; }
+.sk small { color: var(--gold); }
+.sk.on { border-color: #4ade80; background: #14301f; }
+.sk.locked { color: #6b6378; justify-content: center; }
+.sk .skd { font-size: 12px; }
+.itemrow { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.opt.small b { font-size: 15px; }
+@media (max-width: 900px) {
+    .actbar { flex-wrap: wrap; }
+    .actbar .curwho { width: 100%; flex-direction: row; gap: 8px; }
+    .actbar .curwho img { width: 36px; height: 36px; }
+    .actbar .curwho span { display: inline; margin-left: 6px; }
+    .skills { grid-template-columns: repeat(2, 1fr); flex-basis: 100%; }
+    .side-acts { width: 100%; flex-direction: row; flex-wrap: wrap; }
+    .side-acts .btn { width: auto; flex: 1; }
+    .items { flex: 1 1 100%; }
+    .pskills { grid-template-columns: repeat(2, 1fr); }
+    .classes { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+    .skill b { font-size: 15px; }
+    .skd { font-size: 12px; }
+    .ochip { width: 30px; height: 30px; }
+    .ochip img { width: 24px; height: 24px; }
+    .olabel { display: none; }
+    .unit { width: 70px; }
+    .unit.big { width: 96px; }
+}
+@media (max-width: 560px) {
+    .arena { gap: 2px; padding: 34px 2px 4px; }
+    .side { gap: 1px; min-width: 0; }
+    .vs { width: 4px; }
+    .unit { width: auto; flex: 1 1 0; min-width: 0; max-width: 64px; padding: 2px 0; border-width: 1px; }
+    .unit.big { max-width: 92px; flex-grow: 1.6; }
+    .unit .spr, .unit.big .spr { width: 100%; height: auto; }
+    .uname { font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .bar { height: 12px; }
+    .bar em { font-size: 9px; line-height: 12px; }
+    .bar.st { height: 9px; }
+    .bar.st em { font-size: 8px; line-height: 9px; }
+    .blk { font-size: 9px; line-height: 12px; }
+    .rank { width: 16px; height: 16px; font-size: 10px; top: 0; left: 0; }
+    .intent { font-size: 11px; padding: 1px 4px; border-width: 1px; }
+    .intent small { font-size: 9px; }
+    .st { font-size: 9px; padding: 0 2px; }
+    .actbar { padding: 6px 8px 10px; gap: 6px; min-height: 0; }
+}
+
 </style>
 </head>
 <body>
@@ -313,6 +416,30 @@ header .hbtn { background: var(--panel2); border: 1px solid var(--line); border-
                     R(4, 8, 7, 7, '#f8fafc'); R(4, 8, 7, 1, '#4ade80'); R(7, 9, 1, 3, '#22c55e'); R(6, 10, 3, 1, '#22c55e'); R(4, 14, 7, 1, '#4ade80');
                     R(11, 9, 2, 2, SK);
                     R(5, 15, 2, 1, BOOT); R(8, 15, 2, 1, BOOT);
+                },
+                archer(R) {
+                    // 弓
+                    R(13, 1, 1, 1, '#8b5a2b'); R(14, 2, 1, 3, '#8b5a2b'); R(15, 5, 1, 5, '#a0522d'); R(14, 10, 1, 3, '#8b5a2b'); R(13, 13, 1, 1, '#8b5a2b');
+                    R(13, 2, 1, 11, '#e5e7eb');
+                    // 箭筒
+                    R(1, 6, 2, 6, '#7c4a1e'); R(1, 4, 1, 2, '#f8fafc'); R(2, 3, 1, 3, '#ef4444');
+                    // 兜帽
+                    R(5, 0, 5, 1, '#166534'); R(4, 1, 7, 2, '#15803d'); R(3, 3, 2, 5, '#166534'); R(11, 3, 1, 3, '#166534');
+                    R(5, 3, 6, 4, SK); R(5, 3, 6, 1, '#15803d'); R(9, 4, 1, 1, EYE); R(10, 6, 1, 1, SK2);
+                    R(4, 7, 8, 1, '#14532d');
+                    R(4, 8, 7, 5, '#4d7c0f'); R(5, 8, 2, 4, '#65a30d'); R(4, 11, 7, 1, '#7c4a1e'); R(7, 11, 1, 1, '#ffd23a');
+                    R(11, 8, 2, 2, SK);
+                    R(5, 13, 2, 2, '#3f3f46'); R(8, 13, 2, 2, '#3f3f46'); R(4, 15, 3, 1, BOOT); R(8, 15, 3, 1, BOOT);
+                },
+                rogue(R) {
+                    // 斗篷
+                    R(5, 0, 5, 1, '#27272a'); R(4, 1, 7, 2, '#3f3f46'); R(3, 3, 2, 9, '#27272a'); R(2, 8, 1, 4, '#27272a');
+                    R(5, 3, 6, 3, SK); R(8, 4, 3, 1, EYE); R(9, 4, 1, 1, '#facc15');
+                    R(5, 6, 6, 2, '#7f1d1d'); R(6, 6, 4, 1, '#b91c1c');
+                    R(5, 8, 6, 5, '#44403c'); R(6, 8, 1, 5, '#57534e'); R(5, 11, 6, 1, '#7c2d12'); R(8, 11, 1, 1, '#d4d4d8');
+                    // 匕首
+                    R(11, 9, 2, 2, SK); R(13, 6, 1, 4, '#e5e7eb'); R(14, 6, 1, 3, '#a1a1aa'); R(12, 10, 3, 1, '#ffd23a');
+                    R(5, 13, 2, 2, '#292524'); R(8, 13, 2, 2, '#292524'); R(4, 15, 3, 1, '#1c1917'); R(8, 15, 3, 1, '#1c1917');
                 }
             };
             const BOSS = {
@@ -450,91 +577,109 @@ header .hbtn { background: var(--panel2); border: 1px solid var(--line); border-
             };
         })();
 // =====================================================================
-//  資料：職業、卡牌、敵人、遺物、事件
+//  資料：職業、技能、敵人、遺物、事件
 // =====================================================================
+// dmg：基礎傷害範圍、spd：速度（越快越早行動）、crit：爆擊率、home：適合站的位置
 const CLASSES = {
-    warrior: { name: '劍士', color: '#ef4444', hp: 34, home: 1, desc: '前排輸出，斬擊、旋風斬' },
-    knight:  { name: '盾衛', color: '#3b82f6', hp: 40, home: 1, desc: '擋傷害、嘲諷、保護隊友' },
-    mage:    { name: '法師', color: '#a855f7', hp: 24, home: 3, desc: '後排法術、群體傷害、削弱' },
-    healer:  { name: '祭司', color: '#22c55e', hp: 28, home: 3, desc: '補血、降壓力、救瀕死的人' }
+    warrior: { name: '劍士', color: '#ef4444', hp: 34, spd: 5, dmg: [6, 10], crit: 0.06, home: 1, desc: '前排主力，傷害高、會吸血' },
+    knight:  { name: '盾衛', color: '#3b82f6', hp: 40, spd: 2, dmg: [4, 8], crit: 0.04, home: 1, desc: '擋在前面，守護、嘲諷、暈眩' },
+    rogue:   { name: '盜賊', color: '#a3a3a3', hp: 28, spd: 8, dmg: [5, 9], crit: 0.12, home: 2, desc: '速度最快，爆擊、流血、處決' },
+    archer:  { name: '弓手', color: '#65a30d', hp: 26, spd: 6, dmg: [5, 9], crit: 0.08, home: 3, desc: '後排遠射，標記、箭雨' },
+    mage:    { name: '法師', color: '#a855f7', hp: 24, spd: 5, dmg: [5, 9], crit: 0.06, home: 3, desc: '群體法術、削弱、擊退' },
+    healer:  { name: '祭司', color: '#22c55e', hp: 28, spd: 3, dmg: [3, 6], crit: 0.04, home: 4, desc: '補血、降壓力、救瀕死的人' }
 };
 const CLASS_KEYS = Object.keys(CLASSES);
 
-// 卡牌欄位：c 職業（null = 共用）、cost、type atk/def/skill/curse、rank 使用者要站的位置、reach melee（只打敵人 1-2 排）/any
-//           tgt enemy/allEnemy/ally/self/party/none、r 稀有度 0 起始 1 普通 2 罕見 3 稀有、fx(ctx, up)
-const CARDS = {
-    // ---------- 劍士 ----------
-    strike:   { c: 'warrior', n: '斬擊', cost: 1, type: 'atk', rank: [1, 2], reach: 'melee', tgt: 'enemy', r: 0, t: up => `造成 ${up ? 9 : 6} 傷害`, fx: (X, up) => X.hit(up ? 9 : 6) },
-    guard:    { c: 'warrior', n: '格擋', cost: 1, type: 'def', tgt: 'self', r: 0, t: up => `自己獲得 ${up ? 8 : 5} 護盾`, fx: (X, up) => X.block(X.me, up ? 8 : 5) },
-    cleave:   { c: 'warrior', n: '旋風斬', cost: 1, type: 'atk', rank: [1, 2], tgt: 'allEnemy', r: 0, t: up => `所有敵人 ${up ? 6 : 4} 傷害`, fx: (X, up) => X.hitAll(up ? 6 : 4) },
-    bash:     { c: 'warrior', n: '破甲擊', cost: 2, type: 'atk', rank: [1, 2], reach: 'melee', tgt: 'enemy', r: 1, t: up => `${up ? 10 : 8} 傷害，易傷 ${up ? 3 : 2}`, fx: (X, up) => { X.hit(up ? 10 : 8); X.apply(X.target, 'vuln', up ? 3 : 2); } },
-    warcry:   { c: 'warrior', n: '戰吼', cost: 1, type: 'skill', tgt: 'self', r: 1, ex: true, t: up => `力量 +${up ? 3 : 2}，全隊壓力 −5（消耗）`, fx: (X, up) => { X.apply(X.me, 'str', up ? 3 : 2); X.stressAll(-5); } },
-    charge:   { c: 'warrior', n: '衝鋒', cost: 1, type: 'atk', reach: 'any', tgt: 'enemy', r: 1, t: up => `衝到第 1 排，${up ? 8 : 5} 傷害`, fx: (X, up) => { X.moveTo(X.me, 1); X.hit(up ? 8 : 5); } },
-    bloodlust:{ c: 'warrior', n: '嗜血', cost: 1, type: 'atk', rank: [1, 2], reach: 'melee', tgt: 'enemy', r: 2, t: up => `${up ? 9 : 7} 傷害，自己回 ${up ? 4 : 3} 血`, fx: (X, up) => { X.hit(up ? 9 : 7); X.heal(X.me, up ? 4 : 3); } },
-    execute:  { c: 'warrior', n: '斬首', cost: 2, type: 'atk', rank: [1, 2], reach: 'melee', tgt: 'enemy', r: 3, t: up => `${up ? 14 : 11} 傷害；敵人血量低於一半時加倍`, fx: (X, up) => { const d = up ? 14 : 11; X.hit(X.target.hp * 2 < X.target.maxHp ? d * 2 : d); } },
-    // ---------- 盾衛 ----------
-    shieldbash:{ c: 'knight', n: '盾擊', cost: 1, type: 'atk', rank: [1, 2], reach: 'melee', tgt: 'enemy', r: 0, t: up => `造成「自己的護盾」${up ? '＋3 ' : ''}傷害（至少 3）`, fx: (X, up) => X.hit(Math.max(3, X.me.block + (up ? 3 : 0)), true) },
-    protect:  { c: 'knight', n: '守護', cost: 1, type: 'def', tgt: 'ally', r: 0, t: up => `一位隊友獲得 ${up ? 9 : 6} 護盾`, fx: (X, up) => X.block(X.target, up ? 9 : 6) },
-    taunt:    { c: 'knight', n: '嘲諷', cost: 1, type: 'def', tgt: 'self', r: 0, t: up => `這回合單體攻擊都打自己，護盾 ${up ? 7 : 4}`, fx: (X, up) => { X.block(X.me, up ? 7 : 4); X.apply(X.me, 'taunt', 1); } },
-    fortify:  { c: 'knight', n: '堅守陣線', cost: 2, type: 'def', tgt: 'party', r: 1, t: up => `全隊各獲得 ${up ? 7 : 5} 護盾`, fx: (X, up) => X.party().forEach(h => X.block(h, up ? 7 : 5)) },
-    holystrike:{ c: 'knight', n: '聖光斬', cost: 1, type: 'atk', rank: [1, 2], reach: 'melee', tgt: 'enemy', r: 1, t: up => `${up ? 8 : 5} 傷害，全隊壓力 −${up ? 8 : 5}`, fx: (X, up) => { X.hit(up ? 8 : 5); X.stressAll(up ? -8 : -5); } },
-    riposte:  { c: 'knight', n: '反擊架式', cost: 1, type: 'def', tgt: 'self', r: 1, t: up => `護盾 ${up ? 7 : 5}，被打時反彈 ${up ? 5 : 3}`, fx: (X, up) => { X.block(X.me, up ? 7 : 5); X.apply(X.me, 'thorns', up ? 5 : 3); } },
-    inspire:  { c: 'knight', n: '鼓舞', cost: 0, type: 'skill', tgt: 'party', r: 2, ex: true, t: up => `全隊壓力 −${up ? 20 : 12}（消耗）`, fx: (X, up) => X.stressAll(up ? -20 : -12) },
-    regroup:  { c: 'knight', n: '重整隊形', cost: 1, type: 'def', tgt: 'ally', r: 2, t: up => `和隊友交換位置，兩人各 ${up ? 7 : 4} 護盾`, fx: (X, up) => { X.swap(X.me, X.target); X.block(X.me, up ? 7 : 4); X.block(X.target, up ? 7 : 4); } },
-    // ---------- 法師 ----------
-    fireball: { c: 'mage', n: '火球', cost: 1, type: 'atk', rank: [2, 3], reach: 'any', tgt: 'enemy', r: 0, t: up => `造成 ${up ? 10 : 7} 傷害`, fx: (X, up) => X.hit(up ? 10 : 7) },
-    icewall:  { c: 'mage', n: '冰牆', cost: 1, type: 'def', tgt: 'party', r: 0, t: up => `全隊各獲得 ${up ? 5 : 3} 護盾`, fx: (X, up) => X.party().forEach(h => X.block(h, up ? 5 : 3)) },
-    hex:      { c: 'mage', n: '弱化詛咒', cost: 1, type: 'skill', reach: 'any', tgt: 'enemy', r: 0, t: up => `虛弱 ${up ? 3 : 2}、易傷 ${up ? 2 : 1}`, fx: (X, up) => { X.apply(X.target, 'weak', up ? 3 : 2); X.apply(X.target, 'vuln', up ? 2 : 1); } },
-    chain:    { c: 'mage', n: '連鎖閃電', cost: 2, type: 'atk', rank: [2, 3], tgt: 'allEnemy', r: 1, t: up => `所有敵人 ${up ? 8 : 6} 傷害`, fx: (X, up) => X.hitAll(up ? 8 : 6) },
-    missiles: { c: 'mage', n: '奧術飛彈', cost: 1, type: 'atk', rank: [2, 3], tgt: 'none', r: 1, t: up => `隨機敵人 3 傷害 ×${up ? 4 : 3}`, fx: (X, up) => X.hitRandom(3, up ? 4 : 3) },
-    meditate: { c: 'mage', n: '冥想', cost: 0, type: 'skill', tgt: 'self', r: 1, t: up => `抽 ${up ? 3 : 2} 張牌，自己壓力 +5`, fx: (X, up) => { X.draw(up ? 3 : 2); X.stress(X.me, 5); } },
-    meteor:   { c: 'mage', n: '隕石', cost: 3, type: 'atk', rank: [2, 3], reach: 'any', tgt: 'enemy', r: 3, t: up => `造成 ${up ? 30 : 22} 傷害`, fx: (X, up) => X.hit(up ? 30 : 22) },
-    surge:    { c: 'mage', n: '法力湧泉', cost: 0, type: 'skill', tgt: 'self', r: 2, ex: true, t: up => `獲得 ${up ? 3 : 2} 點能量（消耗）`, fx: (X, up) => X.gainEnergy(up ? 3 : 2) },
-    // ---------- 祭司 ----------
-    heal:     { c: 'healer', n: '治癒', cost: 1, type: 'skill', tgt: 'ally', r: 0, t: up => `一位隊友回 ${up ? 10 : 7} 血（可以救瀕死）`, fx: (X, up) => X.heal(X.target, up ? 10 : 7) },
-    bless:    { c: 'healer', n: '祝福', cost: 1, type: 'def', tgt: 'ally', r: 0, t: up => `隊友護盾 ${up ? 7 : 5}、壓力 −${up ? 15 : 10}`, fx: (X, up) => { X.block(X.target, up ? 7 : 5); X.stress(X.target, up ? -15 : -10); } },
-    smite:    { c: 'healer', n: '聖光彈', cost: 1, type: 'atk', reach: 'any', tgt: 'enemy', r: 0, t: up => `造成 ${up ? 8 : 5} 傷害`, fx: (X, up) => X.hit(up ? 8 : 5) },
-    massheal: { c: 'healer', n: '群體治療', cost: 2, type: 'skill', tgt: 'party', r: 1, t: up => `全隊回 ${up ? 7 : 5} 血`, fx: (X, up) => X.party().forEach(h => X.heal(h, up ? 7 : 5)) },
-    purify:   { c: 'healer', n: '淨化', cost: 1, type: 'skill', tgt: 'party', r: 1, t: up => `清除全隊負面狀態，壓力 −${up ? 15 : 8}`, fx: (X, up) => { X.party().forEach(h => { h.st.weak = 0; h.st.vuln = 0; h.st.bleed = 0; }); X.stressAll(up ? -15 : -8); } },
-    requiem:  { c: 'healer', n: '安魂曲', cost: 1, type: 'skill', tgt: 'party', r: 2, ex: true, t: up => `全隊壓力 −${up ? 30 : 20}（消耗）`, fx: (X, up) => X.stressAll(up ? -30 : -20) },
-    aegis:    { c: 'healer', n: '神聖之盾', cost: 2, type: 'def', tgt: 'ally', r: 2, t: up => `一位隊友 ${up ? 16 : 12} 護盾`, fx: (X, up) => X.block(X.target, up ? 16 : 12) },
-    judgment: { c: 'healer', n: '審判之光', cost: 2, type: 'atk', reach: 'any', tgt: 'allEnemy', r: 3, t: up => `所有敵人 ${up ? 7 : 5} 傷害，全隊回 ${up ? 4 : 3} 血`, fx: (X, up) => { X.hitAll(up ? 7 : 5); X.party().forEach(h => X.heal(h, up ? 4 : 3)); } },
-    // ---------- 共用 ----------
-    torch:    { c: null, n: '火把', cost: 0, type: 'skill', tgt: 'none', r: 1, ex: true, t: up => `火光 +${up ? 40 : 25}（消耗）`, fx: (X, up) => X.light(up ? 40 : 25) },
-    breather: { c: null, n: '喘口氣', cost: 1, type: 'skill', tgt: 'none', r: 1, t: up => `抽 ${up ? 3 : 2} 張牌`, fx: (X, up) => X.draw(up ? 3 : 2) },
-    // ---------- 詛咒（壓力爆表時塞進牌組）----------
-    dread:    { c: null, n: '恐懼', cost: -1, type: 'curse', tgt: 'none', r: -1, t: () => '不能打出。留在手上回合結束時，隨機一位隊友壓力 +5', fx: () => {} }
+// 技能欄位
+//   use：自己要站在第幾排才能用　tg：enemy 單一敵人 / enemies 打 tr 範圍內全部 / ally 單一隊友 / allies 全隊 / self 自己
+//   tr：打得到敵人的第幾排　m：傷害倍率（0 = 不造成傷害）　crit：額外爆擊率
+//   其他效果：bleed 流血、stun 暈眩機率、vuln 易傷、weak 虛弱、mark 標記、push 擊退、pull 拉近、
+//             heal 治療、stress 對目標的壓力變化、pstress 全隊壓力、block 護盾、str 力量、move 自己往前(+)/後(-)、
+//             guard 守護、taunt 嘲諷、thorns 反彈、exec 低血處決、souls 偷魂火、self 自己壓力、light 火光
+const SKILLS = {
+    warrior: {
+        slash:   { n: '斬擊', use: [1, 2], tg: 'enemy', tr: [1, 2], m: 1 },
+        cleave:  { n: '旋風斬', use: [1, 2], tg: 'enemies', tr: [1, 2], m: 0.6 },
+        sunder:  { n: '破甲擊', use: [1, 2], tg: 'enemy', tr: [1, 2, 3], m: 0.75, vuln: 2 },
+        charge:  { n: '衝鋒', use: [3, 4], tg: 'enemy', tr: [1, 2], m: 0.9, move: 2 },
+        warcry:  { n: '戰吼', use: [1, 2, 3, 4], tg: 'self', m: 0, str: 3, pstress: -6 },
+        drain:   { n: '嗜血斬', use: [1, 2], tg: 'enemy', tr: [1], m: 1.1, heal: 4 }
+    },
+    knight: {
+        bash:    { n: '盾擊', use: [1, 2], tg: 'enemy', tr: [1, 2], m: 0.7, stun: 0.6 },
+        guard:   { n: '守護', use: [1, 2, 3], tg: 'ally', m: 0, guard: 2, block: 6 },
+        taunt:   { n: '嘲諷', use: [1, 2, 3, 4], tg: 'self', m: 0, taunt: 2, block: 8 },
+        holy:    { n: '聖光斬', use: [1, 2], tg: 'enemy', tr: [1, 2], m: 0.8, pstress: -6 },
+        wall:    { n: '堅守陣線', use: [1, 2], tg: 'allies', m: 0, block: 4 },
+        riposte: { n: '反擊架式', use: [1, 2], tg: 'self', m: 0, thorns: 3, block: 5 }
+    },
+    rogue: {
+        stab:    { n: '背刺', use: [1, 2, 3], tg: 'enemy', tr: [1, 2, 3], m: 0.95, crit: 0.15 },
+        poison:  { n: '毒刃', use: [1, 2, 3], tg: 'enemy', tr: [1, 2], m: 0.5, bleed: 4 },
+        smoke:   { n: '煙霧彈', use: [2, 3], tg: 'enemies', tr: [1, 2], m: 0, weak: 2 },
+        lunge:   { n: '突進', use: [3, 4], tg: 'enemy', tr: [1, 2, 3], m: 0.9, move: 1 },
+        execute: { n: '處決', use: [1, 2], tg: 'enemy', tr: [1, 2], m: 0.9, exec: true },
+        steal:   { n: '順手牽羊', use: [1, 2], tg: 'enemy', tr: [1, 2], m: 0.5, souls: 8 }
+    },
+    archer: {
+        aim:     { n: '精準射擊', use: [3, 4], tg: 'enemy', tr: [2, 3, 4], m: 1, crit: 0.1 },
+        volley:  { n: '箭雨', use: [3, 4], tg: 'enemies', tr: [1, 2, 3, 4], m: 0.45 },
+        mark:    { n: '獵人標記', use: [2, 3, 4], tg: 'enemy', tr: [1, 2, 3, 4], m: 0, mark: 3, vuln: 1 },
+        retreat: { n: '撤步射擊', use: [1, 2], tg: 'enemy', tr: [1, 2, 3], m: 0.75, move: -1 },
+        pierce:  { n: '穿刺箭', use: [2, 3, 4], tg: 'enemy', tr: [1, 2, 3, 4], m: 0.6, bleed: 3 },
+        flare:   { n: '照明箭', use: [2, 3, 4], tg: 'enemy', tr: [1, 2, 3, 4], m: 0.4, light: 20 }
+    },
+    mage: {
+        fireball:{ n: '火球', use: [2, 3, 4], tg: 'enemy', tr: [1, 2, 3, 4], m: 1 },
+        chain:   { n: '連鎖閃電', use: [3, 4], tg: 'enemies', tr: [1, 2, 3, 4], m: 0.5 },
+        hex:     { n: '弱化詛咒', use: [2, 3, 4], tg: 'enemy', tr: [1, 2, 3, 4], m: 0.3, weak: 2, vuln: 2 },
+        icewall: { n: '冰牆', use: [3, 4], tg: 'allies', m: 0, block: 3 },
+        meteor:  { n: '隕石', use: [3, 4], tg: 'enemy', tr: [1, 2, 3, 4], m: 1.8, self: 8 },
+        blast:   { n: '奧術衝擊', use: [2, 3], tg: 'enemy', tr: [1, 2], m: 0.8, push: 2 }
+    },
+    healer: {
+        heal:    { n: '治癒', use: [2, 3, 4], tg: 'ally', m: 0, heal: 8 },
+        mass:    { n: '群體治療', use: [3, 4], tg: 'allies', m: 0, heal: 3 },
+        smite:   { n: '聖光彈', use: [2, 3, 4], tg: 'enemy', tr: [1, 2, 3], m: 0.9 },
+        bless:   { n: '祝福', use: [2, 3, 4], tg: 'ally', m: 0, stress: -14, block: 4 },
+        purify:  { n: '淨化', use: [3, 4], tg: 'allies', m: 0, cleanse: true, stress: -5 },
+        judge:   { n: '審判之光', use: [3, 4], tg: 'enemies', tr: [1, 2, 3, 4], m: 0.4, pstress: -3 }
+    }
 };
-// 起始牌組（每位隊員 4 張）
-const STARTER = {
-    warrior: ['strike', 'strike', 'guard', 'cleave'],
-    knight: ['shieldbash', 'protect', 'protect', 'taunt'],
-    mage: ['fireball', 'fireball', 'icewall', 'hex'],
-    healer: ['heal', 'heal', 'smite', 'bless']
+// 一開始會的 4 招（另外 2 招之後在冒險中學會）
+const START_SKILLS = {
+    warrior: ['slash', 'cleave', 'sunder', 'charge'],
+    knight: ['bash', 'guard', 'taunt', 'holy'],
+    rogue: ['stab', 'poison', 'smoke', 'lunge'],
+    archer: ['aim', 'volley', 'mark', 'retreat'],
+    mage: ['fireball', 'chain', 'hex', 'icewall'],
+    healer: ['heal', 'mass', 'smite', 'bless']
 };
+const MAX_LV = 3;
 
-// 敵人：moves 依序或隨機出招；tg 目標 front 前排 / back 後排 / any 隨機 / all 全體 / low 血最少
+// 敵人：spd 速度、moves 出招（tg：front 前排 / back 後排 / any 隨機 / all 全體 / low 血最少）
+//       acts：一輪行動幾次（魔王 2 次）
 const ENEMIES = {
-    rat:      { n: '腐鼠', px: ['mob', 'rat'], hp: 12, moves: [{ n: '撕咬', a: 4, tg: 'front' }, { n: '亂咬', a: 2, hits: 2, tg: 'any', bleed: 1 }] },
-    skeleton: { n: '骷髏兵', px: ['mob', 'skeleton'], hp: 20, moves: [{ n: '劈砍', a: 7, tg: 'front' }, { n: '舉盾', b: 6 }, { n: '劈砍', a: 7, tg: 'front' }] },
-    bat:      { n: '暗影蝙蝠', px: ['mob', 'bat'], hp: 14, moves: [{ n: '尖嘯', s: 12, tg: 'any' }, { n: '俯衝', a: 5, tg: 'back' }] },
-    cultist:  { n: '邪教徒', px: ['mob', 'cultist'], hp: 24, moves: [{ n: '邪惡低語', s: 10, tg: 'all' }, { n: '獻祭之刃', a: 6, tg: 'any' }, { n: '狂熱', str: 2 }] },
-    slimeling:{ n: '黏液', px: ['mob', 'slimeling'], hp: 16, moves: [{ n: '黏液噴吐', a: 3, tg: 'all', weak: 1 }, { n: '撞擊', a: 6, tg: 'front' }] },
-    gargoyle: { n: '石像鬼', px: ['mob', 'gargoyle'], hp: 32, moves: [{ n: '石化', b: 12 }, { n: '重爪', a: 10, tg: 'front' }, { n: '俯衝', a: 7, tg: 'back' }] },
-    wisp:     { n: '鬼火', px: ['mob', 'wisp'], hp: 20, moves: [{ n: '燃燒', a: 4, tg: 'all' }, { n: '吞噬火光', light: -15, s: 6, tg: 'all' }] },
-    stalker:  { n: '獵影者', px: ['mob', 'stalker'], hp: 26, moves: [{ n: '背刺', a: 9, tg: 'back', bleed: 2 }, { n: '隱身', b: 8 }, { n: '連斬', a: 4, hits: 2, tg: 'low' }] },
+    rat:      { n: '腐鼠', px: ['mob', 'rat'], hp: 11, spd: 6, moves: [{ n: '撕咬', a: 4, tg: 'front' }, { n: '亂咬', a: 2, hits: 2, tg: 'any', bleed: 2 }] },
+    skeleton: { n: '骷髏兵', px: ['mob', 'skeleton'], hp: 18, spd: 3, moves: [{ n: '劈砍', a: 6, tg: 'front' }, { n: '舉盾', b: 6 }, { n: '重劈', a: 8, tg: 'front' }] },
+    bat:      { n: '暗影蝙蝠', px: ['mob', 'bat'], hp: 12, spd: 8, moves: [{ n: '尖嘯', s: 10, tg: 'any' }, { n: '俯衝', a: 5, tg: 'back' }] },
+    cultist:  { n: '邪教徒', px: ['mob', 'cultist'], hp: 20, spd: 4, moves: [{ n: '邪惡低語', s: 8, tg: 'all' }, { n: '獻祭之刃', a: 6, tg: 'any' }, { n: '狂熱', str: 2 }] },
+    slimeling:{ n: '黏液', px: ['mob', 'slimeling'], hp: 14, spd: 2, moves: [{ n: '黏液噴吐', a: 2, tg: 'all', weak: 1 }, { n: '撞擊', a: 6, tg: 'front' }] },
+    gargoyle: { n: '石像鬼', px: ['mob', 'gargoyle'], hp: 28, spd: 2, moves: [{ n: '石化', b: 10 }, { n: '重爪', a: 9, tg: 'front' }, { n: '俯衝', a: 7, tg: 'back' }] },
+    wisp:     { n: '鬼火', px: ['mob', 'wisp'], hp: 16, spd: 7, moves: [{ n: '燃燒', a: 3, tg: 'all' }, { n: '吞噬火光', light: -12, s: 6, tg: 'all' }] },
+    stalker:  { n: '獵影者', px: ['mob', 'stalker'], hp: 22, spd: 7, moves: [{ n: '背刺', a: 8, tg: 'back', bleed: 2 }, { n: '隱身', b: 8 }, { n: '連斬', a: 4, hits: 2, tg: 'low' }] },
     // 菁英
-    tombknight:{ n: '墓穴騎士', px: ['boss', 'ghost'], hp: 60, elite: true, moves: [{ n: '重斬', a: 14, tg: 'front' }, { n: '鐵壁', b: 15, str: 1 }, { n: '橫掃', a: 6, tg: 'all' }] },
-    wailer:   { n: '哀嚎鏡魔', px: ['boss', 'mirror'], hp: 52, elite: true, moves: [{ n: '刺耳哀嚎', s: 18, tg: 'all' }, { n: '鏡像碎片', a: 5, hits: 2, tg: 'any' }, { n: '詛咒凝視', a: 4, tg: 'back', weak: 2, vuln: 2 }] },
-    ashgiant: { n: '灰燼巨人', px: ['boss', 'oni'], hp: 90, elite: true, moves: [{ n: '蓄力', b: 10, str: 3 }, { n: '震地', a: 9, tg: 'all' }, { n: '巨拳', a: 18, tg: 'front' }] },
-    wyrm:     { n: '鐵鱗飛龍', px: ['boss', 'dragon'], hp: 80, elite: true, moves: [{ n: '龍息', a: 7, tg: 'all', bleed: 1 }, { n: '咬殺', a: 15, tg: 'low' }, { n: '展翼', b: 12, s: 10, tg: 'all' }] },
-    // 魔王
-    bonelord: { n: '骨冠領主', px: ['boss', 'lich'], hp: 115, boss: true, moves: [{ n: '召喚亡骨', summon: 'skeleton' }, { n: '靈魂吸取', a: 10, tg: 'any', s: 10 }, { n: '死亡宣告', a: 6, tg: 'all', vuln: 1 }, { n: '骨牆', b: 18 }] },
-    nightlord:{ n: '永夜之主', px: ['boss', 'demon'], hp: 170, boss: true, moves: [{ n: '吞噬光明', light: -30, s: 15, tg: 'all' }, { n: '暗影爪', a: 16, tg: 'front' }, { n: '恐懼風暴', a: 8, tg: 'all', weak: 1 }, { n: '召喚鬼火', summon: 'wisp' }, { n: '絕望凝視', s: 25, tg: 'low' }] }
+    tombknight:{ n: '墓穴騎士', px: ['boss', 'ghost'], hp: 55, spd: 3, elite: true, moves: [{ n: '重斬', a: 12, tg: 'front' }, { n: '鐵壁', b: 12, str: 1 }, { n: '橫掃', a: 5, tg: 'all' }] },
+    wailer:   { n: '哀嚎鏡魔', px: ['boss', 'mirror'], hp: 46, spd: 5, elite: true, moves: [{ n: '刺耳哀嚎', s: 15, tg: 'all' }, { n: '鏡像碎片', a: 5, hits: 2, tg: 'any' }, { n: '詛咒凝視', a: 4, tg: 'back', weak: 2, vuln: 2 }] },
+    ashgiant: { n: '灰燼巨人', px: ['boss', 'oni'], hp: 80, spd: 1, elite: true, moves: [{ n: '蓄力', b: 10, str: 3 }, { n: '震地', a: 7, tg: 'all' }, { n: '巨拳', a: 15, tg: 'front' }] },
+    wyrm:     { n: '鐵鱗飛龍', px: ['boss', 'dragon'], hp: 70, spd: 6, elite: true, moves: [{ n: '龍息', a: 6, tg: 'all', bleed: 1 }, { n: '咬殺', a: 13, tg: 'low' }, { n: '展翼', b: 10, s: 10, tg: 'all' }] },
+    // 魔王（一輪行動兩次）
+    bonelord: { n: '骨冠領主', px: ['boss', 'lich'], hp: 96, spd: 4, boss: true, acts: 2, moves: [{ n: '召喚亡骨', summon: 'skeleton' }, { n: '靈魂吸取', a: 8, tg: 'any', s: 8 }, { n: '死亡宣告', a: 5, tg: 'all', vuln: 1 }, { n: '骨牆', b: 14 }] },
+    nightlord:{ n: '永夜之主', px: ['boss', 'demon'], hp: 165, spd: 5, boss: true, acts: 2, moves: [{ n: '吞噬光明', light: -25, s: 12, tg: 'all' }, { n: '暗影爪', a: 13, tg: 'front' }, { n: '恐懼風暴', a: 6, tg: 'all', weak: 1 }, { n: '召喚鬼火', summon: 'wisp' }, { n: '絕望凝視', s: 20, tg: 'low' }] }
 };
 const ACTS = [
-    { name: '第一幕・地下墓穴', normal: [['rat', 'rat'], ['skeleton'], ['bat', 'rat'], ['cultist'], ['slimeling', 'slimeling'], ['skeleton', 'bat'], ['cultist', 'rat']], elites: [['tombknight'], ['wailer']], boss: ['bonelord'] },
-    { name: '第二幕・燭火尖塔', normal: [['gargoyle'], ['wisp', 'wisp'], ['stalker'], ['gargoyle', 'bat'], ['stalker', 'wisp'], ['cultist', 'cultist'], ['skeleton', 'stalker']], elites: [['ashgiant'], ['wyrm'], ['wailer', 'wisp']], boss: ['nightlord'] }
+    { name: '第一幕・地下墓穴', normal: [['rat', 'rat'], ['skeleton', 'rat'], ['bat', 'rat'], ['cultist', 'rat'], ['slimeling', 'slimeling'], ['skeleton', 'bat'], ['skeleton', 'cultist', 'rat'], ['skeleton', 'skeleton', 'bat']], elites: [['tombknight', 'rat'], ['wailer', 'bat']], boss: ['bonelord'] },
+    { name: '第二幕・燭火尖塔', normal: [['gargoyle', 'bat'], ['wisp', 'wisp'], ['stalker', 'rat'], ['gargoyle', 'wisp'], ['stalker', 'wisp'], ['cultist', 'cultist', 'bat'], ['skeleton', 'stalker', 'wisp'], ['gargoyle', 'stalker']], elites: [['ashgiant', 'wisp'], ['wyrm'], ['wailer', 'stalker']], boss: ['nightlord'] }
 ];
 
 // 遺物
@@ -542,47 +687,62 @@ const RELICS = {
     candle:   { n: '長明燭台', i: '🕯️', d: '每走一格，火光少掉的量減半' },
     amulet:   { n: '舊護符', i: '🧿', d: '每場戰鬥開始，全隊各 4 護盾' },
     flask:    { n: '魂之瓶', i: '🧪', d: '每場戰鬥結束，全隊回 4 血' },
-    banner:   { n: '破舊戰旗', i: '🚩', d: '每場戰鬥第一回合多 1 點能量' },
+    banner:   { n: '破舊戰旗', i: '🚩', d: '每場戰鬥第一輪，全隊一定比敵人先行動' },
     ironheart:{ n: '鐵之心', i: '❤️‍🔥', d: '瀕死時被致命一擊的機率減半' },
     beads:    { n: '祈禱念珠', i: '📿', d: '每場戰鬥結束，全隊壓力 −8' },
-    whetstone:{ n: '磨刀石', i: '🪨', d: '所有攻擊牌傷害 +1' },
+    whetstone:{ n: '磨刀石', i: '🪨', d: '所有傷害 +1' },
     phoenix:  { n: '鳳凰之羽', i: '🪶', d: '隊員死亡時，改成回到 1 血（一次）' },
     pouch:    { n: '魂火袋', i: '👝', d: '獲得的魂火 +30%' },
     cross:    { n: '銀十字', i: '✝️', d: '受到的壓力減少 25%' },
     lantern:  { n: '引魂燈', i: '🏮', d: '每場戰鬥開始，火光 +10' },
-    boots:    { n: '疾風靴', i: '👢', d: '每回合第一張牌少 1 費（每場第一回合）' }
+    boots:    { n: '疾風靴', i: '👢', d: '全隊速度 +2' },
+    medkit:   { n: '急救包', i: '🩹', d: '所有治療效果 +2' },
+    eye:      { n: '獵人之眼', i: '👁️', d: '爆擊率 +6%' }
 };
 const RELIC_KEYS = Object.keys(RELICS);
 
-// 事件（黑暗地牢的「奇物」）
+// 道具（黑暗地牢的補給品）：戰鬥中輪到任何隊員都可以用，不算行動
+const ITEMS = {
+    torch:   { n: '火把', i: '🔥', tg: 'none', d: '火光 +25', price: 25 },
+    bandage: { n: '繃帶', i: '🩹', tg: 'ally', d: '回 6 血、止血', price: 25 },
+    herb:    { n: '藥草', i: '🌿', tg: 'ally', d: '回 12 血，可以救瀕死', price: 40 },
+    water:   { n: '聖水', i: '💧', tg: 'ally', d: '壓力 −20', price: 35 }
+};
+const ITEM_KEYS = Object.keys(ITEMS);
+
+// 事件
 const EVENTS = [
     { id: 'altar', t: '古老祭壇', i: '⛩️', d: '一座布滿灰塵的祭壇，上面刻著看不懂的文字。', o: [
         { t: '跪下祈禱', fx: R => Math.random() < 0.6 ? (R.party.forEach(h => addStress(h, -20)), '一股暖流湧上心頭。全隊壓力 −20。') : (R.party.forEach(h => addStress(h, 15)), '祭壇傳來低沉的笑聲……全隊壓力 +15。') },
         { t: '獻上 30 魂火', need: R => R.souls >= 30, fx: R => { R.souls -= 30; const k = grantRelic(R); return `祭壇發光了！獲得遺物 ${RELICS[k].i} ${RELICS[k].n}。`; } },
         { t: '離開', fx: () => '你們悄悄離開了。' }] },
     { id: 'chest', t: '可疑的寶箱', i: '📦', d: '角落有個上鎖的寶箱，鎖頭看起來不太牢。', o: [
-        { t: '撬開', fx: R => Math.random() < 0.65 ? (R.souls += 45, '裡面有 45 魂火！') : (R.party.forEach(h => { h.hp = Math.max(1, h.hp - 5); }), '是陷阱！毒針射出，全隊 −5 血。') },
+        { t: '撬開', fx: R => Math.random() < 0.65 ? (R.souls += 45, '裡面有 45 魂火！') : (R.party.forEach(h => { if (!h.dead) h.hp = Math.max(1, h.hp - 5); }), '是陷阱！毒針射出，全隊 −5 血。') },
         { t: '用火把照一照再開（火光 −20）', fx: R => { R.light = Math.max(0, R.light - 20); R.souls += 40; return '看清楚陷阱後安全打開，拿到 40 魂火。'; } },
         { t: '不碰', fx: () => '小心駛得萬年船。' }] },
     { id: 'traveler', t: '迷路的旅人', i: '🧙', d: '一位老旅人坐在牆邊：「年輕人，能分我一點魂火取暖嗎？」', o: [
-        { t: '給他 25 魂火', need: R => R.souls >= 25, fx: R => { R.souls -= 25; R.party.forEach(h => addStress(h, -15)); addRandomCard(R, 2); return '旅人感激地教了你們一招（獲得一張罕見卡牌），大家心情也好多了（壓力 −15）。'; } },
+        { t: '給他 25 魂火', need: R => R.souls >= 25, fx: R => { R.souls -= 25; R.party.forEach(h => addStress(h, -15)); return '旅人感激地教了你們一招：' + learnRandom(R) + '。大家心情也好多了（壓力 −15）。'; } },
         { t: '搶他的東西', fx: R => { R.souls += 30; R.party.forEach(h => addStress(h, 12)); return '你們拿走了 30 魂火，但良心不安……全隊壓力 +12。'; } },
         { t: '離開', fx: () => '旅人嘆了一口氣。' }] },
     { id: 'pool', t: '鏡之泉', i: '🪞', d: '泉水像鏡子一樣，照出你們心中的猶豫。', o: [
-        { t: '丟掉一張牌', fx: R => { openRemoveCard(R, '鏡之泉'); return null; } },
-        { t: '喝一口泉水（回 30% 血）', fx: R => { R.party.forEach(h => { if (!h.dead) h.hp = Math.min(h.maxHp, h.hp + Math.ceil(h.maxHp * 0.3)); h.door = h.hp <= 0; }); return '冰涼的泉水讓傷口癒合了。'; } }] },
+        { t: '凝視泉水（壓力最高的人壓力歸零）', fx: R => { const h = R.party.filter(x => !x.dead).sort((a, b) => b.stress - a.stress)[0]; if (!h) return '什麼都沒發生。'; h.stress = 0; h.aff = null; return `${h.name} 看著倒影，終於放下心裡的重擔。`; } },
+        { t: '喝一口泉水（回 30% 血）', fx: R => { R.party.forEach(h => { if (!h.dead) { h.hp = Math.min(h.maxHp, h.hp + Math.ceil(h.maxHp * 0.3)); if (h.hp > 0) h.door = false; } }); return '冰涼的泉水讓傷口癒合了。'; } }] },
     { id: 'bones', t: '骨堆', i: '💀', d: '一大堆白骨，裡面好像有東西在發光。', o: [
-        { t: '翻找', fx: R => { if (Math.random() < 0.55) { addRandomCard(R, 1); return '找到一本破舊的戰技書（獲得一張卡牌）。'; } R.party.forEach(h => addStress(h, 10)); return '骨頭突然崩塌，嚇了大家一跳！全隊壓力 +10。'; } },
+        { t: '翻找', fx: R => { if (Math.random() < 0.55) return '找到一本破舊的戰技書：' + upgradeRandom(R) + '。'; R.party.forEach(h => addStress(h, 10)); return '骨頭突然崩塌，嚇了大家一跳！全隊壓力 +10。'; } },
         { t: '離開', fx: () => '還是別亂碰比較好。' }] },
     { id: 'fountain', t: '燭火噴泉', i: '⛲', d: '噴泉裡流的不是水，而是溫暖的火光。', o: [
         { t: '裝滿火把（火光 +50）', fx: R => { R.light = Math.min(100, R.light + 50); return '火光重新照亮了四周。'; } },
-        { t: '在旁邊休息（全隊回 10 血）', fx: R => { R.party.forEach(h => { if (!h.dead) { h.hp = Math.min(h.maxHp, h.hp + 10); if (h.hp > 0) h.door = false; } }); return '大家稍微恢復了一點體力。'; } }] }
+        { t: '在旁邊休息（全隊回 10 血）', fx: R => { R.party.forEach(h => { if (!h.dead) { h.hp = Math.min(h.maxHp, h.hp + 10); if (h.hp > 0) h.door = false; } }); return '大家稍微恢復了一點體力。'; } }] },
+    { id: 'peddler', t: '鬼魂小販', i: '👻', d: '一個半透明的小販飄了過來：「補給品，便宜賣～」', o: [
+        { t: '拿 2 個藥草（20 魂火）', need: R => R.souls >= 20, fx: R => { R.souls -= 20; R.items.herb = (R.items.herb || 0) + 2; return '小販把藥草塞給你們，咯咯笑著消失了。'; } },
+        { t: '拿 2 支火把（免費？）', fx: R => { R.items.torch = (R.items.torch || 0) + 2; R.party.forEach(h => addStress(h, 6)); return '拿到 2 支火把……但小販的笑聲讓大家毛骨悚然（壓力 +6）。'; } },
+        { t: '離開', fx: () => '小販飄走了。' }] }
 ];
 
 const DIFF = {
-    easy:   { n: '簡單（給學生）', ehp: 0.7, edmg: 0.65, death: 0, virtue: 0.4, light: 0.6, revive: true, drop: false, souls: 1.2 },
-    normal: { n: '普通', ehp: 1, edmg: 1, death: 0.25, virtue: 0.25, light: 1, revive: false, drop: true, souls: 1 },
-    hard:   { n: '魂系（自己玩）', ehp: 1.3, edmg: 1.3, death: 0.5, virtue: 0.15, light: 1.4, revive: false, drop: true, souls: 0.9 }
+    easy:   { n: '簡單（給學生）', ehp: 0.7, edmg: 0.65, death: 0, virtue: 0.4, light: 0.6, revive: true, drop: false, souls: 1.2, ecrit: 0 },
+    normal: { n: '普通', ehp: 1.1, edmg: 1.12, death: 0.25, virtue: 0.25, light: 1, revive: false, drop: true, souls: 1, ecrit: 0.05 },
+    hard:   { n: '魂系（自己玩）', ehp: 1.2, edmg: 1.25, death: 0.4, virtue: 0.15, light: 1.25, revive: false, drop: true, souls: 0.9, ecrit: 0.08 }
 };
 
 // =====================================================================
@@ -616,6 +776,7 @@ function tone(freqs, dur = 0.12, type = 'sine', gap = 0.09, vol = 0.15) {
 const SFX = {
     card: () => tone([520, 660], 0.06, 'triangle', 0.04, 0.08),
     hit: () => tone([180, 90], 0.09, 'square', 0.04, 0.12),
+    crit: () => tone([880, 440, 220], 0.12, 'square', 0.05, 0.12),
     block: () => tone([440, 660], 0.08, 'square', 0.05, 0.07),
     heal: () => tone([660, 880, 1175], 0.12, 'sine', 0.07, 0.12),
     stress: () => tone([300, 240, 200], 0.14, 'sawtooth', 0.08, 0.06),
@@ -623,7 +784,8 @@ const SFX = {
     bad: () => tone([220, 160], 0.25, 'sawtooth', 0.15, 0.1),
     coin: () => tone([988, 1319], 0.07, 'square', 0.06, 0.06),
     door: () => tone([110, 98, 87], 0.3, 'sawtooth', 0.18, 0.12),
-    fire: () => tone([200, 260, 330], 0.2, 'triangle', 0.1, 0.08)
+    fire: () => tone([200, 260, 330], 0.2, 'triangle', 0.1, 0.08),
+    turn: () => tone([660], 0.08, 'triangle', 0.05, 0.06)
 };
 function toggleMute() { muted = !muted; localStorage.setItem('cft_muted', muted ? '1' : '0'); renderTop(); }
 
@@ -639,31 +801,38 @@ function toast(text, color = '#fbbf24') {
 // =====================================================================
 const UNLOCKS = {
     veteran: { n: '老兵', cost: 8, d: '所有隊員最大血量 +6' },
-    torchbearer: { n: '持火者', cost: 12, d: '起始牌組多一張「火把」，火光從 100 開始也不會掉得那麼快（−20%）' },
+    torchbearer: { n: '持火者', cost: 12, d: '火光掉得比較慢（−20%），起始多 2 支火把' },
+    supplies: { n: '補給官', cost: 10, d: '起始多 2 個繃帶、1 個藥草' },
+    hoard: { n: '魂火收藏家', cost: 15, d: '每次冒險起始魂火 +50' },
     legacy: { n: '傳承', cost: 20, d: '每次冒險一開始隨機獲得一個遺物' },
-    hoard: { n: '魂火收藏家', cost: 15, d: '每次冒險起始魂火 +50' }
+    mentor: { n: '名師', cost: 25, d: '每位隊員一開始就多學會一招' }
 };
-let META = (() => { try { return Object.assign({ embers: 0, unlocks: {}, stain: null, best: 0, runs: 0, wins: 0 }, JSON.parse(localStorage.getItem('cft_meta') || '{}')); } catch (e) { return { embers: 0, unlocks: {}, stain: null, best: 0, runs: 0, wins: 0 }; } })();
+const META_KEY = 'cft_meta', RUN_KEY = 'cft_run2';
+let META = (() => { const d = { embers: 0, unlocks: {}, stain: null, best: 0, runs: 0, wins: 0 }; try { return Object.assign(d, JSON.parse(localStorage.getItem(META_KEY) || '{}')); } catch (e) { return d; } })();
 let RUN = null;
-function saveMeta() { try { localStorage.setItem('cft_meta', JSON.stringify(META)); } catch (e) {} }
-function saveRun() { try { if (RUN) localStorage.setItem('cft_run', JSON.stringify(RUN)); else localStorage.removeItem('cft_run'); } catch (e) {} }
-function loadRun() { try { const r = JSON.parse(localStorage.getItem('cft_run') || 'null'); if (r && r.party) { UID = Math.max(UID, ...r.deck.map(c => c.uid + 1)); return r; } } catch (e) {} return null; }
+function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(META)); } catch (e) {} }
+function saveRun() { try { if (RUN) localStorage.setItem(RUN_KEY, JSON.stringify(RUN)); else localStorage.removeItem(RUN_KEY); } catch (e) {} }
+function loadRun() { try { const r = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); if (r && r.party) { UID = Math.max(UID, ...r.party.map(h => h.uid + 1)); return r; } } catch (e) {} return null; }
 const D = () => DIFF[RUN.diff];
 const has = k => RUN && RUN.relics.includes(k);
 
 // =====================================================================
 //  開新冒險
 // =====================================================================
+function makeHero(cls, rank) {
+    const C = CLASSES[cls], hp = C.hp + (META.unlocks.veteran ? 6 : 0);
+    const skills = {};
+    START_SKILLS[cls].forEach(k => skills[k] = 1);
+    if (META.unlocks.mentor) { const extra = Object.keys(SKILLS[cls]).filter(k => !skills[k]); if (extra.length) skills[pick(extra)] = 1; }
+    return { uid: UID++, cls, name: C.name, maxHp: hp, hp, stress: 0, door: false, dead: false, virtue: null, aff: null, rank, st: {}, block: 0, skills, equip: START_SKILLS[cls].slice() };
+}
 function newRun(diff, classes) {
-    const vet = META.unlocks.veteran ? 6 : 0;
     RUN = {
         diff, act: 0, souls: META.unlocks.hoard ? 50 : 0, light: 100, relics: [], map: null, pos: null, floor: 0, kills: 0,
-        reviveUsed: {}, done: false,
-        party: classes.map((c, i) => ({ uid: UID++, cls: c, name: CLASSES[c].name, maxHp: CLASSES[c].hp + vet, hp: CLASSES[c].hp + vet, stress: 0, door: false, dead: false, virtue: null, aff: null, rank: i + 1, st: {}, block: 0 })),
-        deck: []
+        reviveUsed: {}, pending: null,
+        items: { torch: 1 + (META.unlocks.torchbearer ? 2 : 0), bandage: 1 + (META.unlocks.supplies ? 2 : 0), herb: META.unlocks.supplies ? 1 : 0, water: 0 },
+        party: classes.map((c, i) => makeHero(c, i + 1))
     };
-    classes.forEach(c => STARTER[c].forEach(id => RUN.deck.push({ uid: UID++, id, up: false })));
-    if (META.unlocks.torchbearer) RUN.deck.push({ uid: UID++, id: 'torch', up: false });
     if (META.unlocks.legacy) grantRelic(RUN);
     META.runs++; saveMeta();
     RUN.map = genMap(0);
@@ -690,7 +859,6 @@ function genMap(act) {
             nodes[k] = nodes[k] || { r, c, t: null, next: [] };
             if (r < MAP_ROWS - 1) {
                 let nc = clamp(c + rand(3) - 1, 0, MAP_COLS - 1);
-                // 避免路線交叉：如果隔壁已經往反方向連，就直走
                 const cross = nodes[key(r, nc)] && nodes[key(r, nc)].next.includes(c) && nc !== c;
                 if (cross) nc = c;
                 if (!nodes[k].next.includes(nc)) nodes[k].next.push(nc);
@@ -719,16 +887,14 @@ function reachable() {
     return cur.next.map(c => M.nodes[(RUN.pos.r + 1) + ',' + c]).filter(Boolean);
 }
 
-async function enterNode(n) {
+function enterNode(n) {
     if (!reachable().includes(n)) return;
     SFX.card();
     RUN.pos = { r: n.r, c: n.c };
     RUN.map.visited.push(n.r + ',' + (n.c ?? 'b'));
     RUN.floor++;
-    // 火光：每走一格都會變暗
     const loss = 8 * D().light * (has('candle') ? 0.5 : 1) * (META.unlocks.torchbearer ? 0.8 : 1);
     RUN.light = Math.max(0, Math.round(RUN.light - loss));
-    // 魂系：撿回上次倒下時掉的魂火
     if (META.stain && META.stain.act === RUN.act && META.stain.row === n.r) {
         RUN.souls += META.stain.souls;
         toast(`🩸 你找到了上次倒下的地方，撿回 ${META.stain.souls} 魂火！`, '#f472b6');
@@ -742,6 +908,8 @@ async function enterNode(n) {
     else if (n.t === 'shop') showShop();
     else if (n.t === 'treasure') {
         const k = grantRelic(RUN), s = gainSouls(25 + rand(20));
+        saveRun();
+        showMap();
         showModal(`<h2>💎 寶物</h2><p class="big">${RELICS[k].i} <b>${RELICS[k].n}</b></p><p>${RELICS[k].d}</p><p>另外撿到 ${s} 魂火。</p>
             <div class="btns"><button class="btn gold" onclick="closeModal(); showMap()">繼續前進</button></div>`);
     }
@@ -759,27 +927,27 @@ function grantRelic(R) {
     R.relics.push(k);
     return k;
 }
-function cardPool(R, minR = 1) {
-    const cls = R.party.filter(h => !h.dead).map(h => h.cls);
-    return Object.keys(CARDS).filter(id => { const c = CARDS[id]; return c.r >= minR && (c.c === null || cls.includes(c.c)); });
-}
-function rollCards(R, n) {
-    const pool = cardPool(R);
+function addItem(k, n = 1) { RUN.items[k] = (RUN.items[k] || 0) + n; }
+
+// ---------- 技能成長 ----------
+function upgradeOptions(R) {
     const out = [];
-    for (let k = 0; k < 30 && out.length < n; k++) {
-        const x = Math.random();
-        const want = x < 0.08 ? 3 : x < 0.36 ? 2 : 1;
-        const cand = pool.filter(id => CARDS[id].r === want && !out.includes(id));
-        if (cand.length) out.push(pick(cand));
-    }
+    R.party.filter(h => !h.dead).forEach(h => Object.entries(h.skills).forEach(([k, lv]) => { if (lv < MAX_LV) out.push({ h, k, lv }); }));
     return out;
 }
-function addRandomCard(R, rarity) {
-    const pool = cardPool(R).filter(id => CARDS[id].r >= rarity);
-    const id = pick(pool.length ? pool : cardPool(R));
-    R.deck.push({ uid: UID++, id, up: false });
-    return id;
+function learnOptions(R) {
+    const out = [];
+    R.party.filter(h => !h.dead).forEach(h => Object.keys(SKILLS[h.cls]).forEach(k => { if (!h.skills[k]) out.push({ h, k }); }));
+    return out;
 }
+function doUpgrade(h, k) { h.skills[k] = Math.min(MAX_LV, (h.skills[k] || 1) + 1); return `${h.name}的「${SKILLS[h.cls][k].n}」升到 Lv${h.skills[k]}`; }
+function doLearn(h, k) {
+    h.skills[k] = 1;
+    if (h.equip.length < 4) h.equip.push(k);
+    return `${h.name}學會了「${SKILLS[h.cls][k].n}」${h.equip.includes(k) ? '' : '（到「隊伍」裡換上去）'}`;
+}
+function upgradeRandom(R) { const o = upgradeOptions(R); if (!o.length) { R.souls += 30; return '大家的技能都練滿了，改拿 30 魂火'; } const x = pick(o); return doUpgrade(x.h, x.k); }
+function learnRandom(R) { const o = learnOptions(R); if (!o.length) return upgradeRandom(R); const x = pick(o); return doLearn(x.h, x.k); }
 
 // =====================================================================
 //  壓力（黑暗地牢）
@@ -789,17 +957,17 @@ function addStress(h, v) {
     if (v > 0 && has('cross')) v = Math.round(v * 0.75);
     const old = h.stress;
     h.stress = clamp(h.stress + v, 0, 200);
-    if (v !== 0 && B) fxText(heroEl(h), v > 0 ? `😨+${v}` : `😌${v}`, v > 0 ? '#c084fc' : '#a5b4fc', 22);
+    if (v !== 0 && B) fxText(unitEl(h), v > 0 ? `😨+${v}` : `😌${v}`, v > 0 ? '#c084fc' : '#a5b4fc', 22);
     if (old < 100 && h.stress >= 100 && !h.virtue && !h.aff) {
         if (Math.random() < D().virtue) {
-            h.virtue = 'firm'; h.stress = 40;
-            toast(`✨ ${h.name} 在絕境中堅定了意志！（力量 +1、每場戰鬥開始 4 護盾）`, '#fde047');
+            h.virtue = 'firm'; h.stress = 45;
+            toast(`✨ ${h.name} 在絕境中堅定了意志！（每回合幫全隊降壓、回血）`, '#fde047');
             SFX.win();
         } else {
             h.aff = 'panic';
-            RUN.deck.push({ uid: UID++, id: 'dread', up: false });
-            toast(`😱 ${h.name} 陷入恐慌！（他的牌 +1 費，牌組多了一張「恐懼」）`, '#c084fc');
+            toast(`😱 ${h.name} 陷入恐慌！（有時候會不聽指揮，還會讓隊友更緊張）`, '#c084fc');
             SFX.stress();
+            RUN.party.forEach(o => { if (o !== h) addStress(o, 4); });
         }
     }
     if (h.aff && h.stress < 50) { h.aff = null; toast(`😮‍💨 ${h.name} 冷靜下來了`, '#a5b4fc'); }
@@ -811,15 +979,19 @@ function addStress(h, v) {
 }
 
 // =====================================================================
-//  戰鬥
+//  戰鬥（黑暗地牢）：依速度輪流行動，每位隊員輪到時選一招
 // =====================================================================
-let B = null;   // 這場戰鬥的狀態
+let B = null;
 function alive() { return RUN.party.filter(h => !h.dead).sort((a, b) => a.rank - b.rank); }
-function liveEnemies() { return B.enemies.filter(e => e.hp > 0).sort((a, b) => a.rank - b.rank); }
+function liveEnemies() { return B ? B.enemies.filter(e => e.hp > 0).sort((a, b) => a.rank - b.rank) : []; }
 function reRank() {
     alive().forEach((h, i) => h.rank = i + 1);
-    liveEnemies().forEach((e, i) => e.rank = i + 1);
+    if (B) liveEnemies().forEach((e, i) => e.rank = i + 1);
 }
+function findUnit(uid) { return RUN.party.find(h => h.uid === uid) || (B && B.enemies.find(e => e.uid === uid)); }
+const isHero = u => !!u.cls;
+function unitSpd(u) { return isHero(u) ? CLASSES[u.cls].spd + (has('boots') ? 2 : 0) : ENEMIES[u.key].spd; }
+
 function mkEnemy(key, extraHp = 1) {
     const E = ENEMIES[key];
     const hp = Math.round(E.hp * D().ehp * (1 + RUN.act * 0.1) * extraHp * (0.92 + Math.random() * 0.16));
@@ -827,19 +999,379 @@ function mkEnemy(key, extraHp = 1) {
 }
 function startBattle(kind) {
     const A = ACTS[RUN.act];
-    const group = kind === 'boss' ? A.boss : kind === 'elite' ? pick(A.elites) : pick(RUN.pos.r <= 2 ? A.normal.slice(0, 4) : A.normal);
-    B = { kind, turn: 0, energy: 3, maxEnergy: 3, hand: [], draw: shuffle(RUN.deck.map(c => ({ ...c }))), discard: [], exhaust: [], enemies: group.map(k => mkEnemy(k)), sel: null, busy: false, cardsThisTurn: 0 };
+    const group = kind === 'boss' ? A.boss : kind === 'elite' ? pick(A.elites) : pick(RUN.pos && RUN.pos.r <= 2 ? A.normal.slice(0, 4) : A.normal);
+    B = { kind, round: 0, order: [], cur: null, enemies: group.map(k => mkEnemy(k)), mode: null, busy: true, won: false, log: [] };
     reRank();
-    RUN.party.forEach(h => { h.block = 0; h.st = {}; if (h.virtue === 'firm') { h.st.str = 1; } });
+    RUN.party.forEach(h => { h.block = 0; h.st = {}; h.guardBy = null; });
     if (has('amulet')) alive().forEach(h => h.block += 4);
-    alive().forEach(h => { if (h.virtue === 'firm') h.block += 4; });
     if (has('lantern')) RUN.light = Math.min(100, RUN.light + 10);
     liveEnemies().forEach(rollIntent);
     showScreen('battle');
     buildBattle();
-    startTurn();
+    renderBattle();
+    setTimeout(() => newRound(), FAST ? 0 : 400);
 }
 function lightMul() { return RUN.light < 25 ? 1.25 : RUN.light < 50 ? 1.1 : 1; }
+
+function newRound() {
+    if (!B) return;
+    B.round++;
+    if (RUN.light < 25) alive().forEach(h => addStress(h, 3));
+    const list = [];
+    alive().forEach(h => list.push({ uid: h.uid, s: unitSpd(h) + Math.random() * 4 + (B.round === 1 && has('banner') ? 100 : 0) }));
+    liveEnemies().forEach(e => {
+        const sp = unitSpd(e);
+        list.push({ uid: e.uid, s: sp + Math.random() * 4 });
+        if (ENEMIES[e.key].acts === 2) list.push({ uid: e.uid, s: sp - 4 + Math.random() * 4 });
+    });
+    B.order = list.sort((a, b) => b.s - a.s).map(x => x.uid);
+    nextTurn();
+}
+function nextTurn() {
+    if (!B || B.won) return;
+    if (!liveEnemies().length) { winBattle(); return; }
+    if (checkWipe()) return;
+    let u = null;
+    while (B.order.length && !u) {
+        const x = findUnit(B.order.shift());
+        if (x && !x.dead && (isHero(x) || x.hp > 0)) u = x;
+    }
+    if (!u) { newRound(); return; }
+    B.cur = u.uid;
+    if (isHero(u)) heroTurnStart(u); else enemyTurn(u);
+}
+function tickStart(u) {
+    // 回合開始：護盾消失、流血、嘲諷／反彈倒數
+    u.block = 0;
+    ['taunt', 'thorns'].forEach(k => { if (u.st[k]) u.st[k]--; });
+    if (isHero(u)) RUN.party.forEach(o => { if (o.guardBy === u.uid && o.st.guard) { o.st.guard--; if (!o.st.guard) o.guardBy = null; } });
+    if (u.st.bleed) {
+        const d = u.st.bleed;
+        u.st.bleed--;
+        if (isHero(u)) damageHero(u, d, true, '🩸'); else damageEnemy(u, d, '🩸');
+    }
+}
+function tickEnd(u) {
+    ['weak', 'vuln', 'mark'].forEach(k => { if (u.st[k]) u.st[k]--; });
+    if (isHero(u) && u.st.str) u.st.str--;
+}
+async function heroTurnStart(h) {
+    B.busy = true;
+    tickStart(h);
+    renderBattle();
+    if (h.dead) { await wait(400); nextTurn(); return; }
+    if (h.st.stun) { h.st.stun = 0; fxText(unitEl(h), '💫 暈眩', '#fde047', 26); await wait(700); endHeroTurn(h); return; }
+    if (h.virtue) {
+        alive().forEach(o => { if (o !== h) addStress(o, -3); });
+        h.hp = Math.min(h.maxHp, h.hp + 2);
+        fxText(unitEl(h), '✨ 鼓舞', '#fde047', 22);
+    }
+    if (h.aff && Math.random() < 0.3) {
+        await wait(400);
+        const r = Math.random();
+        if (r < 0.5) {
+            toast(`😱 ${h.name}：「我不要！」（拒絕行動，隊友壓力 +4）`, '#c084fc');
+            alive().forEach(o => { if (o !== h) addStress(o, 4); });
+        } else {
+            const usable = h.equip.filter(k => canUse(h, k) && SKILLS[h.cls][k].tg === 'enemy');
+            if (usable.length) {
+                toast(`😱 ${h.name} 失控亂打！`, '#c084fc');
+                const k = pick(usable);
+                await useSkill(h, k, pick(skillTargets(h, k)), true);
+                return;
+            }
+            toast(`😱 ${h.name} 嚇得發抖，什麼都沒做`, '#c084fc');
+        }
+        await wait(700);
+        endHeroTurn(h);
+        return;
+    }
+    B.busy = false;
+    B.mode = null;
+    SFX.turn();
+    renderBattle();
+}
+function endHeroTurn(h) {
+    if (!B) return;
+    tickEnd(h);
+    B.mode = null;
+    B.busy = true;
+    reRank();
+    renderBattle();
+    setTimeout(nextTurn, FAST ? 0 : 250);
+}
+
+// ---------- 技能 ----------
+function lvOf(h, k) { return h.skills[k] || 1; }
+function skillVal(sk, key, lv) {
+    const v = sk[key];
+    if (v == null) return v;
+    const up = lv - 1;
+    if (key === 'heal' || key === 'block') return v + 2 * up;
+    if (key === 'stress' || key === 'pstress') return v < 0 ? v - 4 * up : v;
+    if (key === 'bleed') return v + up;
+    if (key === 'stun') return Math.min(0.95, v + 0.1 * up);
+    if (key === 'str') return v + up;
+    if (key === 'souls') return v + 4 * up;
+    if (key === 'light') return v + 5 * up;
+    return v;
+}
+const dmgMul = lv => 1 + 0.2 * (lv - 1);
+function skillDmgRange(h, k) {
+    const sk = SKILLS[h.cls][k], C = CLASSES[h.cls], lv = lvOf(h, k);
+    if (!sk.m) return null;
+    const bonus = (h.st.str || 0) + (has('whetstone') ? 1 : 0);
+    const f = x => Math.max(1, Math.round(x * sk.m * dmgMul(lv) * (h.st.weak ? 0.75 : 1)) + bonus);
+    return [f(C.dmg[0]), f(C.dmg[1])];
+}
+function skillText(cls, k, lv, h) {
+    const sk = SKILLS[cls][k], C = CLASSES[cls], V = key => skillVal(sk, key, lv);
+    const parts = [];
+    if (sk.m) {
+        const r = h ? skillDmgRange(h, k) : [Math.max(1, Math.round(C.dmg[0] * sk.m * dmgMul(lv))), Math.max(1, Math.round(C.dmg[1] * sk.m * dmgMul(lv)))];
+        parts.push(`${sk.tg === 'enemies' ? '範圍內所有敵人' : ''}${r[0]}～${r[1]} 傷害`);
+    }
+    if (sk.crit) parts.push(`爆擊率 +${Math.round(sk.crit * 100)}%`);
+    if (sk.exec) parts.push('敵人血量低於一半時傷害加倍');
+    if (sk.bleed) parts.push(`流血 ${V('bleed')}`);
+    if (sk.stun) parts.push(`${Math.round(V('stun') * 100)}% 暈眩`);
+    if (sk.vuln) parts.push(`易傷 ${sk.vuln}`);
+    if (sk.weak) parts.push(`虛弱 ${sk.weak}`);
+    if (sk.mark) parts.push(`標記 ${sk.mark} 回合（受傷 +30%）`);
+    if (sk.push) parts.push(`擊退 ${sk.push} 格`);
+    if (sk.heal) parts.push(`${sk.tg === 'allies' ? '全隊' : sk.tg === 'ally' ? '' : '自己'}回 ${V('heal') + (has('medkit') ? 2 : 0)} 血`);
+    if (sk.block) parts.push(`${sk.tg === 'allies' ? '全隊各' : sk.tg === 'ally' ? '隊友' : '自己'} ${V('block')} 護盾`);
+    if (sk.stress) parts.push(`${sk.tg === 'allies' ? '全隊' : ''}壓力 ${V('stress')}`);
+    if (sk.pstress) parts.push(`全隊壓力 ${V('pstress')}`);
+    if (sk.cleanse) parts.push('清除流血、虛弱、易傷');
+    if (sk.str) parts.push(`力量 +${V('str')}（每回合 −1）`);
+    if (sk.guard) parts.push(`替隊友擋攻擊 ${sk.guard} 回合`);
+    if (sk.taunt) parts.push(`嘲諷 ${sk.taunt} 回合`);
+    if (sk.thorns) parts.push(`被打時反彈 ${sk.thorns}`);
+    if (sk.souls) parts.push(`偷 ${V('souls')} 魂火`);
+    if (sk.light) parts.push(`火光 +${V('light')}`);
+    if (sk.move) parts.push(sk.move > 0 ? `往前 ${sk.move} 格` : `往後 ${-sk.move} 格`);
+    if (sk.self) parts.push(`自己壓力 +${sk.self}`);
+    return parts.join('，');
+}
+function skillTargets(h, k) {
+    const sk = SKILLS[h.cls][k];
+    if (sk.tg === 'enemy' || sk.tg === 'enemies') return liveEnemies().filter(e => sk.tr.includes(e.rank));
+    if (sk.tg === 'ally') return alive().filter(x => !(k === 'guard' && x === h));
+    return [h];
+}
+function whyNotSkill(h, k) {
+    const sk = SKILLS[h.cls][k];
+    if (!sk.use.includes(h.rank)) return `要站第 ${sk.use.join('、')} 排才能用`;
+    if (!skillTargets(h, k).length) return '打不到任何敵人（看技能下面的範圍）';
+    return null;
+}
+const canUse = (h, k) => !whyNotSkill(h, k);
+
+function clickSkill(k) {
+    const h = B && findUnit(B.cur);
+    if (!B || B.busy || !h || !isHero(h)) return;
+    const why = whyNotSkill(h, k);
+    if (why) { toast(why, '#94a3b8'); return; }
+    const sk = SKILLS[h.cls][k];
+    if (B.mode && B.mode.kind === 'skill' && B.mode.k === k) { B.mode = null; renderBattle(); return; }
+    if (sk.tg === 'enemy' || sk.tg === 'ally') {
+        const t = skillTargets(h, k);
+        if (sk.tg === 'enemy' && t.length === 1) { useSkill(h, k, t[0]); return; }
+        B.mode = { kind: 'skill', k }; SFX.card(); renderBattle(); return;
+    }
+    useSkill(h, k, null);
+}
+function clickUnit(uid) {
+    if (!B || B.busy || !B.mode) return;
+    const h = findUnit(B.cur), t = findUnit(uid);
+    if (B.mode.kind === 'skill') {
+        if (!skillTargets(h, B.mode.k).includes(t)) { toast('選一個發亮的目標', '#94a3b8'); return; }
+        useSkill(h, B.mode.k, t);
+    } else if (B.mode.kind === 'item') {
+        if (!isHero(t) || t.dead) { toast('選一位隊友', '#94a3b8'); return; }
+        useItem(B.mode.k, t);
+    } else if (B.mode.kind === 'move') {
+        if (!isHero(t) || t === h || Math.abs(t.rank - h.rank) !== 1) { toast('選旁邊的隊友交換位置', '#94a3b8'); return; }
+        const r = h.rank; h.rank = t.rank; t.rank = r;
+        toast(`🔄 ${h.name} 和 ${t.name} 換位置`, '#a5f3fc');
+        endHeroTurn(h);
+    }
+}
+function clickMove() {
+    const h = B && findUnit(B.cur);
+    if (!B || B.busy || !h) return;
+    if (alive().length < 2) { toast('只剩一個人，不能換位置', '#94a3b8'); return; }
+    B.mode = B.mode && B.mode.kind === 'move' ? null : { kind: 'move' };
+    renderBattle();
+}
+function clickPass() {
+    const h = B && findUnit(B.cur);
+    if (!B || B.busy || !h) return;
+    fxText(unitEl(h), '休息', '#94a3b8', 22);
+    endHeroTurn(h);
+}
+function clickItem(k) {
+    const h = B && findUnit(B.cur);
+    if (!B || B.busy || !h || !(RUN.items[k] > 0)) return;
+    if (ITEMS[k].tg === 'ally') { B.mode = B.mode && B.mode.kind === 'item' && B.mode.k === k ? null : { kind: 'item', k }; renderBattle(); return; }
+    useItem(k, null);
+}
+function useItem(k, t) {
+    RUN.items[k]--;
+    if (k === 'torch') { RUN.light = Math.min(100, RUN.light + 25); toast('🔥 火光 +25', '#fbbf24'); SFX.fire(); }
+    if (k === 'bandage') { healHero(t, 6); t.st.bleed = 0; }
+    if (k === 'herb') healHero(t, 12);
+    if (k === 'water') addStress(t, -20);
+    B.mode = null;
+    renderBattle();   // 用道具不算行動
+}
+
+async function useSkill(h, k, target, forced) {
+    const sk = SKILLS[h.cls][k], lv = lvOf(h, k), V = key => skillVal(sk, key, lv);
+    B.busy = true; B.mode = null;
+    renderBattle();
+    showSkillName(h, sk.n);
+    if (sk.m) await lunge(unitEl(h), 1);
+    else await wait(250);
+    // 位移
+    if (sk.move) moveUnit(h, -sk.move);
+    // 傷害
+    const targets = sk.tg === 'enemies' ? skillTargets(h, k) : sk.tg === 'allies' ? alive() : sk.tg === 'self' ? [h] : [target];
+    let crit = false;
+    if (sk.m) {
+        const C = CLASSES[h.cls];
+        crit = Math.random() < C.crit + (sk.crit || 0) + (has('eye') ? 0.06 : 0);
+        for (const e of targets) {
+            if (!e || e.hp <= 0) continue;
+            let d = (C.dmg[0] + Math.random() * (C.dmg[1] - C.dmg[0] + 1));
+            d = d * sk.m * dmgMul(lv);
+            if (h.st.weak) d *= 0.75;
+            if (crit) d *= 1.5;
+            if (sk.exec && e.hp * 2 < e.maxHp) d *= 2;
+            d = Math.floor(d) + (h.st.str || 0) + (has('whetstone') ? 1 : 0);
+            if (e.st.vuln) d *= 1.5;
+            if (e.st.mark) d *= 1.3;
+            damageEnemy(e, Math.max(1, Math.floor(d)), crit ? '💥' : '');
+        }
+        if (crit) { SFX.crit(); toast(`💥 ${h.name} 爆擊！全隊壓力 −3`, '#fde047'); alive().forEach(o => addStress(o, -3)); }
+    }
+    for (const t of targets) {
+        if (!t) continue;
+        const foe = !isHero(t);
+        if (foe && t.hp <= 0) continue;
+        if (sk.bleed && foe) applySt(t, 'bleed', V('bleed'));
+        if (sk.vuln && foe) applySt(t, 'vuln', sk.vuln);
+        if (sk.weak && foe) applySt(t, 'weak', sk.weak);
+        if (sk.mark && foe) applySt(t, 'mark', sk.mark);
+        if (sk.stun && foe) {
+            const ch = V('stun') * (t.boss ? 0.4 : t.elite ? 0.7 : 1);
+            if (Math.random() < ch) applySt(t, 'stun', 1); else fxText(unitEl(t), '抵抗', '#94a3b8', 20);
+        }
+        if (sk.push && foe) moveUnit(t, sk.push);
+        if (sk.heal && !foe) healHero(t, V('heal'));
+        if (sk.block && !foe && sk.tg !== 'self') giveBlock(t, V('block'));
+        if (sk.stress && !foe) addStress(t, V('stress'));
+        if (sk.cleanse && !foe) ['bleed', 'weak', 'vuln'].forEach(x => t.st[x] = 0);
+        if (sk.guard && !foe) { t.st.guard = sk.guard; t.guardBy = h.uid; fxText(unitEl(t), '🛡️ 守護', '#7dd3fc', 22); }
+    }
+    if (sk.heal && sk.tg === 'enemy') healHero(h, V('heal'));       // 嗜血斬
+    if (sk.block && (sk.tg === 'self' || sk.guard)) giveBlock(h, V('block'));
+    if (sk.str) applySt(h, 'str', V('str'));
+    if (sk.taunt) applySt(h, 'taunt', sk.taunt);
+    if (sk.thorns) applySt(h, 'thorns', sk.thorns);
+    if (sk.pstress) alive().forEach(o => addStress(o, V('pstress')));
+    if (sk.self) addStress(h, sk.self);
+    if (sk.souls && targets.some(t => t && t.hp >= 0)) { const s = gainSouls(V('souls')); fxText(unitEl(h), `🔥+${s}`, '#fbbf24', 22); }
+    if (sk.light) { RUN.light = Math.min(100, RUN.light + V('light')); toast(`🔥 火光 +${V('light')}`, '#fbbf24'); }
+    reRank();
+    renderBattle();
+    await wait(450);
+    if (!B) return;
+    if (!liveEnemies().length) { await wait(300); winBattle(); return; }
+    endHeroTurn(h);
+}
+function applySt(u, k, n) {
+    if (!u) return;
+    u.st[k] = (u.st[k] || 0) + n;
+    fxText(unitEl(u), ST_ICON[k] + ST_NAME[k] + (n > 1 ? ' ' + n : ''), '#fbbf24', 20);
+}
+function giveBlock(u, n) { if (!u || u.dead) return; u.block += n; fxText(unitEl(u), `🛡️+${n}`, '#7dd3fc', 24); SFX.block(); }
+// 往後（+）或往前（−）移動 n 格
+function moveUnit(u, n) {
+    const L = isHero(u) ? alive() : liveEnemies();
+    const i = L.indexOf(u);
+    if (i < 0) return;
+    const j = clamp(i + n, 0, L.length - 1);
+    L.splice(i, 1); L.splice(j, 0, u);
+    L.forEach((x, idx) => x.rank = idx + 1);
+}
+function damageEnemy(e, dmg, tag = '') {
+    const ab = Math.min(e.block, dmg);
+    e.block -= ab; dmg -= ab;
+    e.hp = Math.max(0, e.hp - dmg);
+    const el = unitEl(e);
+    flashEl(el);
+    fxText(el, dmg ? `${tag}−${dmg}` : '🛡️', dmg ? (tag === '💥' ? '#fde047' : '#f87171') : '#7dd3fc', tag === '💥' ? 40 : 34);
+    SFX.hit();
+    if (e.hp <= 0) {
+        RUN.kills++;
+        if (e.elite || e.boss) alive().forEach(h => addStress(h, -10));
+        else alive().forEach(h => addStress(h, -2));
+    }
+}
+function healHero(h, n) {
+    if (!h || h.dead) return;
+    if (has('medkit')) n += 2;
+    const before = h.hp;
+    h.hp = Math.min(h.maxHp, h.hp + n);
+    if (h.hp > 0 && h.door) { h.door = false; toast(`💚 ${h.name} 脫離瀕死了！`, '#4ade80'); }
+    fxText(unitEl(h), `+${h.hp - before}`, '#4ade80', 28);
+    SFX.heal();
+}
+// 隊員受傷：歸零先進入「瀕死」，瀕死再被打有機率死亡
+function damageHero(h, dmg, noBlock, tag = '') {
+    if (h.dead) return 0;
+    if (!noBlock) {
+        if (h.st.vuln) dmg = Math.floor(dmg * 1.5);
+        const ab = Math.min(h.block, dmg); h.block -= ab; dmg -= ab;
+    }
+    const el = unitEl(h);
+    if (dmg <= 0) { fxText(el, '🛡️ 擋下', '#7dd3fc', 26); SFX.block(); return 0; }
+    flashEl(el);
+    fxText(el, `${tag}−${dmg}`, '#f87171', 32);
+    SFX.hit();
+    if (h.door) {
+        const chance = D().death * (has('ironheart') ? 0.5 : 1);
+        if (Math.random() < chance) { killHero(h); return dmg; }
+        fxText(el, '撐住了！', '#fde047', 22);
+        addStress(h, 5);
+        return dmg;
+    }
+    h.hp -= dmg;
+    if (h.hp <= 0) {
+        h.hp = 0; h.door = true;
+        SFX.door();
+        toast(`💀 ${h.name} 倒在瀕死邊緣！快治療他，再被打可能會死`, '#f43f5e');
+        alive().forEach(o => addStress(o, o === h ? 12 : 6));
+    }
+    return dmg;
+}
+function killHero(h) {
+    if (has('phoenix') && !RUN.phoenixUsed) {
+        RUN.phoenixUsed = true; h.door = false; h.hp = 1;
+        toast(`🪶 鳳凰之羽燃燒了！${h.name} 撐了下來`, '#fde047');
+        return;
+    }
+    h.dead = true; h.door = false; h.hp = 0;
+    toast(`⚰️ ${h.name} 陣亡了……`, '#f43f5e');
+    SFX.bad();
+    alive().forEach(o => addStress(o, 20));
+    RUN.party.forEach(o => { if (o.guardBy === h.uid) { o.guardBy = null; o.st.guard = 0; } });
+    reRank();
+}
+
+// ---------- 敵人 ----------
 function rollIntent(e) {
     const moves = ENEMIES[e.key].moves;
     let m;
@@ -854,238 +1386,47 @@ function rollIntent(e) {
         const H = alive();
         if (it.tg === 'all') it.targets = 'all';
         else if (H.length) {
-            const t = it.tg === 'front' ? H[0] : it.tg === 'back' ? H[H.length - 1] : it.tg === 'low' ? H.slice().sort((a, b) => a.hp - b.hp)[0] : pick(H);
+            const front = H.filter(h => h.rank <= 2), back = H.filter(h => h.rank >= 3);
+            const t = it.tg === 'front' ? pick(front.length ? front : H) : it.tg === 'back' ? pick(back.length ? back : H) : it.tg === 'low' ? H.slice().sort((a, b) => a.hp - b.hp)[0] : pick(H);
             it.targets = t.uid;
         }
     }
     e.intent = it;
 }
 function intentDmg(e, it) { return Math.max(0, Math.floor(((it.a || 0) + (e.st.str || 0)) * D().edmg * lightMul() * (e.st.weak ? 0.75 : 1))); }
-
-function startTurn() {
-    B.turn++;
-    B.cardsThisTurn = 0;
-    B.energy = B.maxEnergy + (B.turn === 1 && has('banner') ? 1 : 0);
-    alive().forEach(h => { h.block = 0; ['taunt', 'thorns'].forEach(k => { if (h.st[k]) h.st[k]--; }); });
-    // 黑暗：每回合壓力上升
-    if (RUN.light < 25) alive().forEach(h => addStress(h, 3));
-    // 恐慌的隊員會抱怨
-    alive().forEach(h => { if (h.aff === 'panic' && Math.random() < 0.25) { const o = pick(alive().filter(x => x !== h)); if (o) { addStress(o, 5); toast(`😣 ${h.name} 一直抱怨，${o.name} 壓力 +5`, '#c084fc'); } } });
-    // 流血
-    alive().forEach(h => { if (h.st.bleed) { damageHero(h, h.st.bleed, true); h.st.bleed--; } });
-    drawCards(5);
+// 實際挨打的人：嘲諷 > 守護 > 原本目標
+function realTarget(t) {
+    const tank = alive().find(h => h.st.taunt);
+    if (tank) return tank;
+    if (t && t.guardBy) { const g = findUnit(t.guardBy); if (g && !g.dead) return g; }
+    return t;
+}
+async function enemyTurn(e) {
+    B.busy = true;
+    tickStart(e);
     renderBattle();
-    if (checkWipe()) return;
-}
-function drawCards(n) {
-    for (let i = 0; i < n; i++) {
-        if (!B.draw.length) { if (!B.discard.length) break; B.draw = shuffle(B.discard); B.discard = []; }
-        const c = B.draw.pop();
-        // 死掉隊員的牌抽到就直接移除
-        const C = CARDS[c.id];
-        if (C.c && !RUN.party.some(h => h.cls === C.c && !h.dead)) { B.exhaust.push(c); i--; continue; }
-        if (B.hand.length >= 10) { B.discard.push(c); continue; }
-        B.hand.push(c);
-    }
-}
-function ownerOf(card) { const C = CARDS[card.id]; return C.c ? RUN.party.find(h => h.cls === C.c && !h.dead) : null; }
-function cardCost(card) {
-    const C = CARDS[card.id];
-    let cost = C.cost;
-    const o = ownerOf(card);
-    if (o && o.aff === 'panic') cost++;
-    if (has('boots') && B.turn === 1 && B.cardsThisTurn === 0) cost--;
-    return Math.max(0, cost);
-}
-function whyNot(card) {
-    const C = CARDS[card.id];
-    if (C.type === 'curse') return '這張不能打出';
-    const o = ownerOf(card);
-    if (C.c && !o) return '這位隊員已經倒下';
-    if (cardCost(card) > B.energy) return '能量不夠';
-    if (C.rank && o && !C.rank.includes(o.rank)) return `${o.name}要站第 ${C.rank.join('、')} 排才能用`;
-    if (C.reach === 'melee' && !liveEnemies().some(e => e.rank <= 2)) return '近戰打不到';
-    return null;
-}
-function validTargets(card) {
-    const C = CARDS[card.id];
-    if (C.tgt === 'enemy') return liveEnemies().filter(e => C.reach !== 'melee' || e.rank <= 2);
-    if (C.tgt === 'ally') return alive().filter(h => C.n !== '重整隊形' || h !== ownerOf(card));
-    return [];
-}
-function clickCard(idx) {
-    if (!B || B.busy) return;
-    const card = B.hand[idx];
-    if (!card) return;
-    if (B.sel === idx) { B.sel = null; renderBattle(); return; }
-    const why = whyNot(card);
-    if (why) { toast(why, '#94a3b8'); shakeEl(document.querySelector(`.card[data-i="${idx}"]`)); return; }
-    const C = CARDS[card.id];
-    if (C.tgt === 'enemy' || C.tgt === 'ally') {
-        const vt = validTargets(card);
-        if (vt.length === 1 && C.tgt === 'enemy' && liveEnemies().length === 1) { playCard(idx, vt[0]); return; }
-        if (!vt.length) { toast('沒有可以選的目標', '#94a3b8'); return; }
-        B.sel = idx; SFX.card(); renderBattle(); return;
-    }
-    playCard(idx, null);
-}
-function clickUnit(kind, uid) {
-    if (!B || B.busy || B.sel == null) return;
-    const card = B.hand[B.sel];
-    const vt = validTargets(card);
-    const t = vt.find(x => x.uid === uid);
-    if (!t) { toast(CARDS[card.id].tgt === 'enemy' ? '選一個發亮的敵人' : '選一位發亮的隊友', '#94a3b8'); return; }
-    playCard(B.sel, t);
-}
-async function playCard(idx, target) {
-    const card = B.hand[idx], C = CARDS[card.id], me = ownerOf(card);
-    B.busy = true; B.sel = null;
-    B.energy -= cardCost(card);
-    B.cardsThisTurn++;
-    B.hand.splice(idx, 1);
-    SFX.card();
-    const X = makeCtx(me, target, C);
-    renderBattle();
-    if (me && (C.type === 'atk')) await lunge(heroEl(me), 1);
-    C.fx(X, card.up);
-    await X.done();
-    (C.ex ? B.exhaust : B.discard).push(card);
+    if (e.hp <= 0) { await wait(300); nextTurn(); return; }
+    if (e.st.stun) { e.st.stun = 0; fxText(unitEl(e), '💫 暈眩', '#fde047', 26); await wait(600); tickEnd(e); rollIntent(e); renderBattle(); nextTurn(); return; }
+    await wait(350);
+    const it = e.intent;
+    if (!it) rollIntent(e);
+    await enemyAct(e, e.intent);
+    tickEnd(e);
+    if (!B) return;
+    if (e.hp > 0) rollIntent(e);
     reRank();
-    renderBattle();
-    B.busy = false;
-    if (!liveEnemies().length) { await wait(500); winBattle(); return; }
-    checkWipe();
-}
-function makeCtx(me, target, C) {
-    const jobs = [];
-    const atkBonus = (me ? (me.st.str || 0) : 0) + (has('whetstone') ? 1 : 0);
-    const X = {
-        me, target,
-        party: () => alive(),
-        hit(d, raw) { if (!X.target || X.target.hp <= 0) return; damageEnemy(X.target, calcHit(d, X.target)); },
-        hitAll(d) { liveEnemies().forEach(e => damageEnemy(e, calcHit(d, e))); },
-        hitRandom(d, n) { for (let k = 0; k < n; k++) { const L = liveEnemies(); if (!L.length) break; const e = pick(L); damageEnemy(e, calcHit(d, e)); } },
-        block(h, n) { if (!h || h.dead) return; h.block += n; fxText(unitEl(h), `🛡️+${n}`, '#7dd3fc', 24); SFX.block(); },
-        apply(t, k, n) { if (!t) return; t.st[k] = (t.st[k] || 0) + n; fxText(unitEl(t), ST_NAME[k] + (n > 0 ? `+${n}` : n), '#fbbf24', 20); },
-        stressAll(v) { alive().forEach(h => addStress(h, v)); },
-        stress(h, v) { addStress(h, v); },
-        heal(h, n) { healHero(h, n); },
-        moveTo(h, r) { const L = alive().filter(x => x !== h); L.splice(r - 1, 0, h); L.forEach((x, i) => x.rank = i + 1); },
-        swap(a, b) { if (!a || !b || a === b) return; const t = a.rank; a.rank = b.rank; b.rank = t; },
-        draw(n) { drawCards(n); },
-        gainEnergy(n) { B.energy += n; },
-        light(n) { RUN.light = clamp(RUN.light + n, 0, 100); toast(`🔥 火光 +${n}`, '#fbbf24'); },
-        done: () => wait(350)
-    };
-    function calcHit(d, e) {
-        let v = d + (C.type === 'atk' ? atkBonus : 0);
-        if (me && me.st.weak) v *= 0.75;
-        if (e.st.vuln) v *= 1.5;
-        return Math.max(0, Math.floor(v));
-    }
-    return X;
-}
-function damageEnemy(e, dmg) {
-    const ab = Math.min(e.block, dmg);
-    e.block -= ab; dmg -= ab;
-    e.hp = Math.max(0, e.hp - dmg);
-    const el = unitEl(e);
-    flashEl(el);
-    fxText(el, dmg ? `−${dmg}` : '🛡️', dmg ? '#f87171' : '#7dd3fc', 34);
-    SFX.hit();
-    if (e.hp <= 0) {
-        RUN.kills++;
-        if (el) el.classList.add('dying');
-        if (e.elite || e.boss) alive().forEach(h => addStress(h, -10));
-    }
-}
-function healHero(h, n) {
-    if (!h || h.dead) return;
-    const before = h.hp;
-    h.hp = Math.min(h.maxHp, h.hp + n);
-    if (h.hp > 0 && h.door) { h.door = false; toast(`💚 ${h.name} 脫離瀕死了！`, '#4ade80'); }
-    fxText(heroEl(h), `+${h.hp - before}`, '#4ade80', 28);
-    SFX.heal();
-}
-// 隊員受傷：瀕死（黑暗地牢）→ 再被打有機率死亡
-function damageHero(h, dmg, noBlock) {
-    if (h.dead) return 0;
-    if (!noBlock) { const ab = Math.min(h.block, dmg); h.block -= ab; dmg -= ab; }
-    if (h.st.vuln && !noBlock) dmg = Math.floor(dmg * 1.5);
-    const el = heroEl(h);
-    if (dmg <= 0) { fxText(el, '🛡️ 擋下', '#7dd3fc', 26); SFX.block(); return 0; }
-    flashEl(el);
-    fxText(el, `−${dmg}`, '#f87171', 32);
-    SFX.hit();
-    if (h.door) {
-        const chance = D().death * (has('ironheart') ? 0.5 : 1);
-        if (Math.random() < chance) { killHero(h); return dmg; }
-        fxText(el, '撐住了！', '#fde047', 22);
-        addStress(h, 5);
-        return dmg;
-    }
-    h.hp -= dmg;
-    if (h.hp <= 0) {
-        h.hp = 0; h.door = true;
-        SFX.door();
-        toast(`💀 ${h.name} 倒在瀕死邊緣！快治療他，再被打可能會死`, '#f43f5e');
-        addStress(h, 15);
-    }
-    return dmg;
-}
-function killHero(h) {
-    if (has('phoenix') && !RUN.phoenixUsed) {
-        RUN.phoenixUsed = true; h.door = false; h.hp = 1;
-        toast(`🪶 鳳凰之羽燃燒了！${h.name} 撐了下來`, '#fde047');
-        return;
-    }
-    h.dead = true; h.door = false; h.hp = 0;
-    toast(`⚰️ ${h.name} 陣亡了……`, '#f43f5e');
-    SFX.bad();
-    alive().forEach(o => addStress(o, 20));
-    reRank();
-}
-
-async function endTurn() {
-    if (!B || B.busy) return;
-    B.busy = true; B.sel = null;
-    // 手上的「恐懼」
-    B.hand.filter(c => c.id === 'dread').forEach(() => { const h = pick(alive()); if (h) addStress(h, 5); });
-    B.discard.push(...B.hand); B.hand = [];
-    alive().forEach(h => { if (h.st.weak) h.st.weak--; });
     renderBattle();
     await wait(300);
-    // 敵人回合
-    liveEnemies().forEach(e => e.block = 0);
-    for (const e of liveEnemies()) {
-        if (!alive().length) break;
-        if (e.hp <= 0) continue;
-        if (e.st.stun) { e.st.stun = 0; fxText(unitEl(e), '💫 暈眩', '#fde047', 26); await wait(400); continue; }
-        if (e.st.bleed) { damageEnemy(e, e.st.bleed); e.st.bleed--; if (e.hp <= 0) continue; }
-        await enemyAct(e);
-        ['weak', 'vuln'].forEach(k => { if (e.st[k]) e.st[k]--; });
-        renderBattle();
-        if (checkWipe()) { B.busy = false; return; }
-        await wait(250);
-    }
-    alive().forEach(h => { if (h.st.vuln) h.st.vuln--; });
-    if (!liveEnemies().length) { B.busy = false; winBattle(); return; }
-    if (checkWipe()) { B.busy = false; return; }
-    liveEnemies().forEach(rollIntent);
-    B.busy = false;
-    startTurn();
+    nextTurn();
 }
-async function enemyAct(e) {
-    const it = e.intent;
-    if (!it) return;
+async function enemyAct(e, it) {
     const el = unitEl(e);
-    if (it.b) { e.block += Math.round(it.b * D().ehp); fxText(el, `🛡️+${Math.round(it.b * D().ehp)}`, '#7dd3fc', 26); SFX.block(); }
+    showSkillName(e, it.n);
+    if (it.b) { const b = Math.round(it.b * D().ehp); e.block += b; fxText(el, `🛡️+${b}`, '#7dd3fc', 26); SFX.block(); }
     if (it.str) { e.st.str = (e.st.str || 0) + it.str; fxText(el, `💪+${it.str}`, '#fbbf24', 24); }
-    if (it.summon) {
-        if (liveEnemies().length < 3) {
-            const n = mkEnemy(it.summon, 0.7); n.rank = 9; B.enemies.push(n); reRank(); rollIntent(n);
-            buildBattle(); toast(`${e.n} 召喚了 ${n.n}！`, '#f87171');
-        }
+    if (it.summon && liveEnemies().length < 4) {
+        const n = mkEnemy(it.summon, 0.7); n.rank = 9; B.enemies.push(n); reRank(); rollIntent(n);
+        toast(`${e.n} 召喚了 ${n.n}！`, '#f87171');
     }
     if (it.light) { RUN.light = clamp(RUN.light + it.light, 0, 100); toast(`🌑 ${e.n} 吞噬了火光（${it.light}）`, '#94a3b8'); }
     if (it.a != null || it.s != null) {
@@ -1093,8 +1434,7 @@ async function enemyAct(e) {
         if (it.targets === 'all') targets = alive();
         else {
             let t = RUN.party.find(h => h.uid === it.targets && !h.dead) || alive()[0];
-            const tank = alive().find(h => h.st.taunt);
-            if (tank) t = tank;
+            t = realTarget(t);
             targets = t ? [t] : [];
         }
         if (it.a != null) await lunge(el, -1);
@@ -1102,64 +1442,83 @@ async function enemyAct(e) {
             for (const t of targets) {
                 if (t.dead) continue;
                 if (it.a != null) {
-                    const d = intentDmg(e, it);
+                    let d = intentDmg(e, it);
+                    const crit = Math.random() < D().ecrit;
+                    if (crit) { d = Math.floor(d * 1.5); fxText(unitEl(t), '敵人爆擊！', '#f43f5e', 22); }
                     const got = damageHero(t, d);
-                    if (got > 0 && t.st.thorns) { damageEnemy(e, t.st.thorns); }
-                    if (got > 0 && !t.dead) addStress(t, 2);
+                    if (got > 0 && t.st.thorns) damageEnemy(e, t.st.thorns, '🌵');
+                    if (got > 0 && !t.dead) addStress(t, crit ? 10 : 2);
                 }
                 if (it.s) { addStress(t, Math.round(it.s * (D().edmg > 1 ? 1.15 : D().edmg < 1 ? 0.8 : 1))); SFX.stress(); }
-                if (it.bleed) t.st.bleed = (t.st.bleed || 0) + it.bleed;
-                if (it.weak) t.st.weak = (t.st.weak || 0) + it.weak;
-                if (it.vuln) t.st.vuln = (t.st.vuln || 0) + it.vuln + 1;
+                if (it.bleed && !t.dead) t.st.bleed = (t.st.bleed || 0) + it.bleed;
+                if (it.weak && !t.dead) t.st.weak = (t.st.weak || 0) + it.weak;
+                if (it.vuln && !t.dead) t.st.vuln = (t.st.vuln || 0) + it.vuln + 1;
             }
             if ((it.hits || 1) > 1) await wait(200);
         }
     }
     reRank();
     renderBattle();
-    await wait(300);
+    await wait(250);
 }
 function checkWipe() {
     if (alive().length) return false;
-    B.busy = true;
+    if (B.over) return true;
+    B.busy = true; B.over = true;
     setTimeout(loseBattle, FAST ? 0 : 900);
     return true;
 }
 
-async function winBattle() {
+// ---------- 戰鬥結束 ----------
+function winBattle() {
     if (!B || B.won) return;
     B.won = true;
     const kind = B.kind;
     SFX.win();
-    // 戰鬥後
-    RUN.party.forEach(h => { h.block = 0; h.st = {}; });
+    RUN.party.forEach(h => { h.block = 0; h.st = {}; h.guardBy = null; });
     if (has('flask')) alive().forEach(h => { h.hp = Math.min(h.maxHp, h.hp + 4); if (h.hp > 0) h.door = false; });
     if (has('beads')) alive().forEach(h => addStress(h, -8));
-    const souls = gainSouls(kind === 'boss' ? 120 : kind === 'elite' ? 60 : 16 + rand(12) + B.enemies.length * 4);
+    const souls = gainSouls(kind === 'boss' ? 120 : kind === 'elite' ? 60 : 14 + rand(10) + B.enemies.length * 5);
     const relic = kind === 'elite' || kind === 'boss' ? grantRelic(RUN) : null;
-    const cards = rollCards(RUN, 3);
     B = null;
     RUN.pending = null;
     saveRun();
-    showScreen('map');
-    renderMap();
-    let html = `<h2>${kind === 'boss' ? '👑 擊敗魔王！' : kind === 'elite' ? '💀 擊敗菁英！' : '⚔️ 勝利！'}</h2>
+    showMap();
+    // 三選一獎勵：升級技能／學新招／補給
+    const choices = [];
+    const up = shuffle(upgradeOptions(RUN)).slice(0, 2), lr = shuffle(learnOptions(RUN))[0];
+    up.forEach(x => choices.push({ kind: 'up', uid: x.h.uid, k: x.k }));
+    if (lr) choices.push({ kind: 'learn', uid: lr.h.uid, k: lr.k });
+    const it1 = pick(ITEM_KEYS), it2 = pick(ITEM_KEYS);
+    choices.push({ kind: 'items', a: it1, b: it2 });
+    window.__rw = shuffle(choices).slice(0, 3);
+    showModal(`<h2>${kind === 'boss' ? '👑 擊敗魔王！' : kind === 'elite' ? '💀 擊敗菁英！' : '⚔️ 勝利！'}</h2>
         <p>獲得 <b class="gold">${souls}</b> 魂火${relic ? `，以及遺物 ${RELICS[relic].i} <b>${RELICS[relic].n}</b>：${RELICS[relic].d}` : ''}</p>
-        <p class="sub">選一張新卡牌加入牌組：</p><div class="cardrow">${cards.map(id => cardHTML({ id, up: false }, `pickReward('${id}')`)).join('')}</div>
-        <div class="btns"><button class="btn gray" onclick="pickReward(null)">不拿，跳過</button></div>`;
-    showModal(html);
+        <p class="sub">選一個獎勵：</p>
+        <div class="opts">${window.__rw.map((c, i) => `<button class="opt" onclick="pickReward(${i})">${rewardHTML(c)}</button>`).join('')}</div>
+        <div class="btns"><button class="btn gray" onclick="pickReward(-1)">都不要</button></div>`);
 }
-function pickReward(id) {
-    if (id) { RUN.deck.push({ uid: UID++, id, up: false }); SFX.coin(); toast(`🃏 ${CARDS[id].n} 加入牌組`, '#a5f3fc'); }
+function rewardHTML(c) {
+    if (c.kind === 'items') return `<b>🎒 補給：${ITEMS[c.a].i}${ITEMS[c.a].n} ＋ ${ITEMS[c.b].i}${ITEMS[c.b].n}</b><span>${ITEMS[c.a].d}；${ITEMS[c.b].d}</span>`;
+    const h = findUnit(c.uid), sk = SKILLS[h.cls][c.k], lv = c.kind === 'up' ? h.skills[c.k] + 1 : 1;
+    return `<b>${c.kind === 'up' ? '📈 升級' : '📖 學新招'}：<span style="color:${CLASSES[h.cls].color}">${h.name}</span>「${sk.n}」${c.kind === 'up' ? ` Lv${lv - 1} → Lv${lv}` : ''}</b>
+        <span>${skillText(h.cls, c.k, lv)}（站 ${sk.use.join('·')} 排${sk.tr ? `，打 ${sk.tr.join('·')} 排` : ''}）</span>`;
+}
+function pickReward(i) {
+    const c = window.__rw[i];
+    if (c) {
+        if (c.kind === 'items') { addItem(c.a); addItem(c.b); toast('🎒 補給品收進背包', '#a5f3fc'); }
+        else { const h = findUnit(c.uid); toast(c.kind === 'up' ? doUpgrade(h, c.k) : doLearn(h, c.k), '#a5f3fc'); }
+        SFX.coin();
+    }
     closeModal();
     afterNode();
 }
 function afterNode() {
     RUN.pending = null;
     saveRun();
-    // 打完魔王 → 下一幕或通關
     if (RUN.pos && RUN.pos.r === MAP_ROWS) {
-        if (RUN.act + 1 >= ACTS.length) { winRun(); return; }
+        if (RUN.act + 1 >= ACTS.length) { endRun(true); return; }
         RUN.act++;
         RUN.map = genMap(RUN.act);
         RUN.pos = null;
@@ -1173,6 +1532,7 @@ function afterNode() {
     showMap();
 }
 function loseBattle() {
+    if (!B) return;
     if (D().revive && !RUN.reviveUsed[RUN.act]) {
         RUN.reviveUsed[RUN.act] = true;
         RUN.party.forEach(h => { h.dead = false; h.door = false; h.hp = Math.ceil(h.maxHp / 2); h.stress = Math.min(h.stress, 50); h.aff = null; h.st = {}; h.block = 0; });
@@ -1195,79 +1555,79 @@ function endRun(win) {
     else if (!win) META.stain = null;
     saveMeta();
     const R = RUN;
+    window.__lastDead = R.party.filter(h => h.dead).length;
     RUN = null; B = null; saveRun();
     showScreen('title'); renderTitle();
     showModal(win
         ? `<h2>🏆 你們登上了塔頂！</h2><p>永夜之主被打倒，燭火深塔重新被光照亮。</p><p>走了 ${R.floor} 格、打倒 ${R.kills} 隻怪物。</p><p>獲得 <b class="gold">${embers}</b> 餘燼（可以在餘燼祭壇解鎖永久強化）。</p><div class="btns"><button class="btn gold" onclick="closeModal()">好</button></div>`
         : `<h2>⚰️ 全隊覆滅</h2><p>${ACTS[R.act].name}・第 ${R.pos ? R.pos.r + 1 : 1} 層</p>${META.stain ? `<p>🩸 你們身上的 <b class="gold">${META.stain.souls}</b> 魂火掉在這裡了。下次冒險走到同一層就能撿回來——再倒下就沒了。</p>` : ''}<p>獲得 <b class="gold">${embers}</b> 餘燼。</p><div class="btns"><button class="btn gold" onclick="closeModal()">再挑戰一次</button></div>`);
 }
-function winRun() { endRun(true); }
 
 // =====================================================================
-//  營火、商人、事件、移除／升級卡牌
+//  營火、商人、事件
 // =====================================================================
 function showRest() {
     showMap();
-    const healPct = RUN.diff === 'hard' ? 0.2 : 0.3;
+    const healPct = RUN.diff === 'hard' ? 0.25 : 0.35;
     showModal(`<h2>🔥 營火</h2><p>溫暖的營火驅走了黑暗。選一件事做：</p>
         <div class="opts">
             <button class="opt" onclick="restDo('rest')"><b>😴 休息</b><span>全隊回 ${Math.round(healPct * 100)}% 血、壓力 −15，救起瀕死的人</span></button>
-            <button class="opt" onclick="restDo('forge')"><b>⚒️ 鍛造</b><span>升級一張卡牌（效果變強）</span></button>
-            <button class="opt" onclick="restDo('kindle')"><b>🔥 添柴</b><span>火光 +60</span></button>
+            <button class="opt" onclick="restDo('forge')" ${upgradeOptions(RUN).length ? '' : 'disabled'}><b>⚔️ 修練</b><span>挑一招升一級</span></button>
+            <button class="opt" onclick="restDo('kindle')"><b>🔥 添柴</b><span>火光 +60，再拿一支火把</span></button>
             <button class="opt" onclick="restDo('talk')"><b>💬 談心</b><span>全隊壓力 −30，解除恐慌</span></button>
-        </div>`);
+        </div><p class="sub">（離開營火前，也可以按上面的「👥 隊伍」調整站位和技能）</p>`);
     SFX.fire();
 }
 function restDo(k) {
-    const healPct = RUN.diff === 'hard' ? 0.2 : 0.3;
+    const healPct = RUN.diff === 'hard' ? 0.25 : 0.35;
     closeModal();
     if (k === 'rest') { alive().forEach(h => { h.hp = Math.min(h.maxHp, h.hp + Math.ceil(h.maxHp * healPct)); if (h.hp > 0) h.door = false; addStress(h, -15); }); toast('😴 大家睡了一覺', '#4ade80'); }
-    if (k === 'kindle') { RUN.light = Math.min(100, RUN.light + 60); toast('🔥 火光變亮了', '#fbbf24'); }
+    if (k === 'kindle') { RUN.light = Math.min(100, RUN.light + 60); addItem('torch'); toast('🔥 火光變亮了', '#fbbf24'); }
     if (k === 'talk') { alive().forEach(h => { addStress(h, -30); if (h.stress < 50) h.aff = null; }); toast('💬 圍著營火聊了很久', '#a5b4fc'); }
-    if (k === 'forge') { openPickCard('⚒️ 選一張牌升級', c => !c.up && CARDS[c.id].type !== 'curse', c => { c.up = true; toast(`⚒️ ${CARDS[c.id].n}＋ 升級完成`, '#fde047'); afterNode(); }); return; }
+    if (k === 'forge') { openPickSkill('⚔️ 選一招修練', upgradeOptions(RUN), x => { toast(doUpgrade(x.h, x.k), '#fde047'); afterNode(); }); return; }
     afterNode();
 }
-function openPickCard(title, filter, onPick) {
-    const list = RUN.deck.filter(filter);
-    window.__pickCb = uid => { const c = RUN.deck.find(x => x.uid === uid); closeModal(); onPick(c); };
-    showModal(`<h2>${title}</h2><div class="cardgrid">${list.map(c => cardHTML(c, `__pickCb(${c.uid})`)).join('') || '<p>沒有可以選的牌</p>'}</div>
-        <div class="btns"><button class="btn gray" onclick="closeModal(); afterNode()">取消</button></div>`);
+function openPickSkill(title, list, onPick, onCancel) {
+    window.__ps = { list, onPick, onCancel };
+    showModal(`<h2>${title}</h2><div class="opts">${list.map((x, i) => `<button class="opt" onclick="__psPick(${i})"><b><span style="color:${CLASSES[x.h.cls].color}">${x.h.name}</span>「${SKILLS[x.h.cls][x.k].n}」 Lv${x.h.skills[x.k] || 0} → Lv${(x.h.skills[x.k] || 0) + 1}</b><span>${skillText(x.h.cls, x.k, (x.h.skills[x.k] || 0) + 1)}</span></button>`).join('') || '<p>沒有可以選的</p>'}</div>
+        <div class="btns"><button class="btn gray" onclick="__psCancel()">取消</button></div>`);
 }
-function openRemoveCard(R, title) {
-    setTimeout(() => openPickCard(`${title}：選一張牌丟掉`, () => true, c => { R.deck = R.deck.filter(x => x !== c); toast(`🗑️ 丟掉了 ${CARDS[c.id].n}`, '#94a3b8'); afterNode(); }), 50);
-}
+function __psPick(i) { const P = window.__ps; closeModal(); P.onPick(P.list[i]); }
+function __psCancel() { const P = window.__ps; closeModal(); (P.onCancel || afterNode)(); }
+
 function showShop() {
     showMap();
-    const cards = rollCards(RUN, 3).map(id => ({ id, price: [0, 45, 70, 110][CARDS[id].r] + rand(10) }));
     const relicPool = RELIC_KEYS.filter(k => !RUN.relics.includes(k));
-    const relic = relicPool.length ? pick(relicPool) : null;
-    RUN.shop = { cards, relic, relicPrice: 130 + rand(30), removed: false, sold: [] };
+    const up = shuffle(upgradeOptions(RUN)).slice(0, 2).map(x => ({ uid: x.h.uid, k: x.k, price: 55 + rand(15) }));
+    const lr = shuffle(learnOptions(RUN)).slice(0, 1).map(x => ({ uid: x.h.uid, k: x.k, price: 80 + rand(20) }));
+    RUN.shop = { relic: relicPool.length ? pick(relicPool) : null, relicPrice: 130 + rand(30), up, lr, sold: [] };
     renderShop();
 }
 function renderShop() {
     const S = RUN.shop;
+    const skillBtn = (x, kind, i) => {
+        const h = findUnit(x.uid), sk = SKILLS[h.cls][x.k], lv = kind === 'up' ? h.skills[x.k] + 1 : 1, id = kind + i;
+        if (S.sold.includes(id)) return '';
+        return `<button class="opt" onclick="shopBuy('${kind}', ${i})"><b>${kind === 'up' ? '📈 修練' : '📖 新招'}：<span style="color:${CLASSES[h.cls].color}">${h.name}</span>「${sk.n}」${kind === 'up' ? ' Lv' + lv : ''}　<span class="gold">${x.price}</span></b><span>${skillText(h.cls, x.k, lv)}</span></button>`;
+    };
     showModal(`<h2>🛒 流浪商人 <span class="gold right">魂火 ${RUN.souls}</span></h2>
-        <div class="cardrow">${S.cards.map((x, i) => S.sold.includes(i) ? '<div class="card sold">已售出</div>' : `<div class="shopwrap">${cardHTML({ id: x.id, up: false }, `shopBuy('card', ${i})`)}<div class="price">${x.price} 魂火</div></div>`).join('')}</div>
         <div class="opts">
+            ${S.up.map((x, i) => skillBtn(x, 'up', i)).join('')}${S.lr.map((x, i) => skillBtn(x, 'lr', i)).join('')}
             ${S.relic && !S.sold.includes('r') ? `<button class="opt" onclick="shopBuy('relic')"><b>${RELICS[S.relic].i} ${RELICS[S.relic].n}　<span class="gold">${S.relicPrice}</span></b><span>${RELICS[S.relic].d}</span></button>` : ''}
-            <button class="opt" onclick="shopBuy('remove')" ${S.removed ? 'disabled' : ''}><b>🗑️ 丟掉一張牌　<span class="gold">60</span></b><span>牌組越精簡，越容易抽到好牌</span></button>
-            <button class="opt" onclick="shopBuy('torch')"><b>🔥 火把　<span class="gold">30</span></b><span>火光 +50</span></button>
-            <button class="opt" onclick="shopBuy('tonic')"><b>🍵 安神茶　<span class="gold">40</span></b><span>全隊壓力 −25</span></button>
         </div>
+        <p class="sub">補給品（背包：${ITEM_KEYS.map(k => `${ITEMS[k].i}${RUN.items[k] || 0}`).join('　')}）</p>
+        <div class="itemrow">${ITEM_KEYS.map(k => `<button class="opt small" onclick="shopBuy('item','${k}')"><b>${ITEMS[k].i} ${ITEMS[k].n} <span class="gold">${ITEMS[k].price}</span></b><span>${ITEMS[k].d}</span></button>`).join('')}</div>
         <div class="btns"><button class="btn gold" onclick="closeModal(); afterNode()">離開商店</button></div>`);
 }
 function shopBuy(k, i) {
     const S = RUN.shop;
     const pay = n => { if (RUN.souls < n) { toast('魂火不夠', '#f87171'); return false; } RUN.souls -= n; SFX.coin(); return true; };
-    if (k === 'card') { if (S.sold.includes(i) || !pay(S.cards[i].price)) return; RUN.deck.push({ uid: UID++, id: S.cards[i].id, up: false }); S.sold.push(i); }
-    if (k === 'relic') { if (!pay(S.relicPrice)) return; RUN.relics.push(S.relic); S.sold.push('r'); }
-    if (k === 'torch') { if (!pay(30)) return; RUN.light = Math.min(100, RUN.light + 50); }
-    if (k === 'tonic') { if (!pay(40)) return; alive().forEach(h => addStress(h, -25)); }
-    if (k === 'remove') {
-        if (S.removed || RUN.souls < 60) { if (!S.removed) toast('魂火不夠', '#f87171'); return; }
-        openPickCard('🗑️ 選一張牌丟掉', () => true, c => { RUN.souls -= 60; S.removed = true; RUN.deck = RUN.deck.filter(x => x !== c); SFX.coin(); saveRun(); renderTop(); renderShop(); });
-        return;
+    if (k === 'up' || k === 'lr') {
+        const x = S[k][i]; if (S.sold.includes(k + i) || !pay(x.price)) return;
+        const h = findUnit(x.uid); toast(k === 'up' ? doUpgrade(h, x.k) : doLearn(h, x.k), '#a5f3fc'); S.sold.push(k + i);
     }
+    if (k === 'relic') { if (!pay(S.relicPrice)) return; RUN.relics.push(S.relic); S.sold.push('r'); }
+    if (k === 'item') { if (!pay(ITEMS[i].price)) return; addItem(i); }
     saveRun(); renderTop(); renderShop();
 }
 function showEvent() {
@@ -1280,7 +1640,6 @@ function eventDo(i) {
     const o = window.__ev.o[i];
     if (o.need && !o.need(RUN)) return;
     const res = o.fx(RUN);
-    if (res === null) return;   // 交給後續畫面（例如丟牌）
     saveRun(); renderTop();
     showModal(`<h2>${window.__ev.i} ${window.__ev.t}</h2><p>${res}</p><div class="btns"><button class="btn gold" onclick="closeModal(); afterNode()">繼續</button></div>`);
 }
@@ -1288,9 +1647,9 @@ function eventDo(i) {
 // =====================================================================
 //  畫面
 // =====================================================================
-const ST_NAME = { weak: '虛弱', vuln: '易傷', str: '力量', bleed: '流血', stun: '暈眩', thorns: '反彈', taunt: '嘲諷' };
-const ST_ICON = { weak: '🥀', vuln: '💔', str: '💪', bleed: '🩸', stun: '💫', thorns: '🌵', taunt: '🎯' };
-const ST_DESC = { weak: '造成的傷害 −25%', vuln: '受到的傷害 +50%', str: '攻擊傷害增加', bleed: '每回合開始扣血', stun: '跳過下次行動', thorns: '被打時反彈傷害', taunt: '敵人的單體攻擊都打他' };
+const ST_NAME = { weak: '虛弱', vuln: '易傷', str: '力量', bleed: '流血', stun: '暈眩', thorns: '反彈', taunt: '嘲諷', mark: '標記', guard: '被守護' };
+const ST_ICON = { weak: '🥀', vuln: '💔', str: '💪', bleed: '🩸', stun: '💫', thorns: '🌵', taunt: '🎯', mark: '🎯', guard: '🛡️' };
+const ST_DESC = { weak: '造成的傷害 −25%', vuln: '受到的傷害 +50%', str: '攻擊傷害增加', bleed: '每回合開始扣血', stun: '跳過下次行動', thorns: '被打時反彈傷害', taunt: '敵人的單體攻擊都打他', mark: '受到的傷害 +30%', guard: '有盾衛幫他擋攻擊' };
 
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === 'scr-' + id));
@@ -1320,58 +1679,37 @@ function renderTop() {
             ${L >= 50 ? '明亮' : L >= 25 ? '昏暗' : '漆黑'} ${L}
         </span>
         <span class="relics">${RUN.relics.map(k => `<button class="relic" title="${RELICS[k].n}：${RELICS[k].d}" onclick="toast('${RELICS[k].i} ${RELICS[k].n}：${RELICS[k].d}','#fde047')">${RELICS[k].i}</button>`).join('')}</span>
-        <button class="pill btnlike" onclick="showDeck()" title="查看牌組">🃏 ${RUN.deck.length}</button>`;
+        ${B ? '' : `<button class="pill btnlike" onclick="showParty()" title="調整站位和技能">👥 隊伍</button>`}`;
 }
 
-// ---------- 卡牌 ----------
-function cardHTML(card, onclick, extra = '') {
-    const C = CARDS[card.id];
-    const cls = C.c ? CLASSES[C.c] : null;
-    const color = C.type === 'curse' ? '#6b21a8' : cls ? cls.color : '#94a3b8';
-    const cost = B && B.hand.includes(card) ? cardCost(card) : C.cost;
-    const req = C.rank ? `站 ${C.rank.join('·')} 排` : '';
-    const reach = C.reach === 'melee' ? '近戰' : '';
-    const typeN = { atk: '攻擊', def: '防禦', skill: '技能', curse: '詛咒' }[C.type];
-    return `<button class="card t-${C.type} r${C.r}" style="--cc:${color}" onclick="${onclick || ''}" ${extra}>
-        ${C.cost >= 0 ? `<span class="cost${cost > C.cost ? ' up' : cost < C.cost ? ' down' : ''}">${cost}</span>` : ''}
-        <span class="who">${cls ? cls.name : C.type === 'curse' ? '詛咒' : '共用'}</span>
-        <span class="cname">${C.n}${card.up ? '＋' : ''}</span>
-        <span class="ctype">${typeN}${req || reach ? '・' + [req, reach].filter(Boolean).join('・') : ''}</span>
-        <span class="ctext">${C.t(card.up)}</span>
-    </button>`;
+// 站位小圓點：左邊 4→1 是自己這邊、右邊 1→4 是敵人那邊
+function pips(use, tr) {
+    const a = [4, 3, 2, 1].map(r => `<i class="${use.includes(r) ? 'u' : ''}"></i>`).join('');
+    const b = tr ? [1, 2, 3, 4].map(r => `<i class="${tr.includes(r) ? 't' : ''}"></i>`).join('') : '';
+    return `<span class="pips" title="黃點：要站的位置　紅點：打得到的敵人">${a}${tr ? '<em>|</em>' + b : ''}</span>`;
 }
-function showDeck() {
-    if (!RUN) return;
-    const sorted = RUN.deck.slice().sort((a, b) => (CARDS[a.id].c || 'z').localeCompare(CARDS[b.id].c || 'z') || CARDS[a.id].cost - CARDS[b.id].cost);
-    const extra = B ? `<p class="sub">抽牌堆 ${B.draw.length}・棄牌堆 ${B.discard.length}・已消耗 ${B.exhaust.length}</p>` : '';
-    const wasOpen = $('modal').classList.contains('on') ? $('modalBox').innerHTML : null;
-    window.__deckBack = wasOpen;
-    showModal(`<h2>🃏 牌組（${RUN.deck.length} 張）</h2>${extra}<div class="cardgrid">${sorted.map(c => cardHTML(c, '')).join('')}</div>
-        <div class="btns"><button class="btn gold" onclick="deckBack()">關閉</button></div>`, true);
-}
-function deckBack() { if (window.__deckBack) { $('modalBox').innerHTML = window.__deckBack; $('modalBox').classList.remove('wide'); } else closeModal(); }
 
 // =====================================================================
 //  標題畫面：選難度、選隊伍
 // =====================================================================
 let pickDiff = localStorage.getItem('cft_diff') || 'normal';
-let pickCls = (() => { try { const p = JSON.parse(localStorage.getItem('cft_party') || 'null'); if (Array.isArray(p) && p.length === 3) return p; } catch (e) {} return ['knight', 'warrior', 'healer']; })();
+let pickCls = (() => { try { const p = JSON.parse(localStorage.getItem('cft_party4') || 'null'); if (Array.isArray(p) && p.length === 4 && p.every(k => CLASSES[k])) return p; } catch (e) {} return ['knight', 'warrior', 'mage', 'healer']; })();
 function renderTitle() {
     const saved = loadRun();
     const order = partyOrder();
     $('scr-title').innerHTML = `
     <div class="title-wrap">
-        <div class="logo"><div class="flame"></div><h1>燭火深塔</h1><p>帶著三位冒險者，守住火光，爬上永夜之塔</p></div>
+        <div class="logo"><div class="flame"></div><h1>燭火深塔</h1><p>帶著四位冒險者，守住火光，爬上永夜之塔</p></div>
         ${saved ? `<div class="panel cont"><b>有一趟冒險還沒結束</b><span>${DIFF[saved.diff].n}・${ACTS[saved.act].name}・走了 ${saved.floor} 格</span>
             <div class="btns"><button class="btn gold" onclick="continueRun()">▶ 繼續冒險</button><button class="btn gray" onclick="abandonRun()">放棄這趟</button></div></div>` : ''}
         <div class="panel">
             <h3>① 難度</h3>
             <div class="diffs">${Object.entries(DIFF).map(([k, d]) => `<button class="diff ${k === pickDiff ? 'on' : ''}" onclick="setDiff('${k}')"><b>${d.n}</b><span>${diffDesc(k)}</span></button>`).join('')}</div>
-            <h3>② 選三位隊員 <small>（依照前排→後排自動站好）</small></h3>
+            <h3>② 選四位隊員 <small>（已選 ${pickCls.length}/4，出發後可以在「👥 隊伍」調整站位）</small></h3>
             <div class="classes">${CLASS_KEYS.map(k => { const C = CLASSES[k], on = pickCls.includes(k); return `<button class="cls ${on ? 'on' : ''}" style="--cc:${C.color}" onclick="toggleCls('${k}')">
-                <img src="${PIXEL.hero(k)}" alt=""><b>${C.name}</b><span>❤️ ${C.hp}・${C.home === 1 ? '前排' : '後排'}</span><small>${C.desc}</small></button>`; }).join('')}</div>
+                <img src="${PIXEL.hero(k)}" alt=""><b>${C.name}</b><span>❤️ ${C.hp}・⚡${C.spd}・適合第 ${C.home} 排</span><small>${C.desc}</small></button>`; }).join('')}</div>
             <div class="lineup">${order.map((k, i) => `<span><em>${i + 1}</em>${CLASSES[k].name}</span>`).join('<i>→</i>')}<span class="sub">（第 1 排最前面）</span></div>
-            <div class="btns"><button class="btn gold big" onclick="startNew()" ${pickCls.length === 3 ? '' : 'disabled'}>🔥 點燃火把，出發！</button></div>
+            <div class="btns"><button class="btn gold big" onclick="startNew()" ${pickCls.length === 4 ? '' : 'disabled'}>🔥 點燃火把，出發！</button></div>
         </div>
         <div class="panel row3">
             <button class="btn gray" onclick="showHelp()">📖 怎麼玩</button>
@@ -1393,22 +1731,21 @@ function partyOrder() { return pickCls.slice().sort((a, b) => CLASSES[a].home - 
 function setDiff(k) { pickDiff = k; localStorage.setItem('cft_diff', k); SFX.card(); renderTitle(); }
 function toggleCls(k) {
     if (pickCls.includes(k)) pickCls = pickCls.filter(x => x !== k);
-    else { if (pickCls.length >= 3) pickCls.shift(); pickCls.push(k); }
+    else { if (pickCls.length >= 4) pickCls.shift(); pickCls.push(k); }
     SFX.card(); renderTitle();
 }
 function startNew() {
-    if (pickCls.length !== 3) return;
+    if (pickCls.length !== 4) return;
     if (loadRun() && !confirmBox('這會放棄還沒結束的那趟冒險，確定嗎？')) return;
-    localStorage.setItem('cft_party', JSON.stringify(pickCls));
+    localStorage.setItem('cft_party4', JSON.stringify(pickCls));
     newRun(pickDiff, partyOrder());
-    showModal(`<h2>🕯️ ${ACTS[0].name}</h2><p>塔的最底層很暗。每走一格，火把就會變暗一點；在營火、商人或「火把」卡可以補回來。</p>
-        <p>點地圖上<b>發亮的格子</b>前進，最上面是魔王。</p><div class="btns"><button class="btn gold" onclick="closeModal()">出發</button></div>`);
+    showModal(`<h2>🕯️ ${ACTS[0].name}</h2><p>塔的最底層很暗。每走一格，火把就會變暗一點；營火、商人和背包裡的🔥火把可以補回來。</p>
+        <p>點地圖上<b>發亮的格子</b>前進，最上面是魔王。戰鬥時大家<b>照速度輪流行動</b>，輪到誰就幫他選一招。</p><div class="btns"><button class="btn gold" onclick="closeModal()">出發</button></div>`);
 }
 function confirmBox(msg) { return FAST ? true : window.confirm(msg); }
 function continueRun() {
     RUN = loadRun();
     if (!RUN) { renderTitle(); return; }
-    // 戰鬥中存檔 → 重新開始那一場
     const n = RUN.pos && (RUN.pos.r === MAP_ROWS ? RUN.map.boss : RUN.map.nodes[RUN.pos.r + ',' + RUN.pos.c]);
     const P = RUN.pending;
     if (n && (P === 'fight' || P === 'elite' || P === 'boss')) { startBattle(P); return; }
@@ -1440,16 +1777,59 @@ function showHelp() {
     showModal(`<h2>📖 怎麼玩</h2>
     <div class="help">
         <p><b>🗺️ 爬塔：</b>每一幕有一張路線圖，從下往上走，選你想走的路。⚔️戰鬥、💀菁英（有遺物）、❓事件、🔥營火、🛒商人、💎寶物，最上面是 👑魔王。總共兩幕。</p>
-        <p><b>🃏 出牌：</b>每回合 3 點能量、抽 5 張牌。每張牌屬於一位隊員，<b>那位隊員要活著、站在對的位置</b>才能用。近戰牌只打得到敵人的前兩排。</p>
-        <p><b>👉 看敵人頭上：</b>那是他下一步要做什麼、打誰。先擋傷害或先把他打倒！</p>
-        <p><b>🧍 站位：</b>第 1 排在最前面。劍士、盾衛適合前排；法師、祭司適合後排。隊員倒下後，後面的人會往前補。</p>
-        <p><b>💀 瀕死：</b>血量歸零不會馬上死，而是「瀕死」。這時再被打就可能真的陣亡（簡單模式不會）。快用治療把他救回來！</p>
-        <p><b>😨 壓力：</b>被打、看到隊友倒下、待在黑暗裡，壓力都會上升。壓力滿 100 時，可能<b>堅定意志</b>（變強），也可能<b>陷入恐慌</b>（他的牌變貴，牌組多一張「恐懼」）。壓力 200 會心臟病發作！</p>
-        <p><b>🔥 火光：</b>每走一格會變暗。火光越暗，敵人傷害越高；漆黑時每回合大家壓力都會上升。</p>
-        <p><b>🩸 魂火：</b>打倒敵人得到魂火，在商人買卡牌、遺物。全隊覆滅時魂火會掉在那一層，下次走到同一層可以撿回來。</p>
-        <p><b>🕯️ 餘燼：</b>每次冒險結束都會得到，可以在祭壇解鎖永久強化。</p>
-        <p class="sub">鍵盤：數字 1～9 出牌，E 或空白鍵結束回合，Esc 取消選擇。</p>
+        <p><b>⚡ 輪流行動：</b>戰鬥上方是行動順序，速度快的先動。輪到隊員時，從他的 4 招裡選一招，或是跟旁邊的人換位置。</p>
+        <p><b>🧍 站位最重要：</b>第 1 排在最前面。每一招下面有小圓點：<span class="pips"><i class="u"></i></span> 黃點是「要站在哪幾排才能用」，<span class="pips"><i class="t"></i></span> 紅點是「打得到敵人哪幾排」。站錯位置就不能用！</p>
+        <p><b>👉 看敵人頭上：</b>那是他下一步要做什麼、打誰。盾衛可以「守護」隊友或「嘲諷」把攻擊吸過來。</p>
+        <p><b>💀 瀕死：</b>血量歸零不會馬上死，而是「瀕死」。這時再被打就可能真的陣亡（簡單模式不會）。快治療他！</p>
+        <p><b>😨 壓力：</b>被打、看到隊友倒下、待在黑暗裡，壓力都會上升。壓力滿 100 時，可能<b>堅定意志</b>（每回合鼓舞全隊），也可能<b>陷入恐慌</b>（有時不聽指揮、拖累隊友）。壓力 200 會心臟病發作！</p>
+        <p><b>🔥 火光：</b>每走一格會變暗。越暗敵人傷害越高；漆黑時每輪大家壓力都會上升。</p>
+        <p><b>🎒 道具：</b>輪到任何隊員時都可以用背包裡的道具，<b>不算行動</b>。</p>
+        <p><b>📈 成長：</b>打贏可以升級技能或學新招（每人最多帶 4 招，在「👥 隊伍」裡換）。</p>
+        <p><b>🩸 魂火：</b>在商人買東西。全隊覆滅時魂火會掉在那一層，下次走到同一層可以撿回來。<b>🕯️ 餘燼</b>則可以在祭壇解鎖永久強化。</p>
+        <p class="sub">鍵盤：1～4 用技能，M 換位置，空白鍵休息，Esc 取消選擇。</p>
     </div><div class="btns"><button class="btn gold" onclick="closeModal()">知道了</button></div>`, true);
+}
+
+// =====================================================================
+//  隊伍：調整站位、換技能（戰鬥以外隨時可以）
+// =====================================================================
+function showParty() {
+    if (!RUN || B) return;
+    const H = RUN.party.slice().sort((a, b) => (a.dead - b.dead) || a.rank - b.rank);
+    showModal(`<h2>👥 隊伍</h2><p class="sub">用 ▲▼ 調整站位（第 1 排最前面）。點技能可以換上／換下，每人最多帶 4 招。</p>
+        <div class="partylist">${H.map(h => {
+            const C = CLASSES[h.cls];
+            return `<div class="prow ${h.dead ? 'dead' : ''}">
+                <div class="phead">
+                    <span class="rk">${h.dead ? '⚰️' : h.rank}</span><img src="${PIXEL.hero(h.cls)}" alt="">
+                    <div><b style="color:${C.color}">${h.name}</b>${h.door ? ' 💀' : ''}${h.virtue ? ' ✨' : ''}${h.aff ? ' 😱' : ''}<br><span class="sub">❤️ ${h.hp}/${h.maxHp}・😨 ${h.stress}・⚡${C.spd}</span></div>
+                    ${h.dead ? '' : `<span class="arrows"><button onclick="partyMove(${h.uid},-1)">▲</button><button onclick="partyMove(${h.uid},1)">▼</button></span>`}
+                </div>
+                <div class="pskills">${Object.keys(SKILLS[h.cls]).map(k => {
+                    const sk = SKILLS[h.cls][k], lv = h.skills[k];
+                    if (!lv) return `<span class="sk locked" title="還沒學會">🔒 ${sk.n}</span>`;
+                    const on = h.equip.includes(k);
+                    return `<button class="sk ${on ? 'on' : ''}" onclick="toggleEquip(${h.uid},'${k}')" title="${esc(skillText(h.cls, k, lv))}"><b>${sk.n}</b> <small>Lv${lv}</small>${pips(sk.use, sk.tr)}<span class="skd">${skillText(h.cls, k, lv)}</span></button>`;
+                }).join('')}</div>
+            </div>`;
+        }).join('')}</div>
+        <p class="sub">背包：${ITEM_KEYS.map(k => `${ITEMS[k].i}${ITEMS[k].n}×${RUN.items[k] || 0}`).join('　')}</p>
+        <div class="btns"><button class="btn gold" onclick="closeParty()">好了</button></div>`, true);
+}
+function closeParty() { closeModal(); saveRun(); if (document.body.dataset.screen === 'map') renderMap(); if (window.__afterParty) { const f = window.__afterParty; window.__afterParty = null; f(); } }
+function partyMove(uid, d) {
+    const h = RUN.party.find(x => x.uid === uid);
+    const L = alive(), i = L.indexOf(h), j = i + d;
+    if (j < 0 || j >= L.length) return;
+    [L[i], L[j]] = [L[j], L[i]];
+    L.forEach((x, idx) => x.rank = idx + 1);
+    SFX.card(); showParty();
+}
+function toggleEquip(uid, k) {
+    const h = RUN.party.find(x => x.uid === uid);
+    if (h.equip.includes(k)) { if (h.equip.length <= 1) { toast('至少要帶 1 招', '#94a3b8'); return; } h.equip = h.equip.filter(x => x !== k); }
+    else { if (h.equip.length >= 4) { toast('最多帶 4 招，先換下一招', '#94a3b8'); return; } h.equip.push(k); }
+    SFX.card(); showParty();
 }
 
 // =====================================================================
@@ -1481,16 +1861,15 @@ function renderMap() {
     $('scr-map').innerHTML = `
         <div class="mapside">
             <h2>${ACTS[RUN.act].name}</h2>
-            <div class="party-mini">${RUN.party.map(h => heroMini(h)).join('')}</div>
+            <div class="party-mini">${alive().concat(RUN.party.filter(h => h.dead)).map(h => heroMini(h)).join('')}</div>
+            <button class="btn gray small wide" onclick="showParty()">👥 站位與技能</button>
             <div class="legend">${Object.entries(NODE_INFO).map(([k, v]) => `<span>${v.i} ${v.n}</span>`).join('')}</div>
             <p class="sub">點發亮的格子前進。</p>
-            <button class="btn gray small" onclick="showHelp()">📖 怎麼玩</button>
         </div>
         <div class="mapscroll" id="mapScroll"><div class="mapwrap" style="height:${H}px">
             <svg class="maplines" width="100%" height="${H}">${lines}</svg>${nodes}
             <div class="bossname" style="top:${Y(MAP_ROWS) - 58}px">${ENEMIES[ACTS[RUN.act].boss[0]].n}</div>
         </div></div>`;
-    // 捲到目前位置
     const sc = $('mapScroll');
     const target = RUN.pos ? Y(RUN.pos.r) : Y(0);
     sc.scrollTop = Math.max(0, target - sc.clientHeight * 0.6);
@@ -1503,7 +1882,7 @@ function heroMini(h) {
     const C = CLASSES[h.cls];
     return `<div class="hmini ${h.dead ? 'dead' : ''} ${h.door ? 'door' : ''}">
         <img src="${PIXEL.hero(h.cls)}" alt="">
-        <div><b style="color:${C.color}">${h.name}</b>${h.dead ? ' ⚰️' : h.door ? ' 💀瀕死' : ''}${h.virtue ? ' ✨' : ''}${h.aff ? ' 😱' : ''}
+        <div><b style="color:${C.color}">${h.dead ? '' : h.rank + ' '}${h.name}</b>${h.dead ? ' ⚰️' : h.door ? ' 💀' : ''}${h.virtue ? ' ✨' : ''}${h.aff ? ' 😱' : ''}
         <div class="bar hp"><span style="width:${100 * h.hp / h.maxHp}%"></span><em>${h.hp}/${h.maxHp}</em></div>
         <div class="bar st"><span style="width:${h.stress / 2}%"></span><em>壓力 ${h.stress}</em></div></div>
     </div>`;
@@ -1514,84 +1893,98 @@ function heroMini(h) {
 // =====================================================================
 function buildBattle() {
     $('scr-battle').innerHTML = `
+        <div class="orderbar" id="orderBar"></div>
         <div class="arena" id="arena">
             <div class="side heroes" id="heroSide"></div>
             <div class="vs"></div>
             <div class="side enemies" id="enemySide"></div>
         </div>
         <div class="hint" id="hint"></div>
-        <div class="handbar">
-            <div class="energy" id="energy" title="能量"></div>
-            <div class="hand" id="hand"></div>
-            <div class="endwrap">
-                <button class="btn end" id="endBtn" onclick="endTurn()">結束回合<small>E</small></button>
-                <div class="piles"><span title="抽牌堆">📚 <b id="drawN"></b></span><span title="棄牌堆">🗑️ <b id="discN"></b></span></div>
-            </div>
-        </div>`;
-    $('scr-battle').classList.toggle('dark', RUN.light < 25);
+        <div class="actbar" id="actBar"></div>`;
 }
 function renderBattle() {
     if (!B) return;
     renderTop();
     $('scr-battle').classList.toggle('dark', RUN.light < 25);
     $('scr-battle').classList.toggle('dim', RUN.light >= 25 && RUN.light < 50);
-    const selCard = B.sel != null ? B.hand[B.sel] : null;
-    const vt = selCard ? validTargets(selCard) : [];
-    const owner = selCard ? ownerOf(selCard) : null;
-    // 隊員：第 1 排在最靠中間（右邊）
+    const cur = findUnit(B.cur);
+    const myTurn = cur && isHero(cur) && !B.busy;
+    // 可以選的目標
+    let tg = [];
+    if (myTurn && B.mode) {
+        if (B.mode.kind === 'skill') tg = skillTargets(cur, B.mode.k);
+        if (B.mode.kind === 'item') tg = alive();
+        if (B.mode.kind === 'move') tg = alive().filter(x => Math.abs(x.rank - cur.rank) === 1);
+    }
+    // 預覽：滑到技能上時，標出會打到誰
     const H = alive().slice().reverse();
-    $('heroSide').innerHTML = H.map(h => unitHTML(h, true, vt.includes(h), owner === h)).join('');
-    const E = liveEnemies();
-    $('enemySide').innerHTML = E.map(e => unitHTML(e, false, vt.includes(e))).join('');
-    // 手牌
-    $('hand').innerHTML = B.hand.map((c, i) => {
-        const why = whyNot(c);
-        return cardHTML(c, `clickCard(${i})`, `data-i="${i}" ${why ? `data-why="${esc(why)}"` : ''}`)
-            .replace('class="card', `class="card${why ? ' no' : ''}${B.sel === i ? ' sel' : ''}`);
-    }).join('') || '<div class="sub empty">手上沒有牌了</div>';
-    $('energy').innerHTML = `<b>${B.energy}</b><small>/${B.maxEnergy}</small>`;
-    $('drawN').textContent = B.draw.length;
-    $('discN').textContent = B.discard.length;
-    $('endBtn').disabled = B.busy;
-    const playable = B.hand.some(c => !whyNot(c));
-    $('endBtn').classList.toggle('pulse', !playable && !B.busy);
-    $('hint').innerHTML = selCard ? `👉 選擇${CARDS[selCard.id].tgt === 'enemy' ? '要打的敵人' : '要給的隊友'}（再點一次卡牌取消）`
-        : B.busy ? '' : RUN.light < 25 ? '🌑 太暗了！每回合全隊壓力 +3，敵人傷害 +25%' : '';
+    $('heroSide').innerHTML = H.map(h => unitHTML(h, tg.includes(h), B.cur === h.uid)).join('');
+    $('enemySide').innerHTML = liveEnemies().map(e => unitHTML(e, tg.includes(e), B.cur === e.uid)).join('');
+    // 行動順序
+    const upcoming = [B.cur, ...B.order].map(findUnit).filter(u => u && !u.dead && (isHero(u) || u.hp > 0));
+    $('orderBar').innerHTML = `<span class="olabel">第 ${B.round} 輪・行動順序</span>` + upcoming.slice(0, 9).map((u, i) =>
+        `<span class="ochip ${isHero(u) ? 'h' : 'e'} ${i === 0 ? 'now' : ''}" title="${isHero(u) ? u.name : u.n}"><img src="${unitImg(u)}" alt=""></span>`).join('');
+    // 下方行動列
+    if (myTurn) {
+        const C = CLASSES[cur.cls];
+        $('actBar').innerHTML = `
+            <div class="curwho"><img src="${PIXEL.hero(cur.cls)}" alt=""><div><b style="color:${C.color}">${cur.name}</b><span>第 ${cur.rank} 排・輪到你了</span></div></div>
+            <div class="skills">${cur.equip.map((k, i) => {
+                const sk = SKILLS[cur.cls][k], why = whyNotSkill(cur, k), sel = B.mode && B.mode.kind === 'skill' && B.mode.k === k;
+                return `<button class="skill ${why ? 'no' : ''} ${sel ? 'sel' : ''}" onclick="clickSkill('${k}')" title="${esc(why || '')}">
+                    <span class="kn">${i + 1}</span><b>${sk.n}</b><small>Lv${lvOf(cur, k)}</small>${pips(sk.use, sk.tr)}
+                    <span class="skd">${why ? '⛔ ' + why : skillText(cur.cls, k, lvOf(cur, k), cur)}</span></button>`;
+            }).join('')}</div>
+            <div class="side-acts">
+                <button class="btn gray small ${B.mode && B.mode.kind === 'move' ? 'sel' : ''}" onclick="clickMove()">🔄 換位置 <small>M</small></button>
+                <button class="btn gray small" onclick="clickPass()">💤 休息 <small>空白</small></button>
+                <div class="items">${ITEM_KEYS.map(k => `<button class="item ${B.mode && B.mode.kind === 'item' && B.mode.k === k ? 'sel' : ''}" onclick="clickItem('${k}')" ${RUN.items[k] > 0 ? '' : 'disabled'} title="${ITEMS[k].n}：${ITEMS[k].d}（不算行動）">${ITEMS[k].i}<b>${RUN.items[k] || 0}</b></button>`).join('')}</div>
+            </div>`;
+    } else {
+        $('actBar').innerHTML = `<div class="waiting">${cur ? (isHero(cur) ? `${cur.name} 行動中…` : `<b>${cur.n}</b> 的回合…`) : '準備戰鬥…'}</div>`;
+    }
+    const hint = !myTurn ? '' : B.mode ? (B.mode.kind === 'skill' ? '👉 點一個發亮的目標（再點一次技能取消）' : B.mode.kind === 'item' ? '👉 要給哪位隊友用？' : '👉 點旁邊的隊友交換位置（會用掉這回合）')
+        : RUN.light < 25 ? '🌑 太暗了！每輪全隊壓力 +3，敵人傷害 +25%' : '';
+    $('hint').innerHTML = hint;
 }
-function unitHTML(u, isHero, targetable, isOwner) {
-    const px = isHero ? PIXEL.hero(u.cls) : ENEMIES[u.key].px[0] === 'mob' ? PIXEL.mob(ENEMIES[u.key].px[1]) : PIXEL.boss(ENEMIES[u.key].px[1]);
+function unitImg(u) {
+    if (isHero(u)) return PIXEL.hero(u.cls);
+    const p = ENEMIES[u.key].px;
+    return p[0] === 'mob' ? PIXEL.mob(p[1]) : PIXEL.boss(p[1]);
+}
+function unitHTML(u, targetable, isCur) {
+    const hero = isHero(u);
     const sts = Object.entries(u.st).filter(([k, v]) => v > 0).map(([k, v]) => `<span class="st" title="${ST_NAME[k]}：${ST_DESC[k]}">${ST_ICON[k]}${v}</span>`).join('');
     let intent = '';
-    if (!isHero && u.intent) {
+    if (!hero && u.intent) {
         const it = u.intent;
         const parts = [];
         if (it.a != null) parts.push(`⚔️${intentDmg(u, it)}${it.hits > 1 ? '×' + it.hits : ''}`);
         if (it.s) parts.push(`😨${it.s}`);
         if (it.b) parts.push(`🛡️`);
         if (it.str) parts.push(`💪`);
-        if (it.summon) parts.push(`📯召喚`);
+        if (it.summon) parts.push(`📯`);
         if (it.light) parts.push(`🌑`);
         if (it.bleed || it.weak || it.vuln) parts.push('☠️');
         let tgt = '';
         if (it.targets === 'all') tgt = '全體';
-        else if (it.targets) { const t = RUN.party.find(h => h.uid === it.targets && !h.dead); const tank = alive().find(h => h.st.taunt); tgt = (tank || t) ? '→' + (tank || t).name : ''; }
+        else if (it.targets) { const t = realTarget(RUN.party.find(h => h.uid === it.targets && !h.dead)); tgt = t ? '→' + t.name : ''; }
         intent = `<div class="intent ${it.a != null ? 'atk' : it.s ? 'stress' : 'buff'}" title="${it.n}">${parts.join(' ')}<small>${it.n}${tgt ? ' ' + tgt : ''}</small></div>`;
     }
-    const big = !isHero && ENEMIES[u.key].px[0] === 'boss';
-    const cls = isHero ? CLASSES[u.cls] : null;
-    return `<div class="unit ${isHero ? 'hero' : 'enemy'} ${big ? 'big' : ''} ${targetable ? 'tgt' : ''} ${isOwner ? 'owner' : ''} ${u.door ? 'door' : ''} ${isHero && u.aff ? 'panic' : ''}"
-            data-uid="${u.uid}" onclick="clickUnit('${isHero ? 'h' : 'e'}', ${u.uid})">
+    const big = !hero && ENEMIES[u.key].px[0] === 'boss';
+    const C = hero ? CLASSES[u.cls] : null;
+    return `<div class="unit ${hero ? 'hero' : 'enemy'} ${big ? 'big' : ''} ${targetable ? 'tgt' : ''} ${isCur ? 'cur' : ''} ${u.door ? 'door' : ''} ${hero && u.aff ? 'panic' : ''}"
+            data-uid="${u.uid}" onclick="clickUnit(${u.uid})">
         ${intent}
         <div class="rank">${u.rank}</div>
-        <img class="spr" src="${px}" alt="">
-        <div class="uname" ${cls ? `style="color:${cls.color}"` : ''}>${isHero ? u.name : u.n}${u.door ? ' 💀' : ''}${isHero && u.virtue ? ' ✨' : ''}${isHero && u.aff ? ' 😱' : ''}</div>
+        <img class="spr" src="${unitImg(u)}" alt="">
+        <div class="uname" ${C ? `style="color:${C.color}"` : ''}>${hero ? u.name : u.n}${u.door ? ' 💀' : ''}${hero && u.virtue ? ' ✨' : ''}${hero && u.aff ? ' 😱' : ''}</div>
         <div class="bar hp"><span style="width:${100 * u.hp / u.maxHp}%"></span><em>${u.door ? '瀕死' : u.hp + '/' + u.maxHp}</em>${u.block ? `<i class="blk">🛡️${u.block}</i>` : ''}</div>
-        ${isHero ? `<div class="bar st" title="壓力：滿 100 會崩潰或覺醒"><span style="width:${u.stress / 2}%"></span><em>😨 ${u.stress}</em></div>` : ''}
+        ${hero ? `<div class="bar st" title="壓力：滿 100 會崩潰或覺醒"><span style="width:${u.stress / 2}%"></span><em>😨 ${u.stress}</em></div>` : ''}
         <div class="sts">${sts}</div>
     </div>`;
 }
 function unitEl(u) { return u ? document.querySelector(`.unit[data-uid="${u.uid}"]`) : null; }
-function heroEl(h) { return unitEl(h); }
 function fxText(el, text, color, size = 26) {
     if (!el || FAST) return;
     const r = el.getBoundingClientRect();
@@ -1602,28 +1995,38 @@ function fxText(el, text, color, size = 26) {
     document.body.appendChild(d);
     setTimeout(() => d.remove(), 1100);
 }
+function showSkillName(u, n) {
+    if (FAST) return;
+    const el = unitEl(u); if (!el) return;
+    const r = el.getBoundingClientRect();
+    const d = document.createElement('div');
+    d.className = 'skillname ' + (isHero(u) ? 'h' : 'e');
+    d.textContent = n;
+    d.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top - 6}px`;
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 1000);
+}
 function flashEl(el) {
     if (!el || FAST) return;
     el.classList.remove('hurt'); void el.offsetWidth; el.classList.add('hurt');
 }
-function shakeEl(el) {
-    if (!el || FAST) return;
-    el.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 220 });
-}
 async function lunge(el, dir) {
     if (!el || FAST) return;
     const s = el.querySelector('.spr') || el;
-    s.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${dir * 26}px) scale(1.08)` }, { transform: 'translateX(0)' }], { duration: 260, easing: 'ease-out' });
-    await wait(150);
+    s.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${dir * 30}px) scale(1.1)` }, { transform: 'translateX(0)' }], { duration: 280, easing: 'ease-out' });
+    await wait(160);
 }
 
 // ---------- 鍵盤 ----------
 document.addEventListener('keydown', e => {
-    if ($('modal').classList.contains('on')) { if (e.key === 'Escape' && window.__deckBack !== undefined) deckBack(); return; }
+    if ($('modal').classList.contains('on')) return;
     if (!B || document.body.dataset.screen !== 'battle') return;
-    if (/^[1-9]$/.test(e.key)) { clickCard(+e.key - 1); e.preventDefault(); }
-    else if (e.key === 'e' || e.key === 'E' || e.key === ' ') { endTurn(); e.preventDefault(); }
-    else if (e.key === 'Escape') { B.sel = null; renderBattle(); }
+    const cur = findUnit(B.cur);
+    if (!cur || !isHero(cur) || B.busy) return;
+    if (/^[1-4]$/.test(e.key)) { const k = cur.equip[+e.key - 1]; if (k) clickSkill(k); e.preventDefault(); }
+    else if (e.key === 'm' || e.key === 'M') clickMove();
+    else if (e.key === ' ') { clickPass(); e.preventDefault(); }
+    else if (e.key === 'Escape') { B.mode = null; renderBattle(); }
 });
 
 // ---------- 啟動 ----------
