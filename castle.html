@@ -78,6 +78,7 @@
             <!-- 觸控按鈕：集中在畫面下方中間，站在螢幕前一隻手就按得到 -->
             <div id="padBar" class="absolute left-0 right-0 bottom-0 h-[112px] md:h-[128px] z-20 select-none flex items-center justify-center gap-3 md:gap-4 bg-slate-950 border-t border-slate-800">
                 <button data-k="left" class="pad-btn w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/25 border-4 border-white/50 text-4xl font-black">◀</button>
+                <button data-k="down" class="pad-btn w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/20 border-4 border-white/40 text-3xl font-black">▼</button>
                 <button data-k="right" class="pad-btn w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/25 border-4 border-white/50 text-4xl font-black">▶</button>
                 <div class="w-3 md:w-6"></div>
                 <button data-k="run" class="pad-btn w-16 h-16 md:w-20 md:h-20 rounded-full bg-sky-500/40 border-4 border-sky-300/60 text-lg font-black">加速</button>
@@ -111,7 +112,8 @@
             <p>👾 <b class="text-amber-300">從上面踩怪物，就要回答一題</b>：答對才能打倒牠；答錯會被彈開，再踩一次換新題目。從旁邊撞到怪物會受傷。</p>
             <p>🟦 <b>知識磚</b>：從下面頂藍色的問號磚要答題，答對會跑出 🍊 能量果，吃了變大，被打到只會變小。黃色問號磚有金幣，100 枚換一條命。</p>
             <p>🚩 三關：<b>知識草原 → 地下水道 → 魔龍城堡</b>。前兩關跳上旗竿過關，跳越高分數越多；第三關要打倒混亂魔龍：踩牠答對 3 題，或碰到斧頭連續答對 3 題斬斷吊橋。</p>
-            <p>⚠️ 掉進洞裡、碰到岩漿、時間用完都會少一條命。</p>
+            <p>🟩 有些水管站上去按 <b>↓</b>（或畫面上的 ▼）可以鑽下去，上面會出現黃色箭頭，裡面藏很多金幣！有 🌺 食人花的水管，要等花縮回去再過。</p>
+            <p>⚠️ 掉進洞裡、碰到岩漿、時間用完都會少一條命，但會<b>在附近原地復活</b>，不用整關重來。答完題會短暫無敵（勇者閃爍）。</p>
             <div class="text-right"><button onclick="closeRules()" class="px-6 py-2.5 rounded-xl bg-emerald-500 text-slate-900 font-black">知道了</button></div>
         </div>
     </div>
@@ -1133,12 +1135,13 @@ ${JSON.stringify(list)}
 
         const LEVELS = {
             1: {
-                name: '知識草原', theme: 'over', w: 212, time: 500, start: 3, startRow: 12, check: 96, checkRow: 12,
+                name: '知識草原', theme: 'over', w: 240,
+                regions: [{ x0: 0, x1: 212, theme: 'over' }, { x0: 214, x1: 240, theme: 'under' }], time: 500, start: 3, startRow: 12, check: 96, checkRow: 12,
                 build(B, lv) {
                     B.ground(0, 68); B.ground(71, 85); B.ground(89, 150); B.ground(153, 211);
                     B.row(14, 8, '?');
                     B.row(18, 8, 'B?K?B'); B.row(20, 4, '?');
-                    B.pipe(28, 2); B.pipe(38, 3); B.pipe(46, 4); B.pipe(57, 4);
+                    B.pipe(28, 2); B.pipe(38, 3); B.pipe(46, 4, true); B.pipe(57, 4);
                     B.row(29, 6, 'oo'); B.row(39, 5, 'oo');
                     B.row(76, 8, 'BKB'); B.row(79, 4, 'BBBBBBBB'); B.row(80, 3, 'oooooo');
                     B.row(91, 4, 'BBB?'); B.row(94, 8, 'B');
@@ -1146,18 +1149,24 @@ ${JSON.stringify(list)}
                     B.row(118, 8, 'B'); B.row(121, 4, 'BBB'); B.row(128, 4, 'B??B'); B.row(129, 8, 'BB');
                     B.stairs(134, 4, 1); B.stairs(140, 4, -1);
                     B.stairs(146, 4, 1); B.col(150, 4); B.stairs(153, 4, -1);
-                    B.pipe(163, 2); B.row(168, 8, 'B?BB'); B.pipe(179, 2);
+                    B.pipe(163, 2); B.row(168, 8, 'B?BB'); B.pipe(179, 2, true);
                     B.stairs(181, 8, 1); B.col(189, 8);
                     B.set(198, 11, 6);
                     lv.flag = { x: 198 * T + 8, top: 3 * T, bottom: 11 * T, fy: 3 * T + 4 };
                     lv.castle = 202;
+                    // 金幣密室：從第 57 格的水管鑽下去，從右邊水管出來，回到第 163 格的水管
+                    B.fill(214, 214, 1, 11, 2); B.fill(214, 239, 1, 1, 2); B.ground(214, 239);
+                    B.fill(217, 226, 10, 11, 2); B.row(217, 9, 'oooooooooo'); B.row(218, 7, 'oooooooo'); B.row(219, 5, 'oooooo');
+                    B.sidePipe(232); B.fill(236, 239, 2, 11, 2);
+                    lv.warps.push({ kind: 'down', tx: 57, top: 8 * T, to: { x: 216 * T, y: 3 * T, mode: 'drop' } });
+                    lv.warps.push({ kind: 'side', x: 232 * T, to: { x: 163 * T + 16, y: 10 * T, mode: 'rise' } });
                     ['blob,22', 'blob,40', 'blob,51', 'blob,53', 'blob,82,3', 'blob,97', 'blob,99', 'beetle,107',
                         'blob,115', 'blob,125', 'blob,131', 'blob,172'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
                 }
             },
             2: {
-                name: '地下水道', theme: 'under', w: 220, time: 500, start: 3, startRow: 12, check: 86, checkRow: 12,
-                regions: [{ x0: 0, x1: 178, theme: 'under' }, { x0: 180, x1: 220, theme: 'over' }],
+                name: '地下水道', theme: 'under', w: 248, time: 500, start: 3, startRow: 12, check: 86, checkRow: 12,
+                regions: [{ x0: 0, x1: 178, theme: 'under' }, { x0: 180, x1: 220, theme: 'over' }, { x0: 222, x1: 248, theme: 'under' }],
                 build(B, lv) {
                     B.fill(0, 0, 2, 11, 2);
                     B.fill(1, 177, 1, 1, 2);
@@ -1169,26 +1178,30 @@ ${JSON.stringify(list)}
                     B.row(56, 8, 'BBBBBBBB'); B.row(57, 7, 'oooooo');
                     B.col(66, 3, 12, 2); B.col(73, 3, 12, 2); B.row(68, 9, 'oooo');
                     B.pipe(86, 3, true); B.pipe(92, 4, true); B.pipe(98, 2);
+                    lv.warps.push({ kind: 'down', tx: 98, top: 10 * T, to: { x: 224 * T, y: 3 * T, mode: 'drop' } });
+                    B.pipe(150, 2);
                     B.row(104, 6, 'BBBBBBBB'); B.row(105, 9, 'oooooo');
                     B.row(114, 8, 'K');
                     lv.lifts.push({ x: 137 * T, y: 9 * T, w: 48, mode: 'h', a: 137 * T, b: 141 * T, sp: 0.7, dir: 1, dx: 0, dy: 0 });
                     lv.lifts.push({ x: 143 * T, y: 8 * T, w: 48, mode: 'v', a: 6 * T, b: 10 * T, sp: 0.6, dir: 1, dx: 0, dy: 0 });
                     B.stairs(158, 4, 1); B.col(162, 4);
                     // 橫向出口水管
-                    B.set(170, 10, 14); B.set(171, 10, 14); B.set(170, 11, 15); B.set(171, 11, 15);
-                    for (let y = 2; y < 12; y++) { B.set(172, y, 9); B.set(173, y, 10); }
-                    B.fill(174, 177, 2, 11, 2);
-                    lv.pipeIn = { x: 170 * T };
+                    B.sidePipe(170); B.fill(174, 177, 2, 11, 2);
                     // 地面出口
                     B.ground(180, 219);
                     B.pipe(182, 2);
-                    lv.exitTo = { x: 182 * T + 10, y: 10 * T };
+                    lv.warps.push({ kind: 'side', x: 170 * T, to: { x: 182 * T + 16, y: 10 * T, mode: 'rise' } });
+                    // 金幣密室：第 98 格水管鑽下去，出來在第 150 格的水管
+                    B.fill(222, 222, 1, 11, 2); B.fill(222, 247, 1, 1, 2); B.ground(222, 247);
+                    B.fill(225, 234, 10, 11, 2); B.row(225, 9, 'oooooooooo'); B.row(226, 7, 'oooooooo'); B.row(225, 4, 'BBBKBBBBBB');
+                    B.sidePipe(240); B.fill(244, 247, 2, 11, 2);
+                    lv.warps.push({ kind: 'side', x: 240 * T, to: { x: 150 * T + 16, y: 10 * T, mode: 'rise' } });
                     B.stairs(188, 8, 1); B.col(196, 8);
                     B.set(205, 11, 6);
                     lv.flag = { x: 205 * T + 8, top: 3 * T, bottom: 11 * T, fy: 3 * T + 4 };
                     lv.castle = 209;
                     ['blob,38', 'blob,40', 'beetle,52', 'blob,60', 'blob,62', 'blob,95', 'blob,108', 'blob,110',
-                        'beetle,128', 'blob,152', 'blob,155'].forEach(s => { const [t, x] = s.split(','); B.en(t, +x); });
+                        'beetle,128', 'blob,154', 'blob,156'].forEach(s => { const [t, x] = s.split(','); B.en(t, +x); });
                 }
             },
             3: {
@@ -1238,7 +1251,7 @@ ${JSON.stringify(list)}
             const def = LEVELS[n];
             const W = def.w, g = new Uint8Array(W * ROWS);
             const lv = { n, def, w: W, g, ents: [], coins: [], items: [], lifts: [], bars: [], fires: [], bumps: new Map(),
-                regions: def.regions || [{ x0: 0, x1: W, theme: def.theme }], flag: null, castle: 0, axe: null };
+                regions: def.regions || [{ x0: 0, x1: W, theme: def.theme }], flag: null, castle: 0, axe: null, warps: [] };
             const set = (x, y, v) => { if (x >= 0 && x < W && y >= 0 && y < ROWS) g[y * W + x] = v; };
             const B = {
                 set,
@@ -1256,6 +1269,10 @@ ${JSON.stringify(list)}
                     set(x, top, 7); set(x + 1, top, 8);
                     for (let y = top + 1; y < 12; y++) { set(x, y, 9); set(x + 1, y, 10); }
                     if (plant) lv.ents.push({ type: 'plant', x: x * T + 10, w: 12, h: 22, baseY: top * T, y: top * T, off: 0, st: 0, t: 40 + Math.random() * 60, active: true });
+                },
+                sidePipe(x) {
+                    set(x, 10, 14); set(x + 1, 10, 14); set(x, 11, 15); set(x + 1, 11, 15);
+                    for (let y = 2; y < 12; y++) { set(x + 2, y, 9); set(x + 3, y, 10); }
                 },
                 stairs(x, n, dir = 1, base = 12) {
                     for (let i = 0; i < n; i++) { const cx = dir > 0 ? x + i : x + n - 1 - i; for (let k = 1; k <= i + 1; k++) set(cx, base - k, 6); }
@@ -1302,6 +1319,7 @@ ${JSON.stringify(list)}
             hero.x = (fromCheck ? def.check : def.start) * T;
             hero.y = (fromCheck ? def.checkRow : def.startRow) * T - hero.h;
             game.checkReached = !!fromCheck;
+            game.safe = { x: hero.x, y: hero.y + hero.h };
             game.time = def.time;
             game.timeAcc = 0;
             game.axeNeed = 3;
@@ -1314,25 +1332,26 @@ ${JSON.stringify(list)}
             showBanner(`<div class="text-[2.6em] font-black text-amber-300 drop-shadow">第 ${n} 關</div>
                 <div class="text-[1.8em] font-black mt-1">${def.name}</div>
                 <div class="text-[1.3em] font-bold mt-3">❤️ × ${game.lives}</div>
-                ${n === 1 && !fromCheck ? '<div class="text-[0.95em] font-bold text-sky-200 mt-3">← → 移動　空白鍵／↑ 跳　Shift 加速<br>踩到怪物要答題，答對才能打倒牠！</div>' : ''}`);
+                ${n === 1 && !fromCheck ? '<div class="text-[0.95em] font-bold text-sky-200 mt-3">← → 移動　空白鍵／↑ 跳　Shift 加速　↓ 鑽水管<br>踩到怪物要答題，答對才能打倒牠！</div>' : ''}`);
             updateHud(true);
         }
 
         // ---------- 輸入 ----------
-        const keys = { left: false, right: false, jump: false, run: false };
-        const touch = { left: false, right: false, jump: false, run: false };
-        const inp = { left: false, right: false, jump: false, run: false, jumpPressed: false };
+        const keys = { left: false, right: false, jump: false, run: false, down: false };
+        const touch = { left: false, right: false, jump: false, run: false, down: false };
+        const inp = { left: false, right: false, jump: false, run: false, down: false, jumpPressed: false };
         let prevJump = false;
         const KEYMAP = {
             ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
             Space: 'jump', ArrowUp: 'jump', KeyW: 'jump', KeyZ: 'jump', KeyK: 'jump',
-            ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run', KeyJ: 'run'
+            ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run', KeyJ: 'run', ArrowDown: 'down', KeyS: 'down'
         };
         function readInput() {
             inp.left = keys.left || touch.left;
             inp.right = keys.right || touch.right;
             inp.jump = keys.jump || touch.jump;
             inp.run = keys.run || touch.run;
+            inp.down = keys.down || touch.down;
             inp.jumpPressed = inp.jump && !prevJump;
             prevJump = inp.jump;
         }
@@ -1375,6 +1394,7 @@ ${JSON.stringify(list)}
                     if (--game.timer <= 0) { game.mode = 'play'; hideBanner(); musicPlay(regionAt(hero.x).theme); }
                     break;
                 case 'play': updatePlay(); break;
+                case 'stomp': updateStomp(); break;
                 case 'dying': updateDying(); break;
                 case 'flag': updateFlag(); break;
                 case 'pipe': updatePipe(); break;
@@ -1383,6 +1403,34 @@ ${JSON.stringify(list)}
             }
             updateParticles();
             if (frame % 6 === 0) updateHud();
+        }
+
+        // ---------- 踩怪：先播踩扁動畫，再跳題目 ----------
+        function startStomp(kind, e) {
+            const h = hero;
+            h.y = e.y - h.h; h.vy = 0; h.vx *= 0.3; h.onGround = false;
+            e.stun = true; e.squash = 1;
+            game.mode = 'stomp';
+            game.stomp = { kind, e, t: 0, baseY: h.y };
+            SFX.stomp();
+            if (kind === 'boss') SFX.bossHit();
+            const cx = e.x + e.w / 2, cy = e.y + (kind === 'boss' ? 6 : 4);
+            for (let k = 0; k < 8; k++) {
+                const a = Math.PI * (1 + k / 7);
+                particles.push({ kind: 'spark', x: cx, y: cy, vx: Math.cos(a) * 1.8, vy: Math.sin(a) * 1.8, t: 22 });
+            }
+        }
+        function updateStomp() {
+            const st = game.stomp, h = hero;
+            st.t++;
+            h.y = st.baseY - Math.sin(Math.min(1, st.t / 26) * Math.PI) * 14;
+            h.vy = 0;
+            if (st.t >= 36) {
+                h.y = st.baseY;
+                h.vy = -1;
+                game.mode = 'play';
+                askQ(st.kind, st.e);
+            }
         }
 
         // ---------- 遊戲中 ----------
@@ -1450,9 +1498,10 @@ ${JSON.stringify(list)}
             if (h.vx < 0 || dirIn < 0) {
                 if (pts.some(py => solidPx(h.x, py))) { h.x = (Math.floor(h.x / T) + 1) * T; if (h.vx < 0) h.vx = 0; }
             }
-            // 進入橫向水管
-            if (lv.pipeIn && h.onGround && I.right && h.x + h.w >= lv.pipeIn.x - 1 && h.x < lv.pipeIn.x && h.y + h.h > 10 * T) {
-                game.mode = 'pipe'; game.timer = 40; h.vx = 0; SFX.pipe(); return;
+            // 進水管：橫向水管往右走進去；可以鑽的直水管站在上面按 ↓
+            for (const w of lv.warps) {
+                if (w.kind === 'side' && h.onGround && I.right && h.x + h.w >= w.x - 1 && h.x < w.x && h.y + h.h > 10 * T) { enterPipe(w, 'side'); return; }
+                if (w.kind === 'down' && h.onGround && I.down && Math.abs(h.y + h.h - w.top) < 1 && h.x + h.w / 2 > w.tx * T + 6 && h.x + h.w / 2 < w.tx * T + 26) { enterPipe(w, 'down'); return; }
             }
             // 縱向
             const prevBottom = h.y + h.h;
@@ -1472,6 +1521,9 @@ ${JSON.stringify(list)}
                     }
                 }
                 if (!h.onGround && wasGround) h.gR = 0.44;
+                // 記住最後站穩的位置，倒下時從這裡復活
+                if (h.onGround && !h.onLift && solidPx(h.x + 1, h.y + h.h + 1) && solidPx(h.x + h.w - 1, h.y + h.h + 1) && tileAt(Math.floor((h.x + h.w / 2) / T), Math.floor((h.y + h.h + 1) / T)) !== 12)
+                    game.safe = { x: h.x, y: h.y + h.h };
             } else {
                 const hy = h.y;
                 const l = solidPx(h.x + 2, hy), r = solidPx(h.x + h.w - 2, hy);
@@ -1643,7 +1695,7 @@ ${JSON.stringify(list)}
                 if (!overlap(h, e)) continue;
                 const stomp = h.vy > 0 && (h.y + h.h - h.vy) <= e.y + 8;
                 if (e.type === 'boss') {
-                    if (stomp && e.inv <= 0) { h.y = e.y - h.h; h.vy = -2.5; e.stun = true; askQ('boss', e); return; }
+                    if (stomp && e.inv <= 0) { startStomp('boss', e); return; }
                     if (!stomp) hurt();
                     if (game.mode !== 'play') return;
                     continue;
@@ -1657,12 +1709,12 @@ ${JSON.stringify(list)}
                     if (game.mode !== 'play') return;
                     continue;
                 }
-                if (stomp) { h.y = e.y - h.h; h.vy = -2.5; e.stun = true; SFX.stomp(); askQ('enemy', e); return; }
+                if (stomp) { startStomp('enemy', e); return; }
                 hurt();
                 if (game.mode !== 'play') return;
             }
             // 旗竿
-            if (lv.flag && h.x + h.w >= lv.flag.x - 1) { grabFlag(); return; }
+            if (lv.flag && h.x + h.w >= lv.flag.x - 1 && h.x < lv.flag.x + 48) { grabFlag(); return; }
             // 斧頭
             if (lv.axe && !lv.axe.done && overlap(h, lv.axe)) { touchAxe(); return; }
         }
@@ -1692,8 +1744,22 @@ ${JSON.stringify(list)}
             if (--game.timer <= 0) {
                 game.lives--;
                 if (game.lives <= 0) { finishGame(false); return; }
-                loadLevel(game.level, game.checkReached);
+                respawnHere();
             }
+        }
+
+        function respawnHere() {
+            const s = game.safe || { x: lv.def.start * T, y: lv.def.startRow * T };
+            hero = newHero(false);
+            hero.x = s.x; hero.y = s.y - hero.h;
+            hero.inv = 150;
+            const r = regionAt(hero.x);
+            camX = Math.max(r.x0 * T, Math.min(hero.x - 150, r.x1 * T - VW));
+            if (game.time < 120) game.time = 150;
+            game.mode = 'play';
+            clearInput();
+            musicPlay(r.theme);
+            toast(`❤️ 還有 ${game.lives} 條命，原地復活！`, '#f472b6');
         }
 
         // ---------- 旗竿 ----------
@@ -1735,22 +1801,35 @@ ${JSON.stringify(list)}
         }
 
         // ---------- 水管 ----------
-        function updatePipe() {
+        function enterPipe(w, how) {
             const h = hero;
-            if (game.timer > 0) { game.timer--; h.x += 0.5; if (game.timer === 0) { h.hidden = true; game.timer = -30; } return; }
-            if (game.timer < 0) {
-                if (++game.timer === 0) {
-                    const ex = lv.exitTo;
-                    h.x = ex.x - h.w / 2; h.y = ex.y; h.vx = 0; h.vy = 0; h.hidden = false;
-                    camX = 180 * T;
-                    game.rise = h.h;
-                    h.y = ex.y;
-                    musicStop();
-                    SFX.pipe();
+            game.mode = 'pipe';
+            game.pipe = { w, how, t: how === 'down' ? h.h + 2 : 40, wait: 0, rise: 0 };
+            h.vx = 0; h.vy = 0;
+            if (how === 'down') h.x = w.tx * T + 16 - h.w / 2;
+            SFX.pipe(); musicStop();
+        }
+        function updatePipe() {
+            const h = hero, p = game.pipe;
+            if (p.t > 0) {
+                p.t--;
+                if (p.how === 'down') h.y += 1; else h.x += 0.5;
+                if (p.t === 0) { h.hidden = true; p.wait = 30; }
+                return;
+            }
+            if (p.wait > 0) {
+                if (--p.wait === 0) {
+                    const to = p.w.to;
+                    h.hidden = false; h.vx = 0; h.vy = 0;
+                    h.x = to.x - h.w / 2;
+                    const r = regionAt(h.x);
+                    camX = Math.max(r.x0 * T, Math.min(h.x - 150, r.x1 * T - VW));
+                    if (to.mode === 'rise') { h.y = to.y; p.rise = h.h; SFX.pipe(); }
+                    else { h.y = to.y; game.mode = 'play'; musicPlay(r.theme); }
                 }
                 return;
             }
-            if (game.rise > 0) { game.rise--; h.y -= 1; if (game.rise === 0) { game.mode = 'play'; musicPlay('over'); lv.pipeIn = null; } }
+            if (p.rise > 0) { p.rise--; h.y -= 1; if (p.rise === 0) { game.mode = 'play'; game.safe = { x: h.x, y: h.y + h.h }; musicPlay(regionAt(h.x).theme); } }
         }
 
         // ---------- 魔龍與斧頭 ----------
@@ -1896,6 +1975,7 @@ ${JSON.stringify(list)}
             game.mode = game.prevMode === 'question' ? 'play' : (game.prevMode || 'play');
             clearInput();
             resolveQ(c, ok);
+            if (hero && !hero.dead) hero.inv = Math.max(hero.inv, 100);   // 答完題暫時無敵，不會馬上被旁邊的怪撞到
             if (game.mode === 'play') musicResume();
         }
         function resolveQ(c, ok) {
@@ -1903,13 +1983,13 @@ ${JSON.stringify(list)}
             if (ok) addScore(200);
             if (c.kind === 'enemy') {
                 const e = c.payload;
-                e.stun = false;
+                e.stun = false; e.squash = 0;
                 if (ok) {
                     if (e.type === 'blob') { e.flat = 40; addScore(100, e.x + 7, e.y); }
                     else { e.type = 'shell'; e.y += e.h - 14; e.h = 14; e.vx = 0; e.kickT = 0; addScore(100, e.x + 7, e.y); }
                     h.vy = -4; h.jumping = false;
                     SFX.stomp();
-                } else bounceOff(e);
+                } else { e.vy = -2; bounceOff(e); }
             } else if (c.kind === 'block') {
                 const { tx, ty } = c.payload;
                 if (ok) {
@@ -1918,7 +1998,7 @@ ${JSON.stringify(list)}
                 } else toast('可惜！這塊知識磚沒東西了', '#94a3b8');
             } else if (c.kind === 'boss') {
                 const b = c.payload;
-                b.stun = false;
+                b.stun = false; b.squash = 0;
                 if (ok) {
                     b.hp--; b.inv = 90; b.knock = 2; addScore(1000, b.x + 14, b.y);
                     h.vy = -4; h.vx = -1.5; SFX.bossHit();
@@ -2130,7 +2210,7 @@ ${JSON.stringify(list)}
                     const top = c === 14;
                     R(x, y, 16, 16, '#145c2a'); R(x, y + (top ? 1 : 0), 16, 15, '#2fa84f');
                     if (top) R(x, y + 3, 16, 3, '#8ef0a0'); else R(x, y + 10, 16, 3, '#1a6e32');
-                    if (tx === Math.floor(lv.pipeIn ? lv.pipeIn.x / T : 170)) R(x, y, 2, 16, '#0e4420');
+                    if (tileAt(tx - 1, ty) !== 14 && tileAt(tx - 1, ty) !== 15) R(x, y, 2, 16, '#0e4420');
                     break;
                 }
             }
@@ -2243,7 +2323,8 @@ ${JSON.stringify(list)}
         function drawBlob(e, castle) {
             const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 16;
             const body = castle ? '#4a4a5e' : '#5b2a86', hi = castle ? '#8a8aa0' : '#9a64d4', feet = castle ? '#c84a3a' : '#e0882a';
-            if (e.flat) { R(x + 1, y + 10, 14, 5, body); R(x + 3, y + 11, 3, 1, '#fff'); R(x + 10, y + 11, 3, 1, '#fff'); R(x + 2, y + 15, 12, 1, feet); return; }
+            if (e.flat || e.squash) { if (e.squash) { R(x + 2, y + 5, 2, 2, '#ffd23a'); R(x + 12, y + 4, 2, 2, '#ffd23a'); R(x + 7, y + 3, 2, 2, '#ffd23a'); }
+                R(x + 1, y + 10, 14, 5, body); R(x + 3, y + 11, 3, 1, '#fff'); R(x + 10, y + 11, 3, 1, '#fff'); R(x + 2, y + 15, 12, 1, feet); return; }
             ctx.save();
             if (e.flip) { ctx.translate(0, y * 2 + 16); ctx.scale(1, -1); }
             R(x + 5, y + 1, 6, 1, body); R(x + 3, y + 2, 10, 2, body); R(x + 1, y + 4, 14, 7, body); R(x + 3, y + 11, 10, 1, body);
@@ -2259,6 +2340,7 @@ ${JSON.stringify(list)}
             ctx.restore();
         }
         function drawBeetle(e) {
+            if (e.squash) { drawShell(e); return; }
             const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 24;
             ctx.save();
             if (e.dir > 0) { ctx.translate(x + 16, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
@@ -2297,6 +2379,7 @@ ${JSON.stringify(list)}
         function drawBoss(e) {
             const x = Math.round(e.x) - 2, y = Math.round(e.y + e.h) - 32;
             if (e.inv > 0 && Math.floor(e.inv / 4) % 2) return;
+            if (e.squash && game.mode === 'stomp' && Math.floor(frame / 3) % 2) return;
             ctx.save();
             if (e.dir > 0) { ctx.translate(x + 32, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
             if (e.flip) { ctx.translate(0, y * 2 + 32); ctx.scale(1, -1); }
@@ -2405,6 +2488,11 @@ ${JSON.stringify(list)}
             for (const c of lv.coins) if (!c.got) drawCoin(c.x, c.y);
             for (const it of lv.items) if (!it.gone) drawFruit(it);
             drawAxe();
+            for (const w of lv.warps) {
+                if (w.kind !== 'down' || Math.abs(hero.x - w.tx * T) > 80) continue;
+                const ax = w.tx * T + 12, ay = w.top - 44 + (Math.floor(frame / 12) % 2) * 3;
+                R(ax, ay, 8, 2, '#ffd23a'); R(ax + 1, ay + 2, 6, 2, '#ffd23a'); R(ax + 2, ay + 4, 4, 2, '#ffd23a'); R(ax + 3, ay + 6, 2, 1, '#ffd23a');
+            }
             drawFriend();
             for (const e of lv.ents) {
                 if (e.removed || !e.active || e.type === 'plant') continue;
@@ -2419,6 +2507,7 @@ ${JSON.stringify(list)}
             drawHero();
             for (const p of particles) {
                 if (p.kind === 'brick') { R(p.x, p.y, 5, 5, THEMES[p.th].b1); R(p.x, p.y, 5, 1, THEMES[p.th].b2); }
+                else if (p.kind === 'spark') R(Math.round(p.x) - 1, Math.round(p.y) - 1, 3, 3, p.t > 10 ? '#fff6b0' : '#ffd23a');
                 else if (p.kind === 'coin') drawCoin(p.x, p.y);
             }
             ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
@@ -2431,6 +2520,7 @@ ${JSON.stringify(list)}
             for (const p of particles) {
                 p.t--;
                 if (p.kind === 'brick') { p.vy += 0.25; p.x += p.vx; p.y += p.vy; }
+                else if (p.kind === 'spark') { p.vy += 0.12; p.x += p.vx; p.y += p.vy; }
                 else if (p.kind === 'coin') { p.vy += 0.3; p.y += p.vy; }
             }
             particles = particles.filter(p => p.t > 0 && p.y < VH + 20);
