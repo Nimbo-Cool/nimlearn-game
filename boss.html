@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <title>AI 知識魔王戰</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,7 +15,6 @@
     <style>
         /* 投影模式：題目、選項、解析一起放大縮小 */
         .proj-z { zoom: var(--proj, 1); }
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
         .cell { transition: transform .15s, box-shadow .2s, background-color .4s; }
         .cell:active { transform: scale(.94); }
@@ -67,6 +68,7 @@
                 <span id="roundInfo" class="ml-2 text-xs md:text-sm font-bold bg-slate-700 px-3 py-1 rounded-full text-slate-200 whitespace-nowrap"></span>
             </div>
             <div class="flex items-center gap-2">
+                <a id="homeBtn" href="./" title="回遊戲首頁" class="hidden w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg items-center justify-center shrink-0">🏠</a>
                 <button onclick="toggleMute()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg" title="音效"><i id="muteIcon" class="fa-solid fa-volume-high"></i></button>
                 <div class="flex items-center h-10 rounded-xl bg-slate-700 overflow-hidden font-bold shrink-0" title="題目字體大小（鍵盤 + / -）">
                     <button onclick="projZoom(-1)" class="px-2.5 h-full hover:bg-slate-600 text-sm">A−</button>
@@ -92,7 +94,7 @@
 
 
     <!-- 提示訊息 -->
-    <div id="toast" class="hidden fixed top-28 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2"></div>
+    <div id="toast" class="hidden fixed top-2 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2"></div>
     <div id="flash" class="hidden fixed inset-0 z-[75] pointer-events-none"></div>
 
     <!-- ===================== 規則 ===================== -->
@@ -274,6 +276,7 @@
                     </div>
                 </div>
             </div>
+            <p class="text-center mt-4"><a id="homeLink" href="./" class="hidden inline-block px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-sm font-bold">🏠 回遊戲首頁</a></p>
             <p class="text-center text-[11px] font-bold text-slate-500 mt-6">🍎 秉亨老師 × Claude 協同製作</p>
         </div>
     </div>
@@ -2157,12 +2160,13 @@ ${JSON.stringify(list)}
                 body = `<div class="py-3 text-center ${c.ok ? 'text-green-400' : 'text-red-400'}"><div class="text-5xl font-black">${c.ok ? '✔' : (c.pick < 0 ? '⏰' : '✘')}</div><div class="font-black">${c.ok ? '答對了！' : '失手了…'}</div></div>`;
             } else {
                 const canCheer = !game.over && (ph === 'choose' || ph === 'question') && game.active >= 0 && h.cheers > 0;
+                const showCheer = game.n > 1;
                 body = `<div class="space-y-1">
                     <div class="flex items-center gap-1"><span class="text-[10px]">❤️</span><div class="flex-1">${bar(h.hp / h.maxHp, h.hp / h.maxHp <= 0.3 ? '#ef4444' : '#22c55e', 'h-2.5')}</div><span class="text-[11px] font-black">${h.hp}</span></div>
                     <div class="flex items-center gap-1"><span class="text-[10px]">😨</span><div class="flex-1">${bar(h.stress / 100, '#8b5cf6', 'h-2')}</div><span class="text-[11px] font-black text-violet-300">${h.stress}</span></div>
                     ${energy}
                     <div class="text-center text-xs md:text-sm font-bold text-slate-400 py-1">${h.down ? '💤 倒地中' : '等待中'}${h.crisis ? '・😱嚇壞了' : ''}${h.awaken ? '・✨覺醒' : ''}</div>
-                    <button onclick="cheer(${i})" ${canCheer ? '' : 'disabled'} class="w-full rounded-xl py-2 md:py-3 text-sm md:text-lg font-black border-2 ${canCheer ? 'bg-sky-600 border-sky-300 text-white active:scale-95' : 'bg-slate-900/60 border-slate-700 text-slate-500'}">📣 打氣（剩 ${h.cheers}）</button>
+                    ${showCheer ? `<button onclick="cheer(${i})" ${canCheer ? '' : 'disabled'} class="w-full rounded-xl py-2 md:py-3 text-sm md:text-lg font-black border-2 ${canCheer ? 'bg-sky-600 border-sky-300 text-white active:scale-95' : 'bg-slate-900/60 border-slate-700 text-slate-500'}">📣 打氣（剩 ${h.cheers}）</button>` : ''}
                 </div>`;
             }
             return `<div class="flex flex-col rounded-2xl border-4 p-2 transition ${active ? 'shadow-[0_0_24px_rgba(253,224,71,.45)]' : ''}" style="border-color:${active ? '#fde047' : s.color};background:linear-gradient(180deg, ${s.dark}, #0f172a);${!active && game.active >= 0 ? 'opacity:.85' : ''}">
@@ -2531,6 +2535,14 @@ ${JSON.stringify(list)}
             document.addEventListener('DOMContentLoaded', apply);
             apply();
         })();
+    </script>
+
+    <script>
+        // 放在網站上時（nimlearn-game）顯示「回遊戲首頁」；直接開檔案時不顯示
+        if (/^https?:$/.test(location.protocol)) {
+            const hb = document.getElementById('homeBtn'); if (hb) { hb.classList.remove('hidden'); hb.classList.add('flex'); }
+            const hl = document.getElementById('homeLink'); if (hl) hl.classList.remove('hidden');
+        }
     </script>
 </body>
 </html>

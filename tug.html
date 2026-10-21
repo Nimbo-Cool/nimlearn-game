@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <title>AI 智慧雙人拔河大對決</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,8 +18,7 @@
     <style>
         /* 投影模式：題目、選項、解析一起放大縮小 */
         .proj-z { zoom: var(--proj, 1); }
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; user-select: none; }
+        body { font-family: 'Noto Sans TC', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
         @keyframes toastIn { 0%{opacity:0;transform:translate(-50%,20px)} 12%{opacity:1;transform:translate(-50%,0)} 85%{opacity:1} 100%{opacity:0} }
         .toast { animation: toastIn 2.6s forwards; }
         .rope-transition { transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -36,28 +37,24 @@
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between overflow-x-hidden">
 
     <!-- 上方控制區與標題 -->
-    <header class="p-4 bg-slate-800 border-b border-slate-700 shadow-md">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <span class="text-3xl">🪢</span>
-                <h1 class="text-2xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-amber-300 to-blue-400">
-                    AI 智慧雙人拔河大對決
-                </h1>
-                <span class="hidden md:inline text-[11px] font-bold text-slate-500 ml-2 whitespace-nowrap">秉亨老師 × Claude 協同製作</span>
+    <header class="shrink-0 bg-slate-800 border-b border-slate-700 px-4 py-2.5 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="text-2xl">🪢</span>
+            <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-amber-300 to-blue-400 whitespace-nowrap">AI 智慧拔河大對決</h1>
+            <span class="hidden lg:inline text-[11px] font-bold text-slate-500 ml-2 whitespace-nowrap">秉亨老師 × Claude 協同製作</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <a id="homeBtn" href="./" title="回遊戲首頁" class="hidden w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg items-center justify-center shrink-0">🏠</a>
+                <button onclick="toggleMute()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg" title="音效"><i id="muteIcon" class="fa-solid fa-volume-high"></i></button>
+            <div class="flex items-center h-10 rounded-xl bg-slate-700 overflow-hidden font-bold shrink-0" title="題目字體大小（鍵盤 + / -）">
+                <button onclick="projZoom(-1)" class="px-2.5 h-full hover:bg-slate-600 text-sm">A−</button>
+                <span id="projLabel" class="min-w-[2.8rem] text-center text-xs text-slate-300">100%</span>
+                <button onclick="projZoom(1)" class="px-2.5 h-full hover:bg-slate-600 text-sm">A＋</button>
             </div>
-
-            <!-- 切換選單按鈕 -->
-            <div class="flex flex-wrap items-center gap-3">
-<div class="flex items-center h-8 rounded-xl bg-slate-700 overflow-hidden font-bold shrink-0" title="題目字體大小（鍵盤 + / -）">
-                    <button onclick="projZoom(-1)" class="px-2.5 h-full hover:bg-slate-600 text-xs">A−</button>
-                    <span id="projLabel" class="min-w-[2.8rem] text-center text-xs text-slate-300">100%</span>
-                    <button onclick="projZoom(1)" class="px-2.5 h-full hover:bg-slate-600 text-xs">A＋</button>
-                </div>
-                <button onclick="projFull()" class="w-9 h-8 rounded-xl bg-slate-700 hover:bg-slate-600 shrink-0" title="全螢幕"><i id="projIcon" class="fa-solid fa-expand"></i></button>
-                <button onclick="openMenuModal()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">
-                    <i class="fa-solid fa-gear"></i> 設定 API / 切換題庫
-                </button>
-            </div>
+            <button onclick="projFull()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 shrink-0" title="全螢幕"><i id="projIcon" class="fa-solid fa-expand"></i></button>
+            <button onclick="openRules()" class="px-3 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">📖 規則</button>
+            <button onclick="openMenuModal()" class="px-3 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">⚙️ 設定</button>
+            <button onclick="confirmEnd()" class="px-3 h-10 rounded-xl bg-rose-700 hover:bg-rose-600 text-sm font-bold">🏁 結束</button>
         </div>
     </header>
 
@@ -113,7 +110,7 @@
             <div id="questionBadge" class="hidden absolute top-3 right-4 text-xs font-black text-emerald-300 bg-emerald-950/80 border border-emerald-600 px-2.5 py-1 rounded-md">
                 🔭 延伸挑戰題
             </div>
-            <h2 id="questionText" class="proj-z text-xl md:text-2xl font-bold leading-relaxed text-slate-100 mt-4">
+            <h2 id="questionText" class="proj-z text-2xl md:text-3xl font-black leading-snug text-slate-100 mt-4">
                 請在設定選單中選擇或上傳題庫開始比賽！
             </h2>
             <p id="explainText" class="proj-z hidden mt-3 text-sm md:text-base font-bold text-green-300 bg-green-950/60 border border-green-700 px-4 py-2 rounded-xl"></p>
@@ -144,21 +141,34 @@
 
     </main>
 
-    <div id="toast" class="hidden fixed bottom-8 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2 bg-slate-900"></div>
+    <div id="toast" class="hidden fixed top-2 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2 bg-slate-900"></div>
+
+    <!-- ===================== 規則 ===================== -->
+    <div id="rulesModal" class="hidden fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur flex items-center justify-center p-4" onclick="closeRules()">
+        <div class="max-w-2xl w-full bg-slate-800 border border-slate-600 rounded-2xl p-6 text-left space-y-3 text-base md:text-lg" onclick="event.stopPropagation()">
+            <h3 class="text-2xl font-black text-amber-300">📖 遊戲規則</h3>
+            <p>1️⃣ <b class="text-red-300">紅隊</b>站左邊、<b class="text-sky-300">藍隊</b>站右邊，<b>兩隊同時搶答同一題</b>，按自己那一邊的答案。</p>
+            <p>2️⃣ 鍵盤也可以玩：紅隊按 <b>Q W E R</b>、藍隊按 <b>U I O P</b>。兩邊的選項順序不一樣，偷看對方也沒用。</p>
+            <p>3️⃣ 答對就把繩子往自己這邊拉，<b class="text-amber-300">越快答對拉越多</b>；答錯繩子不會動，但這題就沒機會了。</p>
+            <p>4️⃣ 每局 10 題，由淺入深。比賽結束時，<b>總拉力比較多的隊伍獲勝</b>。</p>
+            <p>5️⃣ 結束後可以看 📋 題目檢討、🔁 原題重玩，或 🆕 直接換一批新題目。</p>
+            <div class="text-right"><button onclick="closeRules()" class="px-6 py-2.5 rounded-xl bg-emerald-500 text-slate-900 font-black">知道了</button></div>
+        </div>
+    </div>
 
     <!-- 啟動 Modal 視窗 -->
     <div id="overlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
-        <div id="overlayContent" class="max-w-md w-full bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-2xl space-y-5 my-auto">
+        <div id="overlayContent" class="max-w-5xl w-full p-2 md:p-6 space-y-5 my-auto">
             <div>
                 <div class="text-5xl mb-2">🪢</div>
-                <h3 id="overlayTitle" class="text-2xl font-black text-amber-400">AI 智慧拔河大對決</h3>
-                <p id="overlayDesc" class="text-slate-300 text-xs mt-1">設定 API Key 與題庫開始遊戲：</p>
+                <h3 id="overlayTitle" class="text-3xl font-black text-amber-300">AI 智慧拔河大對決</h3>
+                <p id="overlayDesc" class="text-slate-300 text-sm mt-1">設定 API Key 與題庫開始遊戲：</p>
             </div>
 
             <!-- 比賽結算 -->
-            <div id="resultArea" class="hidden grid grid-cols-2 gap-3 text-left"></div>
+            <div id="resultArea" class="hidden grid grid-cols-2 gap-3 text-left max-w-3xl mx-auto"></div>
 
-            <div id="setupSections" class="space-y-5">
+            <div id="setupSections" class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
             <!-- 1. AI 來源切換 + API Key 輸入框（自動記憶於瀏覽器） -->
             <div class="bg-slate-900/80 border border-amber-500/40 p-4 rounded-xl text-left space-y-2">
                 <div class="grid grid-cols-3 gap-2 mb-1">
@@ -261,7 +271,7 @@
             </div>
 
             <!-- 4. 預設按鈕區 -->
-            <div id="actionBtnArea" class="pt-1 space-y-2">
+            <div id="actionBtnArea" class="pt-1 space-y-2 max-w-md mx-auto">
                 <button id="reviewBtn" onclick="openReview()" class="hidden w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-900 font-extrabold rounded-xl text-sm transition">
                     📋 題目檢討（回顧這 10 題）
                 </button>
@@ -275,6 +285,7 @@
                     ⚙️ 回設定選單（換教材 / 換主題）
                 </button>
             </div>
+            <p class="text-center mt-4"><a id="homeLink" href="./" class="hidden inline-block px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-sm font-bold">🏠 回遊戲首頁</a></p>
             <p class="text-[11px] font-bold text-slate-500">🍎 秉亨老師 × Claude 協同製作</p>
         </div>
     </div>
@@ -1134,7 +1145,7 @@ ${JSON.stringify(list)}
                 const opt = options[orig];
                 const btn = document.createElement('button');
                 btn.dataset.orig = orig;
-                btn.className = `w-full text-left p-3 rounded-xl border-2 text-sm md:text-base font-bold flex items-center justify-between transition ${
+                btn.className = `w-full text-left p-3 md:p-4 rounded-xl border-2 text-lg md:text-2xl font-black flex items-center justify-between transition ${
                     team === 'left'
                     ? 'bg-slate-800 hover:bg-red-900/40 border-slate-700 hover:border-red-500'
                     : 'bg-slate-800 hover:bg-blue-900/40 border-slate-700 hover:border-blue-500'
@@ -1143,14 +1154,50 @@ ${JSON.stringify(list)}
                 label.innerHTML = `<b class="text-amber-400 mr-2">${i + 1}.</b>`;
                 label.appendChild(document.createTextNode(String(opt)));
                 const mark = document.createElement('span');
-                mark.className = 'mark text-[10px] bg-slate-700 px-2 py-0.5 rounded font-mono';
+                mark.className = 'mark shrink-0 ml-2 text-xs bg-slate-700 px-2 py-0.5 rounded font-mono';
                 mark.innerText = keys[i];
                 btn.appendChild(label);
                 btn.appendChild(mark);
-                btn.onclick = () => handleAnswer(team, orig);
+                // 用 pointerdown：兩隊同時按觸控螢幕也都收得到（click 在多點觸控時會被吃掉）
+                btn.addEventListener('pointerdown', ev => { ev.preventDefault(); handleAnswer(team, orig); });
                 container.appendChild(btn);
             });
         }
+
+        // ===== 音效（WebAudio 合成；靜音設定和其他三款遊戲共用）=====
+        let muted = localStorage.getItem('terr_muted') === '1';
+        let audioCtx = null;
+        function tone(freqs, dur = 0.12, type = 'sine', gap = 0.09, vol = 0.18) {
+            if (muted) return;
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                freqs.forEach((f, i) => {
+                    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                    o.type = type; o.frequency.value = f;
+                    const t0 = audioCtx.currentTime + i * gap;
+                    g.gain.setValueAtTime(vol, t0);
+                    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+                    o.connect(g); g.connect(audioCtx.destination);
+                    o.start(t0); o.stop(t0 + dur + 0.02);
+                });
+            } catch (e) {}
+        }
+        const SFX = {
+            correct: () => tone([660, 880, 1320], 0.16, 'triangle'),
+            wrong: () => tone([220, 160], 0.25, 'sawtooth', 0.15, 0.12),
+            tick: () => tone([1000], 0.04, 'square', 0, 0.05),
+            select: () => tone([520], 0.06, 'triangle', 0, 0.1),
+            win: () => tone([523, 659, 784, 1046, 784, 1046, 1318], 0.18, 'triangle', 0.12)
+        };
+        function toggleMute() { muted = !muted; localStorage.setItem('terr_muted', muted ? '1' : '0'); renderMute(); }
+        function renderMute() { const el = document.getElementById('muteIcon'); if (el) el.className = muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high'; }
+        function confirmEnd() {
+            if (!document.getElementById('overlay').classList.contains('hidden')) return;
+            if (confirm('確定要結束這一局，直接看結果嗎？')) endGame();
+        }
+        function openRules() { document.getElementById('rulesModal').classList.remove('hidden'); }
+        function closeRules() { document.getElementById('rulesModal').classList.add('hidden'); }
+        document.addEventListener('DOMContentLoaded', renderMute);
 
         function startTimer() {
             clearInterval(timerInterval);
@@ -1163,6 +1210,7 @@ ${JSON.stringify(list)}
             timerInterval = setInterval(() => {
                 const elapsed = (performance.now() - questionStartTime) / 1000;
                 timeLeft = Math.max(0, Math.ceil(QUESTION_TIME - elapsed));
+                if (timerEl.innerText !== String(timeLeft) && timeLeft <= 5 && timeLeft > 0) SFX.tick();
                 timerEl.innerText = timeLeft;
                 timerEl.classList.toggle('text-red-500', timeLeft <= 5);
                 if (elapsed >= QUESTION_TIME) {
@@ -1205,12 +1253,14 @@ ${JSON.stringify(list)}
                 picked.querySelector('.mark').innerText = '✔ 答對';
                 panel.classList.add('panel-flash-ok');
                 showPop(team, `✔ +${pull}`, '#4ade80');
+                SFX.correct();
             } else {
                 stats[team].wrong++;
                 picked.classList.add('opt-wrong', 'shake');
                 picked.querySelector('.mark').innerText = '✘ 答錯';
                 panel.classList.add('panel-flash-bad');
                 showPop(team, '✘ 不動', '#f87171');
+                SFX.wrong();
             }
             // 其他選項變暗，讓選到的更明顯
             btns.forEach(b => { if (Number(b.dataset.orig) !== optionIdx) b.classList.add('opt-dim'); });
@@ -1309,6 +1359,7 @@ ${JSON.stringify(list)}
                 teamCard('藍隊', stats.right, 'blue', total, winner === 'right');
 
             document.getElementById('overlayTitle').innerText = "比賽結束！";
+            SFX.win();
             document.getElementById('overlayDesc').innerText = winnerText;
             document.getElementById('overlayDesc').className = "text-amber-300 text-base font-black mt-1";
             document.getElementById('actionBtnArea').style.display = "block";
@@ -1419,7 +1470,7 @@ ${JSON.stringify(list)}
         });
 
         function resetDescStyle() {
-            document.getElementById('overlayDesc').className = "text-slate-300 text-xs mt-1";
+            document.getElementById('overlayDesc').className = "text-slate-300 text-sm mt-1";
         }
 
         function showLoading(title, desc) {
@@ -1480,6 +1531,14 @@ ${JSON.stringify(list)}
             document.addEventListener('DOMContentLoaded', apply);
             apply();
         })();
+    </script>
+
+    <script>
+        // 放在網站上時（nimlearn-game）顯示「回遊戲首頁」；直接開檔案時不顯示
+        if (/^https?:$/.test(location.protocol)) {
+            const hb = document.getElementById('homeBtn'); if (hb) { hb.classList.remove('hidden'); hb.classList.add('flex'); }
+            const hl = document.getElementById('homeLink'); if (hl) hl.classList.remove('hidden');
+        }
     </script>
 </body>
 </html>

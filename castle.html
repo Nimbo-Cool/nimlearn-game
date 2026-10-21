@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <title>AI 知識城堡戰</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,7 +15,6 @@
     <style>
         /* 投影模式：題目、選項、解析一起放大縮小 */
         .proj-z { zoom: var(--proj, 1); }
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
         .cell { transition: transform .15s, box-shadow .2s, background-color .4s; }
         .cell:active { transform: scale(.94); }
@@ -52,6 +53,7 @@
                 <span class="hidden lg:inline text-[11px] font-bold text-slate-500 ml-2 whitespace-nowrap">秉亨老師 × Claude 協同製作</span>
             </div>
             <div class="flex items-center gap-2">
+                <a id="homeBtn" href="./" title="回遊戲首頁" class="hidden w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg items-center justify-center shrink-0">🏠</a>
                 <button onclick="togglePause()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg" title="暫停（Esc）">⏸</button>
                 <button onclick="toggleMute()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg" title="音效"><i id="muteIcon" class="fa-solid fa-volume-high"></i></button>
                 <div class="flex items-center h-10 rounded-xl bg-slate-700 overflow-hidden font-bold shrink-0" title="題目字體大小（鍵盤 + / -）">
@@ -99,7 +101,7 @@
     </div>
 
     <!-- 提示訊息 -->
-    <div id="toast" class="hidden fixed bottom-8 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2"></div>
+    <div id="toast" class="hidden fixed top-2 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2"></div>
 
     <!-- ===================== 規則 ===================== -->
     <div id="rulesModal" class="hidden fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur flex items-center justify-center p-4" onclick="closeRules()">
@@ -282,6 +284,7 @@
                     </div>
                 </div>
             </div>
+            <p class="text-center mt-4"><a id="homeLink" href="./" class="hidden inline-block px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-sm font-bold">🏠 回遊戲首頁</a></p>
             <p class="text-center text-[11px] font-bold text-slate-500 mt-6">🍎 秉亨老師 × Claude 協同製作</p>
         </div>
     </div>
@@ -2586,6 +2589,14 @@ ${JSON.stringify(list)}
             document.addEventListener('DOMContentLoaded', apply);
             apply();
         })();
+    </script>
+
+    <script>
+        // 放在網站上時（nimlearn-game）顯示「回遊戲首頁」；直接開檔案時不顯示
+        if (/^https?:$/.test(location.protocol)) {
+            const hb = document.getElementById('homeBtn'); if (hb) { hb.classList.remove('hidden'); hb.classList.add('flex'); }
+            const hl = document.getElementById('homeLink'); if (hl) hl.classList.remove('hidden');
+        }
     </script>
 </body>
 </html>
