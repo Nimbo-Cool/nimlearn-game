@@ -1,0 +1,2536 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 知識魔王戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        /* 投影模式：題目、選項、解析一起放大縮小 */
+        .proj-z { zoom: var(--proj, 1); }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .cell { transition: transform .15s, box-shadow .2s, background-color .4s; }
+        .cell:active { transform: scale(.94); }
+        @keyframes glow { 0%,100% { box-shadow: 0 0 0 3px var(--gc), 0 0 14px var(--gc); } 50% { box-shadow: 0 0 0 5px var(--gc), 0 0 26px var(--gc); } }
+        .cell-target { animation: glow 1.2s infinite; cursor: pointer; }
+        @keyframes claim { 0% { transform: scale(.4) rotate(-10deg); } 60% { transform: scale(1.15) rotate(3deg); } 100% { transform: scale(1); } }
+        .cell-claim { animation: claim .55s cubic-bezier(.34,1.56,.64,1); }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+        .shake { animation: shake .4s; }
+        @keyframes pulseBig { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+        .pulse-big { animation: pulseBig 0.8s infinite; }
+        @keyframes toastIn { 0%{opacity:0;transform:translate(-50%,20px)} 12%{opacity:1;transform:translate(-50%,0)} 85%{opacity:1} 100%{opacity:0} }
+        .toast { animation: toastIn 2.6s forwards; }
+        @keyframes chestPop { 0%{transform:scale(0) rotate(-20deg)} 70%{transform:scale(1.3) rotate(8deg)} 100%{transform:scale(1)} }
+        .chest-pop { animation: chestPop .6s cubic-bezier(.34,1.56,.64,1); }
+        @keyframes dmgFloat { 0%{opacity:0;transform:translate(-50%,10px) scale(.6)} 20%{opacity:1;transform:translate(-50%,0) scale(1.2)} 100%{opacity:0;transform:translate(-50%,-50px) scale(1)} }
+        .dmg-float { animation: dmgFloat 1.4s forwards; text-shadow: 0 2px 8px #000; }
+        @keyframes bigShake { 0%,100%{transform:translate(0,0)} 10%{transform:translate(-14px,6px)} 25%{transform:translate(12px,-8px)} 40%{transform:translate(-10px,4px)} 55%{transform:translate(10px,6px)} 70%{transform:translate(-6px,-4px)} 85%{transform:translate(4px,2px)} }
+        .big-shake { animation: bigShake .6s; }
+        @keyframes ultIn { 0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-8deg)} 25%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(2deg)} 70%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.4)} }
+        .ult-text { position:fixed; left:50%; top:45%; z-index:90; pointer-events:none; animation: ultIn 1.3s forwards; text-align:center; font-weight:900; text-shadow: 0 0 24px currentColor, 0 4px 12px #000; }
+        @keyframes bossDie { 0%{transform:scale(1);filter:none} 30%{transform:scale(1.3) rotate(-10deg);filter:brightness(3)} 100%{transform:scale(0) rotate(40deg);opacity:0;filter:brightness(5)} }
+        .boss-die { animation: bossDie 1.1s forwards; }
+        @keyframes chargePulse { 0%,100%{box-shadow:0 0 0 0 #f43f5e80} 50%{box-shadow:0 0 0 10px #f43f5e00} }
+        .charge-banner { animation: chargePulse 1s infinite; }
+        .fog-opt { filter: blur(9px); transition: filter .6s; }
+        @keyframes readyGlow { 0%,100%{box-shadow:0 0 0 2px #fde047, 0 0 10px #fde047} 50%{box-shadow:0 0 0 3px #fde047, 0 0 22px #fde047} }
+        .ult-ready { animation: readyGlow 1s infinite; }
+        @keyframes lineIn { 0%{opacity:0;transform:translateX(-12px)} 100%{opacity:1;transform:none} }
+        .battle-line { animation: lineIn .35s ease-out; }
+        #flash { transition: opacity .18s; }
+        .opt-correct { background:#16a34a !important; border-color:#4ade80 !important; color:#fff !important; box-shadow:0 0 0 4px rgba(74,222,128,.35); }
+        .opt-wrong { background:#dc2626 !important; border-color:#f87171 !important; color:#fff !important; }
+        .opt-out { opacity:.3; text-decoration: line-through; }
+        .opt-reveal { background:rgba(22,163,74,.3) !important; border-color:#4ade80 !important; border-style:dashed !important; }
+        input[type=number]::-webkit-inner-spin-button { opacity: 1; }
+        @keyframes activeGlow { 0%,100% { filter: drop-shadow(0 0 0 #fde047) drop-shadow(0 6px 0 rgba(0,0,0,.45)); } 50% { filter: drop-shadow(0 0 16px #fde047) drop-shadow(0 6px 0 rgba(0,0,0,.45)); } }
+        .active-hero { animation: activeGlow 1s infinite; }
+        #scene { background: radial-gradient(ellipse at 75% 40%, #3b0d2e 0%, #1a1027 45%, #0b0716 100%); transition: height .4s ease; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen overflow-x-hidden">
+
+    <!-- ===================== 遊戲畫面 ===================== -->
+    <div id="gameScreen" class="hidden h-screen flex flex-col overflow-hidden">
+        <header class="shrink-0 bg-slate-800 border-b border-slate-700 px-4 py-2 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-2xl">🐉</span>
+                <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-300 via-amber-300 to-rose-300 whitespace-nowrap">AI 知識魔王戰</h1>
+                <span class="hidden lg:inline text-[11px] font-bold text-slate-500 ml-2 whitespace-nowrap">秉亨老師 × Claude 協同製作</span>
+                <span id="roundInfo" class="ml-2 text-xs md:text-sm font-bold bg-slate-700 px-3 py-1 rounded-full text-slate-200 whitespace-nowrap"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleMute()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg" title="音效"><i id="muteIcon" class="fa-solid fa-volume-high"></i></button>
+                <div class="flex items-center h-10 rounded-xl bg-slate-700 overflow-hidden font-bold shrink-0" title="題目字體大小（鍵盤 + / -）">
+                    <button onclick="projZoom(-1)" class="px-2.5 h-full hover:bg-slate-600 text-sm">A−</button>
+                    <span id="projLabel" class="min-w-[2.8rem] text-center text-xs text-slate-300">100%</span>
+                    <button onclick="projZoom(1)" class="px-2.5 h-full hover:bg-slate-600 text-sm">A＋</button>
+                </div>
+                <button onclick="projFull()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 shrink-0" title="全螢幕"><i id="projIcon" class="fa-solid fa-expand"></i></button>
+                <button onclick="openRules()" class="px-3 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">📖 規則</button>
+                <button onclick="openMenu()" class="px-3 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">⚙️ 設定</button>
+                <button onclick="confirmEnd()" class="px-3 h-10 rounded-xl bg-rose-700 hover:bg-rose-600 text-sm font-bold">🏁 撤退</button>
+            </div>
+        </header>
+
+        <!-- 行動順序＋背包 -->
+        <div id="orderBar" class="shrink-0 flex items-center justify-between gap-3 px-3 md:px-4 py-1.5 bg-slate-900/80 border-b border-slate-800"></div>
+
+        <!-- 戰場：勇者站位（左）與魔王（右） -->
+        <div id="scene" class="relative shrink-0 h-[36vh] min-h-[230px] mx-3 md:mx-4 mt-2 rounded-2xl overflow-hidden border border-slate-700"></div>
+
+        <!-- 題目、訊息、每人的選項框 -->
+        <main id="stage" class="flex-1 min-h-0 flex flex-col px-3 md:px-4 pb-3 pt-1 overflow-y-auto"></main>
+    </div>
+
+
+    <!-- 提示訊息 -->
+    <div id="toast" class="hidden fixed top-28 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2"></div>
+    <div id="flash" class="hidden fixed inset-0 z-[75] pointer-events-none"></div>
+
+    <!-- ===================== 規則 ===================== -->
+    <div id="rulesModal" class="hidden fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur flex items-center justify-center p-4" onclick="closeRules()">
+        <div class="max-w-2xl w-full bg-slate-800 border border-slate-600 rounded-2xl p-6 text-left space-y-3 text-base md:text-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <h3 class="text-2xl font-black text-amber-300">📖 遊戲規則</h3>
+            <p>1️⃣ 1～4 位勇者組隊挑戰魔王，<b class="text-amber-300">依照上方的行動順序輪流作答</b>，每個人答的是自己的題目。</p>
+            <p>2️⃣ 輪到你時，在<b>自己的框</b>先選招式，再回答題目：<b>★ 招式比較弱、題目簡單；★★★ 招式比較強、題目比較難</b>。答對招式才會成功，越快答對傷害 +1 ⚡。</p>
+            <p>3️⃣ <b>站位</b>：畫面左邊排成一列，越靠近魔王是第 1 排（前排）。戰士、騎士適合前排；法師、治療師適合後排。有些招式要站對位置才能用，輪到你時可以免費「往前進／往後退」一格。</p>
+            <p>4️⃣ <b class="text-violet-300">😨 恐懼值</b>：答錯、被魔王打會變高。滿 100 時 30% <b class="text-amber-300">✨ 勇氣覺醒</b>（攻擊 +2），70% <b class="text-violet-300">😱 嚇壞了</b>（接下來 2 題只剩 2 個選項，但效果減半）。</p>
+            <p>5️⃣ 沒輪到的人可以按 <b class="text-sky-300">📣 打氣</b>（每人 2 次）：輪到的人恐懼 −15，答題時按還能讓傷害 +1。</p>
+            <p>6️⃣ 能量集滿 100，<b>大招</b>會出現在自己的框裡，按下去<b>不用答題</b>直接發動。</p>
+            <p>7️⃣ 魔王會揮爪打前排、用魔法打後排、咆哮讓大家恐懼、把人撞到後面、用 👁 盯上某人，每 4 次行動還會 ⚡ 蓄力攻擊全隊。騎士的「守護」能幫隊友擋，法師的「冰封」能打斷魔王。</p>
+            <p>8️⃣ 血量歸零會 💤 倒地，輪到他時答對一題就能站起來；治療師也能救人。全隊都倒下就戰敗。</p>
+            <p>9️⃣ 每隻魔王都有<b class="text-fuchsia-300">專屬特性</b>，還可能遇到 <b class="text-sky-300">菁英</b> 或 <b class="text-amber-300">傳說</b> 魔王。答對時有機會撿到 🎒 道具，輪到勇者行動時點背包就能用。</p>
+            <div class="text-right"><button onclick="closeRules()" class="px-6 py-2.5 rounded-xl bg-emerald-500 text-slate-900 font-black">知道了</button></div>
+        </div>
+    </div>
+
+    <!-- ===================== 設定／結算 ===================== -->
+    <div id="menu" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md overflow-y-auto">
+        <div class="max-w-5xl mx-auto p-4 md:p-8">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-1">🐉</div>
+                <h2 id="menuTitle" class="text-3xl font-black text-amber-300">AI 知識魔王戰</h2>
+                <p id="menuDesc" class="text-slate-300 text-sm mt-1">1～4 位勇者輪流作答，用站位、招式和勇氣打倒魔王！</p>
+            </div>
+
+            <!-- 結算 -->
+            <div id="resultPanel" class="hidden mb-6">
+                <div id="resultExtra" class="max-w-3xl mx-auto mb-5"></div>
+                <div id="rankList" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 max-w-3xl mx-auto">
+                    <button onclick="openReview()" class="py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 font-black">📋 題目檢討</button>
+                    <button onclick="startGame('replay')" class="py-3 rounded-xl bg-slate-600 hover:bg-slate-500 font-bold">🔁 原題重玩</button>
+                    <button onclick="startGame('new')" class="py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 font-black">🆕 出新題再一局</button>
+                    <button onclick="showSetup()" class="py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold">⚙️ 回設定</button>
+                </div>
+            </div>
+
+            <!-- 載入中 -->
+            <div id="loadingPanel" class="hidden text-center py-10">
+                <div class="text-5xl mb-4 animate-bounce">🧭</div>
+                <div id="loadingTitle" class="text-2xl font-black text-amber-300"></div>
+                <div id="loadingDesc" class="text-slate-300 mt-2"></div>
+            </div>
+
+            <!-- 題庫完成 -->
+            <div id="readyPanel" class="hidden text-center py-6">
+                <div class="text-5xl mb-3">✅</div>
+                <div id="readyTitle" class="text-2xl font-black text-emerald-300"></div>
+                <div id="readyDesc" class="text-slate-300 mt-2 mb-6"></div>
+                <div class="flex flex-col items-center gap-3">
+                    <button onclick="startGame('fresh')" class="w-full max-w-md py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 text-xl font-black shadow-xl">🚀 開始遊戲</button>
+                    <button onclick="regenerateBank()" class="w-full max-w-md py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold">🔄 題目不滿意，重新出題</button>
+                    <button onclick="showSetup()" class="text-slate-400 hover:text-white text-sm font-bold">⚙️ 回設定</button>
+                </div>
+            </div>
+
+            <!-- 設定 -->
+            <div id="setupPanel" class="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
+                <div class="space-y-5">
+                    <!-- AI 來源 -->
+                    <div class="bg-slate-900/80 border border-amber-500/40 p-4 rounded-xl space-y-2">
+                        <div class="grid grid-cols-3 gap-2 mb-1">
+                            <button type="button" id="btn_gemini" onclick="switchProvider('gemini')" class="py-2 rounded-lg text-xs font-bold transition border">✨ Gemini</button>
+                            <button type="button" id="btn_openai" onclick="switchProvider('openai')" class="py-2 rounded-lg text-xs font-bold transition border">🤖 GPT</button>
+                            <button type="button" id="btn_xai" onclick="switchProvider('xai')" class="py-2 rounded-lg text-xs font-bold transition border">⚡ Grok</button>
+                        </div>
+                        <label class="block text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-key text-amber-400"></i> <span id="keyLabel">Gemini API Key 設定：</span>
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="apiKeyInputModal" onchange="saveApiKeyFromModal()" placeholder="請貼上您的 Gemini API Key..."
+                                class="w-full bg-slate-800 border border-slate-600 focus:border-amber-400 rounded-lg p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition pr-10">
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs">
+                                <i id="eyeIcon" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-[11px] text-slate-400">和拔河遊戲放在同一個網站時，Key 會共用。</p>
+                            <button type="button" onclick="testConnection()" class="shrink-0 px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded-md text-[11px] font-bold transition">
+                                <i class="fa-solid fa-plug"></i> 測試連線
+                            </button>
+                        </div>
+                        <p id="connStatus" class="text-[11px] font-bold hidden"></p>
+                    </div>
+
+                    <!-- 出題設定 -->
+                    <div class="bg-slate-900/80 border border-emerald-500/40 p-4 rounded-xl grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-300 mb-1.5">🎒 學生年級</label>
+                            <select id="gradeSelect" onchange="saveQuizSettings()" class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold">
+                                <option value="1">一年級</option><option value="2">二年級</option><option value="3">三年級</option>
+                                <option value="4">四年級</option><option value="5">五年級</option><option value="6">六年級</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-300 mb-1.5">🔭 延伸程度</label>
+                            <select id="extendSelect" onchange="saveQuizSettings()" class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold">
+                                <option value="0">只考課本</option>
+                                <option value="3">微延伸</option>
+                                <option value="5">多延伸</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <button type="button" onclick="toggleTimePanel()" class="w-full flex items-center justify-between bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-xs font-bold text-emerald-300 transition">
+                                <span>⏱️ 每題答題時間：<span id="timeSummary" class="text-slate-100">15 秒</span></span>
+                                <i id="timeChevron" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                            </button>
+                            <div id="timePanel" class="hidden mt-2">
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="stepTime(-5)" class="w-9 h-9 shrink-0 rounded-lg bg-slate-700 hover:bg-slate-600 font-black text-lg">−</button>
+                                    <input type="number" id="timeInput" min="5" max="120" step="1" value="15" onchange="saveQuizSettings()"
+                                        class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-center text-base font-black">
+                                    <span class="text-xs font-bold text-slate-300 shrink-0">秒</span>
+                                    <button type="button" onclick="stepTime(5)" class="w-9 h-9 shrink-0 rounded-lg bg-slate-700 hover:bg-slate-600 font-black text-lg">＋</button>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1.5">★★★ 題目自動多給 5 秒。</p>
+                            </div>
+                        </div>
+                        <p class="col-span-2 text-[11px] text-slate-400">AI 會出 ★ 基礎、★★ 理解、★★★ 挑戰三種難度，並逐題檢查答案。</p>
+                    </div>
+
+                    <!-- 隊伍設定 -->
+                    <div class="bg-slate-900/80 border border-fuchsia-500/40 p-4 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-fuchsia-300">🧙 勇者人數</label>
+                            <div id="groupCountBtns" class="flex gap-1.5"></div>
+                        </div>
+                        <div id="groupNames" class="space-y-2"></div>
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="text-xs font-bold text-fuchsia-300">💀 魔王難度</label>
+                            <select id="roundSelect" onchange="saveGroupSettings()" class="bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold">
+                                <option value="easy">簡單（每人約 4 題）</option>
+                                <option value="normal">普通（每人約 6 題）</option>
+                                <option value="hard">困難（每人約 8 題）</option>
+                            </select>
+                        </div>
+                        <p id="timeEstimate" class="text-[11px] text-slate-400 text-right"></p>
+                    </div>
+                </div>
+
+                <div class="space-y-5">
+                    <!-- 上傳教冊 -->
+                    <div class="bg-indigo-950/50 border-2 border-indigo-500 p-5 rounded-2xl shadow-lg">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl">📄</div>
+                            <div>
+                                <h4 class="font-bold text-indigo-200 text-base">匯入教師手冊 / 課本檔</h4>
+                                <p class="text-xs text-slate-300">可一次選多份 PDF，AI 讀完全部出三種難度題庫</p>
+                            </div>
+                        </div>
+                        <label class="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-center font-extrabold text-sm rounded-xl cursor-pointer block transition shadow-md">
+                            <i class="fa-solid fa-file-pdf mr-1.5"></i> 選擇教冊 PDF（可一次多選）
+                            <input type="file" id="pdfInputModal" accept=".pdf,.txt" multiple class="hidden" onchange="handleFileUpload(event)">
+                        </label>
+                    </div>
+
+                    <!-- 主題 -->
+                    <div class="bg-slate-700/50 border border-slate-600 p-4 rounded-xl">
+                        <label class="block text-xs font-bold text-amber-300 mb-2">✨ 或挑選預設主題出題：</label>
+                        <select id="topicSelectModal" onchange="generateQuestionsByTopic(this.value)" class="w-full bg-slate-800 border border-slate-600 p-2.5 rounded-lg text-xs font-bold cursor-pointer">
+                            <option value="" disabled selected>-- 點擊選擇主題 --</option>
+                            <option value="自然科學小常識">🌱 自然科學小常識</option>
+                            <option value="成語典故與成語活用">📚 成語典故與活用</option>
+                            <option value="台灣歷史與地理人文">🗺️ 台灣歷史與地理</option>
+                            <option value="日常生活常識與安全">💡 日常生活與安全常識</option>
+                            <option value="國小基礎英文單字與文法">🔤 基礎英文單字與語感</option>
+                            <option value="趣味數學邏輯推理">🔢 趣味數學與邏輯</option>
+                        </select>
+                    </div>
+
+                    <!-- 已有題庫 / 試玩 -->
+                    <div class="bg-slate-800/60 border border-slate-700 p-4 rounded-xl space-y-2">
+                        <div id="bankStatus" class="text-xs text-slate-300"></div>
+                        <button id="useBankBtn" onclick="startGame('fresh')" class="hidden w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 font-black">🚀 用目前題庫開始</button>
+                        <button onclick="useDemoBank()" class="w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">🎮 先用內建題目試玩（不需 API）</button>
+                    </div>
+                </div>
+            </div>
+            <p class="text-center text-[11px] font-bold text-slate-500 mt-6">🍎 秉亨老師 × Claude 協同製作</p>
+        </div>
+    </div>
+
+    <!-- ===================== 題目檢討 ===================== -->
+    <div id="reviewOverlay" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[65] flex flex-col">
+        <div class="shrink-0 bg-slate-800 border-b border-slate-700 px-4 py-3">
+            <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-xl font-black text-emerald-300">📋 題目檢討</h3>
+                <div class="flex items-center gap-2 text-xs font-bold">
+                    <button id="filterAll" onclick="setReviewFilter('all')" class="px-3 py-1.5 rounded-lg border">全部</button>
+                    <button id="filterMiss" onclick="setReviewFilter('miss')" class="px-3 py-1.5 rounded-lg border">只看有答錯的</button>
+                </div>
+            </div>
+        </div>
+        <div id="reviewList" class="flex-1 overflow-y-auto px-4 py-4"></div>
+        <div class="shrink-0 bg-slate-800 border-t border-slate-700 px-4 py-3">
+            <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button onclick="closeReview()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-bold">◀ 回結算</button>
+                <button onclick="closeReview(); startGame('replay')" class="py-2.5 bg-slate-600 hover:bg-slate-500 rounded-xl text-sm font-bold">🔁 原題重玩</button>
+                <button onclick="closeReview(); startGame('new')" class="py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 rounded-xl text-sm font-black">🆕 出新題再一局</button>
+                <button onclick="closeReview(); showSetup()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-bold">⚙️ 回設定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== AI 來源設定 =====
+        const PROVIDERS = {
+            gemini: {
+                name: 'Gemini',
+                // 第一個是 Google 官方「自動指向最新 Flash」的別名，舊模型下架也不用改程式
+                models: ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'],
+                placeholder: '請貼上您的 Gemini API Key（AIza 開頭）...',
+                keyHint: 'AIza 開頭'
+            },
+            openai: {
+                name: 'GPT',
+                // 便宜又快的 mini 等級，失敗時自動往下換
+                models: ['gpt-5.4-mini', 'gpt-mini-latest', 'gpt-5-mini'],
+                placeholder: '請貼上您的 OpenAI API Key（sk- 開頭）...',
+                keyHint: 'sk- 開頭',
+                base: 'https://api.openai.com/v1',
+                jsonMode: true
+            },
+            xai: {
+                name: 'Grok',
+                // 快速、便宜的非推理版優先；名稱都失效時會自動查詢帳號可用的模型
+                models: ['grok-4-1-fast-non-reasoning', 'grok-4-fast-non-reasoning', 'grok-4.7'],
+                placeholder: '請貼上您的 xAI API Key（xai- 開頭）...',
+                keyHint: 'xai- 開頭',
+                base: 'https://api.x.ai/v1',
+                jsonMode: false   // 靠提示詞要求 JSON，避免參數不相容
+            }
+        };
+
+        let provider = localStorage.getItem('ai_provider') || 'gemini';
+        if (!PROVIDERS[provider]) provider = 'gemini';
+        let apiKey = localStorage.getItem(`${provider}_api_key`) || '';
+        let workingModel = localStorage.getItem(`${provider}_working_model`) || '';
+
+        function switchProvider(p) {
+            saveApiKeyFromModal();
+            provider = p;
+            localStorage.setItem('ai_provider', p);
+            apiKey = localStorage.getItem(`${p}_api_key`) || '';
+            workingModel = localStorage.getItem(`${p}_working_model`) || '';
+            renderProviderUI();
+        }
+
+        function renderProviderUI() {
+            const on = 'bg-amber-500 border-amber-400 text-slate-900';
+            const off = 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700';
+            Object.keys(PROVIDERS).forEach(p => {
+                document.getElementById(`btn_${p}`).className = `py-2 rounded-lg text-xs font-bold transition border ${provider === p ? on : off}`;
+            });
+            document.getElementById('keyLabel').innerText = `${PROVIDERS[provider].name} API Key 設定：`;
+            const input = document.getElementById('apiKeyInputModal');
+            input.placeholder = PROVIDERS[provider].placeholder;
+            input.value = apiKey;
+            document.getElementById('connStatus').classList.add('hidden');
+        }
+
+        function saveApiKeyFromModal() {
+            // 去掉空白、換行、誤貼的引號
+            const inputVal = document.getElementById('apiKeyInputModal').value.replace(/[\s"'「」]/g, '');
+            document.getElementById('apiKeyInputModal').value = inputVal;
+            if (inputVal !== apiKey) {
+                workingModel = '';
+                localStorage.removeItem(`${provider}_working_model`);
+            }
+            apiKey = inputVal;
+            localStorage.setItem(`${provider}_api_key`, apiKey);
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('apiKeyInputModal');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function setConnStatus(text, ok) {
+            const el = document.getElementById('connStatus');
+            el.classList.remove('hidden', 'text-green-400', 'text-red-400', 'text-slate-300');
+            el.classList.add(ok === true ? 'text-green-400' : ok === false ? 'text-red-400' : 'text-slate-300');
+            el.innerText = text;
+        }
+
+        async function testConnection() {
+            saveApiKeyFromModal();
+            setConnStatus('連線測試中...', null);
+            try {
+                await callGeminiRaw('請只回覆 JSON：{"ok":true}', 1);
+                setConnStatus(`✅ 連線成功（使用模型：${workingModel}）`, true);
+            } catch (err) {
+                setConnStatus('❌ ' + err.message, false);
+            }
+        }
+
+        function withTimeout(promise, ms, label) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`${label}讀取逾時`)), ms))
+            ]);
+        }
+
+        // 太長時切成約 1000 字的小段，從頭到尾平均挑，確保每一章都會被看到
+        function sampleEvenly(pageTexts, limit) {
+            const text = pageTexts.map(t => t.replace(/[ \t　]+/g, ' ').trim()).filter(Boolean).join('\n');
+            if (text.length <= limit) return text;
+            const SZ = 1000, blocks = [];
+            for (let i = 0; i < text.length; i += SZ) blocks.push(text.slice(i, i + SZ));
+            const keep = Math.max(1, Math.floor(limit / SZ));
+            const out = [];
+            for (let k = 0; k < keep; k++) out.push(blocks[Math.floor(k * blocks.length / keep)]);
+            return out.join('\n…\n');
+        }
+
+        // 一次讀多份教材（PDF / txt），每份平均分配字數，合併成一份教材給 AI
+        const MAX_BOOK_FILES = 8;
+        async function readBookFiles(fileList) {
+            const all = Array.from(fileList || []);
+            const ok = all.filter(f => /\.(pdf|txt)$/i.test(f.name));
+            const files = ok.slice(0, MAX_BOOK_FILES);
+            if (!files.length) throw new Error('請選擇 PDF 或 .txt 檔。');
+            const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/';
+            const parts = [], bad = [];
+            for (let f = 0; f < files.length; f++) {
+                const file = files[f];
+                const tag = files.length > 1 ? `第 ${f + 1}/${files.length} 份「${file.name}」` : '教冊內文';
+                const pages = [];
+                try {
+                    if (/\.pdf$/i.test(file.name)) {
+                        const pdf = await withTimeout(pdfjsLib.getDocument({
+                            data: await file.arrayBuffer(), cMapUrl: PDFJS_BASE + 'cmaps/', cMapPacked: true,
+                            standardFontDataUrl: PDFJS_BASE + 'standard_fonts/'
+                        }).promise, 30000, '開啟 PDF');
+                        let skipped = 0;
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            showLoading(`正在讀取${tag} (${i}/${pdf.numPages} 頁)...`, skipped ? `已略過 ${skipped} 頁讀不出來的頁面` : '這可能需要幾秒鐘');
+                            try {
+                                const page = await withTimeout(pdf.getPage(i), 8000, `第 ${i} 頁`);
+                                const content = await withTimeout(page.getTextContent(), 8000, `第 ${i} 頁`);
+                                pages.push(content.items.map(item => item.str).join(' '));
+                                page.cleanup();
+                            } catch (e) { skipped++; }
+                        }
+                        pdf.destroy && pdf.destroy();
+                    } else {
+                        showLoading(`正在讀取${tag}...`, '');
+                        pages.push(await file.text());
+                    }
+                } catch (e) { console.warn('讀檔失敗', file.name, e); }
+                const len = pages.join('').replace(/\s/g, '').length;
+                if (len < 50) bad.push(file.name); else parts.push({ name: file.name, pages, len, order: f });
+            }
+            if (!parts.length) throw new Error('讀不到文字（可能是掃描成圖片的 PDF），請改用有文字層的 PDF 或 .txt。');
+            // 一份 30000 字，每多一份 +10000，最多 60000；短的檔案用不完的字數讓給長的
+            let remain = Math.min(60000, 30000 + 10000 * (parts.length - 1));
+            [...parts].sort((a, b) => a.len - b.len).forEach((p, i, arr) => {
+                p.text = sampleEvenly(p.pages, Math.floor(remain / (arr.length - i)));
+                remain -= p.text.length;
+            });
+            const text = parts.length > 1
+                ? parts.map(p => `【教材：${p.name}】\n${p.text}`).join('\n\n')
+                : parts[0].text;
+            const name = parts.length > 1 ? `${parts[0].name} 等 ${parts.length} 份` : parts[0].name;
+            const notes = [];
+            if (bad.length) notes.push(`略過讀不到文字的檔案：${bad.join('、')}`);
+            if (all.length > ok.length) notes.push(`只能讀 PDF 或 .txt，已略過：${all.filter(f => !ok.includes(f)).map(f => f.name).join('、')}`);
+            if (ok.length > files.length) notes.push(`一次最多 ${MAX_BOOK_FILES} 份，第 ${MAX_BOOK_FILES + 1} 份之後沒有讀`);
+            return { name, text, count: parts.length, notes };
+        }
+
+        // 單一模型呼叫：回傳 {ok, status, text, msg, reason}
+        async function requestModel(model, promptText) {
+            let url, options;
+            if (provider === 'gemini') {
+                url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+                options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                };
+            } else {
+                // OpenAI 與 Grok 都是相同的 chat/completions 格式
+                const P = PROVIDERS[provider];
+                url = `${P.base}/chat/completions`;
+                const body = {
+                    model,
+                    messages: [
+                        { role: 'system', content: '你是台灣國小教師的出題助手。只輸出 JSON，不要任何其他文字或 markdown。依使用者指定的格式輸出；若指定的是陣列，請包成 {"questions": 陣列}。' },
+                        { role: 'user', content: promptText }
+                    ]
+                };
+                if (P.jsonMode) body.response_format = { type: 'json_object' };
+                options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify(body)
+                };
+            }
+
+            // 最多等 60 秒，避免畫面永遠卡在「出題中」
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 60000);
+            options.signal = controller.signal;
+
+            let response;
+            try {
+                response = await fetch(url, options);
+            } catch (e) {
+                clearTimeout(timer);
+                if (e.name === 'AbortError') {
+                    return { ok: false, status: 408, msg: `${model} 超過 60 秒沒回應` };
+                }
+                return { ok: false, status: 0, msg: `網路連不到 ${PROVIDERS[provider].name}（可能被學校網路/防火牆擋住，或目前離線）` };
+            }
+            clearTimeout(timer);
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                const text = provider === 'gemini'
+                    ? (data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '')
+                    : (data.choices?.[0]?.message?.content || '');
+                return { ok: true, status: 200, text };
+            }
+            return {
+                ok: false,
+                status: response.status,
+                msg: data.error?.message || `HTTP ${response.status}`,
+                reason: JSON.stringify(data.error || {})
+            };
+        }
+
+        // 查詢這把 Key 能用的文字模型，快速／便宜的排前面
+        async function discoverModels(P) {
+            try {
+                const r = await fetch(`${P.base}/models`, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                if (!r.ok) return [];
+                const data = await r.json();
+                const ids = (data.data || data.models || []).map(m => m.id || m).filter(id => typeof id === 'string');
+                const textModels = ids.filter(id =>
+                    /^(gpt|grok)/i.test(id) &&
+                    !/image|vision|audio|realtime|tts|transcribe|embed|search|imagine|video|code/i.test(id));
+                const score = id => (/fast|mini/i.test(id) ? 0 : 1) + (/reasoning/i.test(id) && !/non-reasoning/i.test(id) ? 1 : 0);
+                return textModels.sort((a, b) => score(a) - score(b) || b.localeCompare(a));
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // 呼叫 API：自動找能用的模型，錯誤訊息翻成看得懂的中文
+        async function callGeminiRaw(promptText, retries = 3) {
+            const P = PROVIDERS[provider];
+            if (!apiKey) throw new Error(`請先在上方框框中輸入或貼上 ${P.name} API Key！`);
+
+            const queue = workingModel
+                ? [workingModel, ...P.models.filter(m => m !== workingModel)]
+                : [...P.models];
+            const tried = new Set();
+            let discovered = false;
+
+            let lastMsg = '';
+            while (true) {
+                let model = queue.shift();
+                // 預設名稱都失效：向 API 查詢這把 Key 可用的模型清單再試
+                if (!model && P.base && !discovered) {
+                    discovered = true;
+                    showLoadingIfOpen(`正在查詢 ${P.name} 可用的模型...`, '預設的模型名稱可能已經更新');
+                    queue.push(...(await discoverModels(P)).filter(m => !tried.has(m)).slice(0, 3));
+                    model = queue.shift();
+                }
+                if (!model) break;
+                if (tried.has(model)) continue;
+                tried.add(model);
+
+                for (let i = 0; i < retries; i++) {
+                    const res = await requestModel(model, promptText);
+
+                    if (res.ok) {
+                        workingModel = model;
+                        localStorage.setItem(`${provider}_working_model`, model);
+                        if (!res.text) throw new Error("AI 沒有回傳內容（可能被安全過濾擋下），請換個主題或教材再試。");
+                        return res.text;
+                    }
+
+                    lastMsg = res.msg;
+                    const detail = (res.reason || '') + res.msg;
+
+                    // Key 問題：不必重試、不必換模型
+                    if ((res.status === 400 && /API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) || res.status === 401) {
+                        throw new Error(`API Key 無效：請重新複製完整的 ${P.name} Key（${P.keyHint}）。`);
+                    }
+                    // Grok 帳戶沒有額度
+                    if (/credits|spending limit/i.test(detail)) {
+                        throw new Error(`${P.name} 帳戶沒有可用額度：請到 console.x.ai 確認儲值或額度後再試。`);
+                    }
+                    if (res.status === 403) {
+                        throw new Error("這把 API Key 沒有權限（可能被停用、限制了網域，或專案未開通）。原始訊息：" + res.msg);
+                    }
+                    if (res.status === 0) throw new Error(res.msg);
+
+                    // GPT 帳戶沒錢：重試也沒用
+                    if (res.status === 429 && /insufficient_quota|billing/i.test(detail)) {
+                        throw new Error("OpenAI 帳戶餘額不足：請到 platform.openai.com 的 Billing 儲值後再試。");
+                    }
+
+                    // 模型不存在 / 已下架 / 帳號等級還用不到：換下一個模型
+                    if (res.status === 404 || /model_not_found|model not found|invalid model|does not exist|do not have access/i.test(detail)) break;
+
+                    // 超時：不重試同一個模型，直接換下一個
+                    if (res.status === 408) {
+                        showLoadingIfOpen("這個模型太慢了，換一個試試...", `改用下一個模型`);
+                        break;
+                    }
+
+                    // 額度用完：等一下再試，最後一次就換模型
+                    if (res.status === 429) {
+                        if (i < retries - 1) {
+                            showLoadingIfOpen("免費額度暫時用完，等待中...", `自動重試 (${i + 1}/${retries - 1})`);
+                            await new Promise(r => setTimeout(r, 5000 * (i + 1)));
+                            continue;
+                        }
+                        break;
+                    }
+
+                    // 500/503 伺服器忙碌：重試
+                    if (i < retries - 1) {
+                        showLoadingIfOpen("伺服器忙碌中...", `自動重試 (${i + 1}/${retries - 1})`);
+                        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+                        continue;
+                    }
+                    break;
+                }
+            }
+            throw new Error("所有模型都連線失敗。最後的錯誤訊息：" + lastMsg);
+        }
+
+        // 容錯解析：去掉 ```json 包裝、支援 {questions:[...]} 外層
+        function parseJsonLoose(text) {
+            let t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+            try { return JSON.parse(t); } catch (e) {}
+            const start = t.indexOf('['), end = t.lastIndexOf(']');
+            if (start !== -1 && end > start) {
+                try { return JSON.parse(t.slice(start, end + 1)); } catch (e) {}
+            }
+            throw new Error("AI 回傳的格式無法解析，請再按一次試試。");
+        }
+
+        function normalizeQuestions(parsed) {
+            let arr = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.items || Object.values(parsed).find(Array.isArray));
+            if (!Array.isArray(arr)) throw new Error("AI 回傳的不是題目清單，請再試一次。");
+            arr = arr.filter(q =>
+                q && typeof q.q === 'string' &&
+                Array.isArray(q.options) && q.options.length === 4 &&
+                Number.isInteger(Number(q.answer)) && Number(q.answer) >= 0 && Number(q.answer) <= 3
+            ).map(q => ({ ...q, answer: Number(q.answer) }));
+            if (arr.length === 0) throw new Error("生成的題目格式都不完整，請再試一次。");
+            return arr;
+        }
+
+
+        // =====================================================================
+        //  共用小工具
+        // =====================================================================
+        const $ = id => document.getElementById(id);
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function shuffle(a) {
+            for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+            return a;
+        }
+        function showLoadingIfOpen(title, desc) {
+            if (!$('loadingPanel').classList.contains('hidden')) showLoading(title, desc);
+        }
+
+        // ===== 音效（WebAudio 合成，不需外部檔案）=====
+        let muted = localStorage.getItem('terr_muted') === '1';
+        let audioCtx = null;
+        function tone(freqs, dur = 0.12, type = 'sine', gap = 0.09, vol = 0.18) {
+            if (muted) return;
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                freqs.forEach((f, i) => {
+                    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                    o.type = type; o.frequency.value = f;
+                    const t0 = audioCtx.currentTime + i * gap;
+                    g.gain.setValueAtTime(vol, t0);
+                    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+                    o.connect(g); g.connect(audioCtx.destination);
+                    o.start(t0); o.stop(t0 + dur + 0.02);
+                });
+            } catch (e) {}
+        }
+        const SFX = {
+            correct: () => tone([660, 880, 1320], 0.16, 'triangle'),
+            wrong: () => tone([220, 160], 0.25, 'sawtooth', 0.15, 0.12),
+            steal: () => tone([880, 1100, 880, 1100], 0.08, 'square', 0.08, 0.08),
+            chest: () => tone([523, 659, 784, 1046, 1318], 0.14, 'triangle', 0.07),
+            tick: () => tone([1000], 0.04, 'square', 0, 0.05),
+            select: () => tone([520], 0.06, 'triangle', 0, 0.1),
+            win: () => tone([523, 659, 784, 1046, 784, 1046, 1318], 0.18, 'triangle', 0.12),
+            ult: () => tone([392, 523, 659, 784, 1046, 1318, 1568], 0.12, 'sawtooth', 0.06, 0.12),
+            charge: () => tone([110, 98, 110, 87, 73], 0.22, 'sawtooth', 0.14, 0.14),
+            thunder: () => tone([1800, 300, 1200, 150], 0.08, 'square', 0.04, 0.12),
+            heal: () => tone([784, 988, 1175, 1568], 0.14, 'sine', 0.08, 0.14),
+            block: () => tone([440, 660, 880], 0.1, 'square', 0.06, 0.1)
+        };
+        function toggleMute() {
+            muted = !muted;
+            localStorage.setItem('terr_muted', muted ? '1' : '0');
+            renderMute();
+        }
+        function renderMute() {
+            $('muteIcon').className = muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+        }
+
+        function toast(text, color = '#fbbf24') {
+            const el = $('toast');
+            el.innerText = text;
+            el.style.background = '#0f172a';
+            el.style.color = color;
+            el.style.borderColor = color;
+            el.classList.remove('hidden', 'toast');
+            void el.offsetWidth;
+            el.classList.add('toast');
+            clearTimeout(el._t);
+            el._t = setTimeout(() => el.classList.add('hidden'), 2600);
+        }
+
+        // =====================================================================
+        //  出題設定（年級、延伸、時間）— 與拔河遊戲共用儲存
+        // =====================================================================
+        const GRADE_NAMES = ['', '一', '二', '三', '四', '五', '六'];
+        let QUESTION_TIME = 15;
+        function clampTime(v) {
+            if (v === '' || v === null || v === undefined) return 15;
+            v = Math.round(Number(v));
+            if (!Number.isFinite(v)) return 15;
+            return Math.min(120, Math.max(5, v));
+        }
+        function getQuizSettings() {
+            return {
+                grade: Number(localStorage.getItem('quiz_grade') || 4),
+                extend: Number(localStorage.getItem('quiz_extend') ?? 3),
+                time: clampTime(localStorage.getItem('quiz_time') ?? 15)
+            };
+        }
+        function saveQuizSettings() {
+            localStorage.setItem('quiz_grade', $('gradeSelect').value);
+            localStorage.setItem('quiz_extend', $('extendSelect').value);
+            const t = clampTime($('timeInput').value);
+            $('timeInput').value = t;
+            localStorage.setItem('quiz_time', t);
+            QUESTION_TIME = t;
+            $('timeSummary').innerText = `${t} 秒`;
+        }
+        function toggleTimePanel(force) {
+            const open = force !== undefined ? force : $('timePanel').classList.contains('hidden');
+            $('timePanel').classList.toggle('hidden', !open);
+            $('timeChevron').classList.toggle('rotate-180', open);
+        }
+        function stepTime(d) {
+            $('timeInput').value = clampTime(Number($('timeInput').value) + d);
+            saveQuizSettings();
+        }
+        function renderQuizSettings() {
+            const s = getQuizSettings();
+            $('gradeSelect').value = String(s.grade);
+            $('extendSelect').value = String(s.extend);
+            $('timeInput').value = s.time;
+            QUESTION_TIME = s.time;
+            $('timeSummary').innerText = `${s.time} 秒`;
+        }
+        function timeFor(value) { return QUESTION_TIME + (value === 3 ? 5 : 0); }
+
+        // =====================================================================
+        //  隊伍設定（1～4 位勇者，每人選職業）
+        // =====================================================================
+        const TEAM_STYLES = [
+            { color: '#ef4444', dark: '#7f1d1d', emoji: '⚔️', label: '勇者一' },
+            { color: '#3b82f6', dark: '#1e3a8a', emoji: '⚔️', label: '勇者二' },
+            { color: '#22c55e', dark: '#14532d', emoji: '⚔️', label: '勇者三' },
+            { color: '#f59e0b', dark: '#78350f', emoji: '⚔️', label: '勇者四' }
+        ];
+        const CLASSES = {
+            warrior: { icon: '⚔️', sprite: '🧑‍🦰', name: '戰士', hp: 16, spd: 4, home: 'front', desc: '前排輸出最高，後排可以衝鋒' },
+            mage:    { icon: '🔮', sprite: '🧙', name: '法師', hp: 11, spd: 6, home: 'back', desc: '後排施法，35% 爆擊、能冰封魔王' },
+            knight:  { icon: '🛡️', sprite: '🤺', name: '騎士', hp: 20, spd: 3, home: 'front', desc: '血最厚，能守護隊友、降低恐懼' },
+            healer:  { icon: '💚', sprite: '🧝', name: '治療師', hp: 13, spd: 5, home: 'back', desc: '補血、救起倒地隊友、安撫恐懼' }
+        };
+        const CLASS_KEYS = Object.keys(CLASSES);
+        // per：每位勇者大約要答幾題；atk：魔王每次攻擊的基本傷害
+        const DIFFICULTY = {
+            easy:   { label: '簡單', per: 4, solo: 8,  atk: 3, hpMul: 1.1 },
+            normal: { label: '普通', per: 6, solo: 12, atk: 4, hpMul: 1 },
+            hard:   { label: '困難', per: 8, solo: 14, atk: 5, hpMul: 0.9 }
+        };
+
+        let groupCount = Math.min(4, Math.max(1, Number(localStorage.getItem('boss_players') || 1)));
+        let groupNames = (() => {
+            try { const a = JSON.parse(localStorage.getItem('boss_names') || '[]'); if (Array.isArray(a)) return a; } catch (e) {}
+            return [];
+        })();
+        let heroClasses = (() => {
+            try { const a = JSON.parse(localStorage.getItem('boss_classes') || '[]'); if (Array.isArray(a)) return a; } catch (e) {}
+            return [];
+        })();
+        let difficulty = localStorage.getItem('boss_diff') || 'normal';
+        if (!DIFFICULTY[difficulty]) difficulty = 'normal';
+
+        function heroClass(i) { return CLASSES[heroClasses[i]] ? heroClasses[i] : CLASS_KEYS[i % 4]; }
+        function syncEmoji() { TEAM_STYLES.forEach((s, i) => { s.emoji = CLASSES[heroClass(i)].icon; }); }
+        function teamName(i) { return (groupNames[i] && groupNames[i].trim()) || TEAM_STYLES[i].label; }
+        function teamTag(i, size = '') {
+            const s = TEAM_STYLES[i];
+            return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-black ${size}" style="background:${s.color};color:#fff">${s.emoji} ${escapeHtml(teamName(i))}</span>`;
+        }
+
+        function renderGroupSettings() {
+            syncEmoji();
+            $('groupCountBtns').innerHTML = [1, 2, 3, 4].map(n =>
+                `<button onclick="setGroupCount(${n})" class="w-9 h-9 rounded-lg font-black text-sm border ${n === groupCount ? 'bg-fuchsia-500 border-fuchsia-300 text-slate-900' : 'bg-slate-800 border-slate-600 text-slate-300'}">${n}</button>`
+            ).join('');
+            $('groupNames').innerHTML = Array.from({ length: groupCount }, (_, i) => {
+                const s = TEAM_STYLES[i], cls = heroClass(i);
+                return `<div class="bg-slate-800 rounded-lg p-2 border-l-4" style="border-color:${s.color}">
+                    <input data-i="${i}" value="${escapeHtml(groupNames[i] || '')}" placeholder="${s.label}（可輸入名字）" maxlength="8" onchange="saveGroupSettings()"
+                        class="w-full bg-transparent text-sm font-bold focus:outline-none placeholder-slate-500 mb-1.5">
+                    <div class="grid grid-cols-4 gap-1.5">${CLASS_KEYS.map(k => `
+                        <button onclick="setClass(${i}, '${k}')" title="${CLASSES[k].desc}" class="rounded-lg py-1.5 text-xs font-black border ${k === cls ? 'border-white text-white' : 'border-slate-600 text-slate-400 bg-slate-900'}" style="${k === cls ? `background:${s.color}` : ''}">
+                            <img src="${PIXEL.hero(k)}" alt="" class="w-9 h-9 mx-auto" style="image-rendering:pixelated">${CLASSES[k].name}</button>`).join('')}
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1">${CLASSES[cls].icon} ${CLASSES[cls].name}：${CLASSES[cls].desc}</div>
+                </div>`;
+            }).join('');
+            $('roundSelect').value = difficulty;
+            renderTimeEstimate();
+        }
+        function setClass(i, k) {
+            saveGroupSettings();
+            heroClasses[i] = k;
+            localStorage.setItem('boss_classes', JSON.stringify(heroClasses));
+            renderGroupSettings();
+        }
+        // 每位勇者每答一題平均造成的傷害（模擬測出來的，含大招、爆擊、答錯）
+        const CLASS_DPS = { warrior: 7.8, mage: 8, knight: 3.4, healer: 2.6 };
+        function totalTurns(n, diff) { return n === 1 ? DIFFICULTY[diff].solo : DIFFICULTY[diff].per * n; }
+        function bossMaxHp(n, diff, mult = 1) {
+            let d = 0;
+            for (let i = 0; i < n; i++) d += CLASS_DPS[heroClass(i)] || 3;
+            return Math.max(20, Math.round(d / n * totalTurns(n, diff) * 1.1 * DIFFICULTY[diff].hpMul * mult));
+        }
+        function renderTimeEstimate() {
+            const t = totalTurns(groupCount, difficulty);
+            const min = Math.max(1, Math.round(t * 32 / 60));
+            $('timeEstimate').innerText = `${groupCount} 位勇者輪流作答・每人約 ${Math.round(t / groupCount)} 題・魔王約 ${bossMaxHp(groupCount, difficulty)} 血，大約 ${min} 分鐘`;
+        }
+        function setGroupCount(n) {
+            saveGroupSettings();
+            groupCount = n;
+            localStorage.setItem('boss_players', n);
+            renderGroupSettings();
+        }
+        function saveGroupSettings() {
+            document.querySelectorAll('#groupNames input').forEach(inp => { groupNames[Number(inp.dataset.i)] = inp.value.trim(); });
+            localStorage.setItem('boss_names', JSON.stringify(groupNames));
+            difficulty = $('roundSelect').value;
+            localStorage.setItem('boss_diff', difficulty);
+            renderTimeEstimate();
+        }
+
+        // =====================================================================
+        //  題庫：AI 依課本出三種難度
+        // =====================================================================
+        const TIERS = {
+            1: { n: 14, min: 8, name: '★ 基礎', desc: '課本直接寫到的重點、名詞、基本事實，認真上過課的學生一看就會。' },
+            2: { n: 12, min: 6, name: '★★ 理解', desc: '需要理解概念才答得出來，例如比較、分類、因果關係、為什麼會這樣。' },
+            3: { n: 10, min: 4, name: '★★★ 挑戰', desc: '把概念應用到生活情境、需要兩步推理，或判斷實驗設計，難度明顯較高但仍在該年級能力範圍內。' }
+        };
+        let bank = { 1: [], 2: [], 3: [] };      // 尚未使用的題目
+        let bankAll = { 1: [], 2: [], 3: [] };   // 這份題庫的全部題目（再玩一局用）
+        let lastSource = null;
+        let previousQs = [];
+        let isDemoBank = false;
+
+        const JSON_FORMAT = `請嚴格以 JSON 格式輸出陣列，answer 為正確選項的索引（0~3），正確答案的位置請平均分散；source 標示題目來源："課本" 或 "延伸"：
+[
+  { "q": "題目敘述", "options": ["選項0", "選項1", "選項2", "選項3"], "answer": 0, "explanation": "一句話解析", "source": "課本" }
+]`;
+
+        function tierExtendRule(tier, extend, gradeName) {
+            const rule = `延伸題必須和課本主題直接相關，只往外多走一小步（生活應用、常見例子、簡單原因），${gradeName}年級學生想一想答得出來；只能用教科書等級、公認正確的事實，不確定或會變動的內容（最新紀錄、精確統計數字）一律不要出；延伸題的 explanation 要說明和課本哪個概念有關。`;
+            if (!extend || tier === 1) return `\n- 全部只能根據上述內容出題，source 一律填 "課本"。`;
+            if (extend === 3) return tier === 3 ? `\n- 其中約一半可以是「微加深加廣」的延伸題（source 填 "延伸"），其餘根據課本。${rule}` : `\n- 全部根據課本內容，source 填 "課本"。`;
+            return tier === 3 ? `\n- 其中大部分可以是延伸題（source 填 "延伸"）。${rule}` : `\n- 其中約三分之一可以是延伸題（source 填 "延伸"），其餘根據課本。${rule}`;
+        }
+
+        function buildTierPrompt(src, tier, n) {
+            const { grade, extend } = getQuizSettings();
+            const gradeName = GRADE_NAMES[grade];
+            const audience = `台灣國小${gradeName}年級學生`;
+            const T = TIERS[tier];
+            const quality = `\n\n【品質要求】
+- 用繁體中文、台灣用語，用字符合${gradeName}年級程度，題目敘述簡短，適合投影在大螢幕上全班一起看。
+- 每題只有一個正確答案，三個錯誤選項要看起來合理但明確是錯的，不可以有兩個都算對的選項。
+- 避免「以上皆是」「以上皆非」與否定句考法。
+- 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。`;
+            const avoid = previousQs.length
+                ? `\n\n以下題目已經出過，請出不同的新題目：\n${previousQs.slice(-60).map(q => '- ' + q).join('\n')}`
+                : '';
+            const tierText = `\n\n【難度：${T.name}】${T.desc}`;
+            if (src.type === 'pdf') {
+                return `請根據以下教材內文，為${audience}出 ${n} 道四選一選擇題。\n\n【教材內文】\n${src.text}${tierText}\n【出題範圍】${tierExtendRule(tier, extend, gradeName)}${quality}${avoid}\n\n${JSON_FORMAT}`;
+            }
+            return `請針對主題「${src.topic}」，為${audience}設計 ${n} 道四選一單選題，可以生活化、有趣一點。source 一律填 "課本"。${tierText}${quality}${avoid}\n\n${JSON_FORMAT}`;
+        }
+
+        async function verifyQuestions(questions) {
+            const { grade } = getQuizSettings();
+            const list = questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
+            const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（依公認正確的知識判斷，不要猜出題者的意思），並檢查每題品質。
+對每一題回報：
+- best：你認為唯一正確的選項索引（0~3）
+- ok：true 代表事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級太多）就填 false
+
+題目：
+${JSON.stringify(list)}
+
+請嚴格以 JSON 格式輸出：{"results":[{"id":0,"best":1,"ok":true}]}`;
+            const raw = await callGeminiRaw(prompt);
+            const parsed = parseJsonLoose(raw);
+            const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
+                .filter(r => r && r.id !== undefined && r.best !== undefined);
+            if (results.length < questions.length / 2) throw new Error('審題結果格式不符');
+            const byId = new Map(results.map(r => [Number(r.id), r]));
+            const kept = questions.filter((q, i) => {
+                const r = byId.get(i);
+                return r && r.ok === true && Number(r.best) === q.answer;
+            });
+            return { kept, removed: questions.length - kept.length };
+        }
+
+        // 出一個難度：出題 → 審題（審題失敗就保留原題）
+        async function makeTier(src, tier, n, report) {
+            const raw = normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n))));
+            previousQs.push(...raw.map(q => q.q));
+            report(tier, '審題中');
+            try {
+                const { kept, removed } = await verifyQuestions(raw);
+                return { qs: kept, removed, checked: true };
+            } catch (e) {
+                console.warn('審題失敗，保留原題', e);
+                return { qs: raw, removed: 0, checked: false };
+            }
+        }
+
+        async function generateBank(src, isRegen) {
+            const label = src.type === 'pdf' ? `教冊「${src.name}」` : `主題「${src.topic}」`;
+            const status = { 1: '出題中', 2: '出題中', 3: '出題中' };
+            const t0 = Date.now();
+            const paint = () => showLoading(
+                isRegen ? `AI 正在用${label}重新出題庫...` : `AI 正在根據${label}出題庫...`,
+                `★ ${status[1]}　★★ ${status[2]}　★★★ ${status[3]}　（已等待 ${Math.round((Date.now() - t0) / 1000)} 秒）`
+            );
+            const report = (tier, s) => { status[tier] = s; paint(); };
+            paint();
+            const ticker = setInterval(paint, 1000);
+
+            try {
+                const result = { 1: [], 2: [], 3: [] };
+                let removedTotal = 0, unchecked = false;
+
+                // 三種難度同時出題，速度比較快
+                const firsts = await Promise.all([1, 2, 3].map(t =>
+                    makeTier(src, t, TIERS[t].n, report).then(r => { report(t, `完成 ${r.qs.length} 題`); return r; })
+                ));
+                firsts.forEach((r, i) => { result[i + 1].push(...r.qs); removedTotal += r.removed; if (!r.checked) unchecked = true; });
+
+                // 某個難度剔除太多就補出一輪
+                const lacking = [1, 2, 3].filter(t => result[t].length < TIERS[t].min);
+                if (lacking.length) {
+                    lacking.forEach(t => report(t, '補題中'));
+                    const extra = await Promise.all(lacking.map(t => makeTier(src, t, TIERS[t].n, report)));
+                    extra.forEach((r, i) => { const t = lacking[i]; result[t].push(...r.qs); removedTotal += r.removed; report(t, `完成 ${result[t].length} 題`); });
+                }
+
+                clearInterval(ticker);
+                const total = result[1].length + result[2].length + result[3].length;
+                if (total < 8) throw new Error('通過檢查的題目太少，請再出一次題。');
+
+                lastSource = src;
+                isDemoBank = false;
+                setBank(result);
+                const ext = [1, 2, 3].reduce((n, t) => n + result[t].filter(q => q.source === '延伸').length, 0);
+                showReady(
+                    `${label}題庫完成！`,
+                    `★ ${result[1].length} 題　★★ ${result[2].length} 題　★★★ ${result[3].length} 題${ext ? `（含 ${ext} 題延伸）` : ''}<br>` +
+                    (unchecked ? '<span class="text-amber-300">部分題目這次沒有完成答案檢查，建議先自己看過。</span>'
+                               : (removedTotal ? `已剔除 ${removedTotal} 題有疑慮的題目` : '全部通過答案檢查'))
+                );
+            } catch (err) {
+                clearInterval(ticker);
+                alert('出題失敗：' + err.message);
+                showSetup();
+            }
+        }
+
+        function setBank(result) {
+            bankAll = { 1: [...result[1]], 2: [...result[2]], 3: [...result[3]] };
+            refillBank();
+            renderBankStatus();
+        }
+        function refillBank() {
+            bank = { 1: shuffle([...bankAll[1]]), 2: shuffle([...bankAll[2]]), 3: shuffle([...bankAll[3]]) };
+        }
+        function bankSize() { return bankAll[1].length + bankAll[2].length + bankAll[3].length; }
+
+        // 原題重玩：上一局出過的題目，依原本順序再出一次
+        let replayQueue = [];
+        function setReplay(log) {
+            replayQueue = log.map(e => ({ q: e.q, options: e.options, answer: e.answer, explanation: e.explanation, source: e.source, tier: e.tier }));
+        }
+        function unusedCount() { return bank[1].length + bank[2].length + bank[3].length; }
+
+        // 依難度抽題；出過的題目不會再出現。該難度用完就向相鄰難度借
+        // 選項順序打亂（正解跟著換位置），避免 AI 或內建題庫的答案老是同一個號碼
+        function shuffleOpts(q) {
+            if (!q || !Array.isArray(q.options) || q.options.length !== 4) return q;
+            const idx = shuffle([0, 1, 2, 3]);
+            return { ...q, options: idx.map(i => q.options[i]), answer: idx.indexOf(q.answer) };
+        }
+        function drawQuestion(value) {
+            const order = value === 1 ? [1, 2, 3] : value === 2 ? [2, 1, 3] : [3, 2, 1];
+            let picked = null;
+            for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; break; }
+            if (!picked) {
+                // 真的全部用完（內建題目，或 AI 補題失敗）才重複使用
+                refillBank();
+                toast('新題目還沒補好，這題先重複使用舊題', '#38bdf8');
+                for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; break; }
+            }
+            topUpBank();
+            return picked ? shuffleOpts(picked) : picked;
+        }
+
+        // 背景補題：剩下不到 12 題時，AI 依同一份教材再出一批新題（避開出過的題目），不打斷遊戲
+        let toppingUp = false;
+        async function topUpBank() {
+            if (toppingUp || !lastSource || isDemoBank || unusedCount() >= 12) return;
+            toppingUp = true;
+            const tiers = [1, 2, 3].sort((a, b) => bank[a].length - bank[b].length).slice(0, 2);
+            try {
+                const results = await Promise.all(tiers.map(t => makeTier(lastSource, t, 8, () => {}).catch(() => ({ qs: [] }))));
+                let added = 0;
+                results.forEach((r, i) => {
+                    const t = tiers[i];
+                    bank[t].unshift(...r.qs);
+                    bankAll[t].push(...r.qs);
+                    added += r.qs.length;
+                });
+                if (added && game && !game.over) toast(`📚 AI 補了 ${added} 題新題目`, '#34d399');
+            } finally {
+                toppingUp = false;
+            }
+        }
+
+        function regenerateBank() {
+            saveApiKeyFromModal();
+            if (!lastSource) { alert('目前是內建題目，請先上傳教材或選一個主題。'); showSetup(); return; }
+            generateBank(lastSource, true);
+        }
+
+        // ===== 讀取教冊 =====
+        async function handleFileUpload(event) {
+            saveApiKeyFromModal(); saveGroupSettings();
+            const fileList = event.target.files;
+            if (!fileList || !fileList.length) return;
+            showLoading('正在解析教冊檔案...', '準備開始提取內文文字');
+            let book;
+            try {
+                book = await readBookFiles(fileList);
+            } catch (err) {
+                alert('讀取檔案失敗：' + err.message);
+                event.target.value = '';
+                showSetup();
+                return;
+            }
+            event.target.value = '';
+            if (book.notes.length) alert(book.notes.join('\n'));
+            showLoading('教冊讀取完成！', `共 ${book.count} 份、約 ${book.text.replace(/\s/g, '').length} 字，準備交給 AI 出題`);
+            previousQs = [];
+            await generateBank({ type: 'pdf', name: book.name, text: book.text }, false);
+        }
+
+        async function generateQuestionsByTopic(topic) {
+            saveApiKeyFromModal(); saveGroupSettings();
+            if (!topic) return;
+            if (!lastSource || lastSource.type !== 'topic' || lastSource.topic !== topic) previousQs = [];
+            await generateBank({ type: 'topic', topic }, false);
+        }
+
+        // ===== 內建試玩題 =====
+        const DEMO_BANK = {
+            1: [
+                { q: '水在一般情況下，溫度降到幾度會開始結冰？', options: ['0℃', '10℃', '50℃', '100℃'], answer: 0, explanation: '水的凝固點是 0℃。' },
+                { q: '太陽每天從哪個方向升起？', options: ['東方', '西方', '南方', '北方'], answer: 0, explanation: '地球由西向東自轉，所以太陽從東方升起。' },
+                { q: '人體用來呼吸、交換氣體的器官是？', options: ['胃', '肺', '心臟', '腎臟'], answer: 1, explanation: '肺負責吸入氧氣、排出二氧化碳。' },
+                { q: '台灣最高的山是哪一座？', options: ['玉山', '雪山', '阿里山', '合歡山'], answer: 0, explanation: '玉山主峰約 3952 公尺，是台灣最高峰。' },
+                { q: '下列哪一種動物會飛？', options: ['企鵝', '鴕鳥', '老鷹', '烏龜'], answer: 2, explanation: '企鵝和鴕鳥是不會飛的鳥，老鷹會飛。' },
+                { q: '一年有幾個月？', options: ['10 個月', '11 個月', '12 個月', '13 個月'], answer: 2, explanation: '一年有 12 個月。' }
+            ],
+            2: [
+                { q: '為什麼濕衣服晾在太陽下比較快乾？', options: ['陽光讓水蒸發得比較快', '衣服會變輕', '風會停止', '水會變成冰'], answer: 0, explanation: '溫度越高，水蒸發得越快。' },
+                { q: '冰飲料的杯子外面出現小水珠，水珠是從哪裡來的？', options: ['杯子裡的水滲出來', '空氣中的水蒸氣遇冷凝結', '冰塊直接跑出來', '杯子自己產生的'], answer: 1, explanation: '空氣中的水蒸氣碰到冰冷的杯壁，凝結成小水珠。' },
+                { q: '下列哪一種材料最容易導電？', options: ['塑膠', '木頭', '銅', '橡皮'], answer: 2, explanation: '銅是金屬，容易導電；電線裡面就是銅線。' },
+                { q: '晚上看到月亮很亮，是因為？', options: ['月亮自己會燃燒', '月亮反射太陽的光', '月亮反射地球的燈光', '月亮上有很多燈'], answer: 1, explanation: '月亮本身不會發光，是反射太陽光。' },
+                { q: '植物的根主要的功能是？', options: ['吸收水分並固定植物', '製造種子', '開花', '吸引昆蟲'], answer: 0, explanation: '根能吸收水分和養分，也讓植物站穩。' },
+                { q: '指南針的指針，有一端會固定指向哪個方向？', options: ['北方', '西方', '正上方', '太陽的方向'], answer: 0, explanation: '指南針受地球磁場影響，指針會指向南北方向。' }
+            ],
+            3: [
+                { q: '同樣大小的木塊和鐵塊放進水裡，木塊浮起來、鐵塊沉下去，主要是因為？', options: ['同樣大小時木塊比較輕', '木塊的顏色比較淺', '鐵塊的形狀比較方', '水比較喜歡木頭'], answer: 0, explanation: '同樣體積下，木頭比水輕所以浮，鐵比水重所以沉。' },
+                { q: '地震發生時躲在堅固的桌子底下，最主要是為了？', options: ['保護頭部，避免被掉落物砸傷', '桌子下面比較涼', '比較容易被找到', '桌子可以讓地震停止'], answer: 0, explanation: '地震時最大的危險之一是掉落物，桌子能保護頭部。' },
+                { q: '把一盆植物放在完全沒有光的櫃子裡兩個星期，最可能發生什麼事？', options: ['長得更綠更壯', '葉子變黃、變得虛弱', '開出很多花', '完全沒有改變'], answer: 1, explanation: '植物需要光才能製造養分，長期沒光會變黃、虛弱。' },
+                { q: '冬天摸鐵欄杆比摸木頭椅子覺得更冰，主要原因是？', options: ['鐵欄杆的溫度一定比較低', '鐵比木頭更容易把手上的熱傳走', '木頭會自己發熱', '鐵欄杆上都有結冰'], answer: 1, explanation: '兩者溫度可能一樣，但金屬導熱快，手的熱被快速帶走，所以覺得冰。' },
+                { q: '雨後天空出現彩虹，是陽光經過什麼而分出不同顏色？', options: ['空氣中的小水滴', '雲的影子', '吹過的風', '樹葉'], answer: 0, explanation: '陽光穿過小水滴時會折射，分散成不同顏色。' },
+                { q: '想知道「植物生長需不需要水」，哪一種實驗設計最合適？', options: ['兩盆相同植物，一盆澆水、一盆不澆，其他條件都一樣', '兩盆不同植物，都澆水', '一盆放室內、一盆放室外，都不澆水', '只種一盆植物，每天多澆一點水'], answer: 0, explanation: '公平的實驗只改變一個條件（有沒有澆水），其他都要相同。' }
+            ]
+        };
+        function useDemoBank() {
+            saveGroupSettings();
+            isDemoBank = true;
+            lastSource = null;
+            setBank(DEMO_BANK);
+            showReady('內建試玩題目已準備好！', `共 ${bankSize()} 題（★、★★、★★★ 各 6 題）。題目用完會重新洗牌。<br>正式上課建議上傳教冊，讓 AI 依課本出題。`);
+        }
+
+        function renderBankStatus() {
+            const n = bankSize();
+            $('bankStatus').innerHTML = n
+                ? `📦 目前題庫：<b class="text-white">${isDemoBank ? '內建試玩題' : (lastSource?.type === 'pdf' ? escapeHtml(lastSource.name) : escapeHtml(lastSource?.topic || ''))}</b>，共 ${n} 題`
+                : '📦 目前還沒有題庫，請上傳教材或選一個主題。';
+            $('useBankBtn').classList.toggle('hidden', !n);
+        }
+
+        // =====================================================================
+        //  選單畫面切換
+        // =====================================================================
+        function menuParts(part) {
+            ['resultPanel', 'loadingPanel', 'readyPanel', 'setupPanel'].forEach(id => $(id).classList.toggle('hidden', id !== part));
+            $('menu').classList.remove('hidden');
+            $('menu').scrollTop = 0;
+        }
+        function showSetup() {
+            stopTimers();
+            $('menuTitle').innerText = 'AI 知識魔王戰';
+            $('menuDesc').innerText = '1～4 位勇者輪流作答，用站位、招式和勇氣打倒魔王！';
+            $('topicSelectModal').selectedIndex = 0;
+            $('pdfInputModal').value = '';
+            toggleTimePanel(false);
+            renderGroupSettings();
+            renderBankStatus();
+            menuParts('setupPanel');
+        }
+        function showLoading(title, desc) {
+            $('loadingTitle').innerText = title;
+            $('loadingDesc').innerText = desc;
+            $('menuTitle').innerText = 'AI 知識魔王戰';
+            $('menuDesc').innerText = '';
+            menuParts('loadingPanel');
+        }
+        function showReady(title, descHtml) {
+            $('readyTitle').innerText = title;
+            $('readyDesc').innerHTML = descHtml;
+            $('menuDesc').innerText = '';
+            menuParts('readyPanel');
+        }
+
+        // =====================================================================
+        //  像素角色（全部用程式畫，統一加深色外框）
+        // =====================================================================
+        const PIXEL = (() => {
+            const cache = {};
+            const OUT = '#140b1c';
+            function make(key, size, draw) {
+                if (cache[key]) return cache[key];
+                const W = size + 2;
+                const c = document.createElement('canvas');
+                c.width = W; c.height = W;
+                const g = c.getContext('2d');
+                g.translate(1, 1);
+                const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+                const C = (cx, cy, rx, ry, col) => {
+                    g.fillStyle = col;
+                    for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++)
+                        if (((x + .5 - cx) / rx) ** 2 + ((y + .5 - cy) / ry) ** 2 <= 1) g.fillRect(x, y, 1, 1);
+                };
+                draw(R, C);
+                // 自動描邊：透明格子旁邊有顏色就塗成外框色
+                g.setTransform(1, 0, 0, 1, 0, 0);
+                const img = g.getImageData(0, 0, W, W), d = img.data;
+                const solid = (x, y) => x >= 0 && y >= 0 && x < W && y < W && d[(y * W + x) * 4 + 3] > 40;
+                const edge = [];
+                for (let y = 0; y < W; y++) for (let x = 0; x < W; x++)
+                    if (!solid(x, y) && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) edge.push([x, y]);
+                g.fillStyle = OUT;
+                edge.forEach(([x, y]) => g.fillRect(x, y, 1, 1));
+                return (cache[key] = c.toDataURL());
+            }
+            const SK = '#f4c9a0', SK2 = '#d89a70', EYE = '#1a1020', PANTS = '#3a3f73', BOOT = '#5a3418';
+            const HERO = {
+                warrior(R) {
+                    R(2, 8, 2, 4, '#b04a2a'); R(2, 8, 1, 4, '#d8703a');
+                    R(4, 1, 8, 3, '#6b3d1e'); R(3, 2, 1, 2, '#6b3d1e');
+                    R(4, 3, 8, 1, '#d83a3a'); R(2, 3, 2, 1, '#d83a3a'); R(1, 4, 2, 1, '#d83a3a');
+                    R(5, 4, 7, 4, SK); R(4, 4, 1, 3, '#6b3d1e');
+                    R(10, 5, 1, 2, EYE); R(11, 7, 1, 1, SK2); R(8, 7, 2, 1, SK2);
+                    R(4, 8, 7, 4, '#9aa4b8'); R(5, 8, 3, 1, '#d0d8e8'); R(5, 9, 1, 2, '#d0d8e8');
+                    R(4, 11, 7, 1, '#6b3d1e'); R(7, 11, 1, 1, '#ffd23a');
+                    R(12, 0, 2, 9, '#dfe7f3'); R(13, 0, 1, 9, '#a8b4c8'); R(11, 9, 4, 1, '#ffd23a'); R(12, 10, 2, 2, '#6b3d1e');
+                    R(11, 9, 1, 2, SK);
+                    R(5, 12, 2, 3, PANTS); R(8, 12, 2, 3, PANTS); R(4, 15, 3, 1, BOOT); R(8, 15, 3, 1, BOOT);
+                },
+                knight(R) {
+                    R(3, 0, 2, 2, '#3b82f6'); R(5, 0, 4, 1, '#3b82f6'); R(2, 1, 2, 2, '#60a5fa');
+                    R(4, 1, 8, 7, '#c8d0dc'); R(5, 1, 3, 1, '#f0f4fa'); R(4, 1, 1, 7, '#9aa4b8');
+                    R(8, 4, 4, 1, EYE); R(9, 5, 2, 1, EYE); R(10, 3, 1, 1, '#f0f4fa');
+                    R(4, 8, 7, 4, '#8a96aa'); R(5, 8, 5, 1, '#c8d0dc'); R(6, 8, 3, 4, '#3b82f6'); R(7, 9, 1, 2, '#ffd23a');
+                    R(5, 12, 2, 3, '#8a96aa'); R(8, 12, 2, 3, '#8a96aa'); R(4, 15, 3, 1, '#4a5060'); R(8, 15, 3, 1, '#4a5060');
+                    R(10, 6, 5, 8, '#1d4ed8'); R(11, 7, 3, 6, '#3b82f6'); R(12, 7, 1, 6, '#ffd23a'); R(11, 9, 3, 1, '#ffd23a'); R(10, 6, 5, 1, '#93c5fd');
+                },
+                mage(R, C) {
+                    R(13, 3, 1, 12, '#8b5a2b'); C(13.5, 2, 2, 2, '#7dd3fc'); R(13, 1, 1, 1, '#ffffff');
+                    R(7, 0, 2, 1, '#6d28d9'); R(6, 1, 4, 1, '#6d28d9'); R(5, 2, 5, 1, '#7c3aed'); R(4, 3, 7, 1, '#7c3aed'); R(2, 4, 11, 1, '#5b21b6');
+                    R(7, 2, 1, 1, '#ffd23a'); R(6, 3, 1, 1, '#a78bfa');
+                    R(5, 5, 6, 3, SK); R(4, 5, 1, 3, '#6b3d1e'); R(9, 6, 1, 1, EYE); R(10, 7, 1, 1, SK2);
+                    R(4, 8, 7, 7, '#7c3aed'); R(6, 8, 3, 1, '#a78bfa'); R(4, 14, 7, 1, '#ffd23a'); R(7, 9, 1, 4, '#5b21b6');
+                    R(11, 9, 2, 2, SK);
+                    R(5, 15, 2, 1, BOOT); R(8, 15, 2, 1, BOOT);
+                },
+                healer(R) {
+                    R(13, 3, 1, 12, '#c8a060'); R(12, 1, 3, 2, '#4ade80'); R(13, 0, 1, 1, '#86efac'); R(12, 2, 1, 1, '#f472b6');
+                    R(4, 1, 8, 7, '#f8fafc'); R(4, 1, 8, 1, '#4ade80'); R(4, 2, 1, 6, '#e2e8f0');
+                    R(6, 3, 5, 4, SK); R(6, 3, 5, 1, '#f0c040'); R(9, 4, 1, 1, EYE); R(10, 6, 1, 1, SK2);
+                    R(4, 8, 7, 7, '#f8fafc'); R(4, 8, 7, 1, '#4ade80'); R(7, 9, 1, 3, '#22c55e'); R(6, 10, 3, 1, '#22c55e'); R(4, 14, 7, 1, '#4ade80');
+                    R(11, 9, 2, 2, SK);
+                    R(5, 15, 2, 1, BOOT); R(8, 15, 2, 1, BOOT);
+                }
+            };
+            const BOSS = {
+                slime(R, C) {
+                    C(16, 22, 14.5, 9.5, '#16a34a'); C(16, 20, 12.5, 8, '#4ade80'); R(7, 16, 3, 2, '#d9f99d'); R(6, 18, 2, 1, '#d9f99d');
+                    R(8, 19, 4, 5, '#fff'); R(15, 19, 4, 5, '#fff'); R(8, 21, 2, 2, EYE); R(15, 21, 2, 2, EYE);
+                    R(10, 26, 7, 1, '#14532d'); R(11, 27, 5, 1, '#14532d');
+                    R(10, 9, 12, 4, '#fbbf24'); R(10, 7, 2, 2, '#fbbf24'); R(15, 6, 2, 3, '#fbbf24'); R(20, 7, 2, 2, '#fbbf24'); R(15, 10, 2, 2, '#ef4444'); R(11, 10, 1, 1, '#fde68a');
+                    R(3, 27, 2, 3, '#16a34a'); R(27, 26, 2, 4, '#16a34a');
+                },
+                dragon(R, C) {
+                    for (let k = 0; k < 11; k++) { R(18 + k, 11 - k, 1, 2 + Math.floor(k * 0.8), '#2f5a3a'); if (k % 3 === 1) R(18 + k, 12 - k, 1, 1 + Math.floor(k * 0.6), '#4a7f55'); } R(29, 0, 2, 2, '#e8e2d0');
+                    C(19, 21, 10, 8, '#3f6f4a'); R(14, 16, 12, 3, '#9aa4b8'); R(15, 20, 10, 2, '#9aa4b8'); R(16, 24, 8, 2, '#9aa4b8');
+                    C(10, 20, 5, 6, '#e8c37a');
+                    C(9, 11, 7, 6, '#4a7f55'); R(1, 11, 6, 5, '#4a7f55'); R(1, 15, 6, 1, '#2f5a3a'); R(2, 16, 1, 1, '#fff'); R(5, 16, 1, 1, '#fff');
+                    R(6, 9, 3, 2, '#fde047'); R(6, 10, 1, 1, EYE); R(2, 12, 1, 1, '#1a1020');
+                    R(11, 3, 2, 5, '#e8e2d0'); R(14, 4, 2, 4, '#e8e2d0'); R(8, 6, 7, 2, '#9aa4b8');
+                    R(12, 27, 4, 5, '#2f5a3a'); R(22, 27, 4, 5, '#2f5a3a'); R(11, 31, 2, 1, '#fff'); R(21, 31, 2, 1, '#fff');
+                    R(28, 21, 4, 3, '#3f6f4a'); R(30, 18, 2, 3, '#3f6f4a');
+                },
+                lich(R, C) {
+                    for (let y = 14; y < 32; y++) { const w = 6 + Math.floor((y - 14) * 0.6); R(16 - w, y, w * 2, 1, y % 4 === 0 ? '#5b21b6' : '#4c1d95'); }
+                    R(13, 14, 6, 18, '#3b0d70');
+                    R(8, 2, 16, 6, '#4c1d95'); R(7, 6, 3, 10, '#4c1d95'); R(22, 6, 3, 10, '#4c1d95');
+                    C(16, 10, 6, 6, '#e8e2d0'); R(11, 8, 3, 3, EYE); R(17, 8, 3, 3, EYE); R(12, 9, 1, 1, '#22d3ee'); R(18, 9, 1, 1, '#22d3ee');
+                    R(15, 12, 2, 1, EYE); R(12, 14, 8, 1, EYE); R(13, 14, 1, 1, '#e8e2d0'); R(16, 14, 1, 1, '#e8e2d0'); R(18, 14, 1, 1, '#e8e2d0');
+                    R(4, 6, 2, 26, '#6b4a2a'); R(1, 1, 8, 1, '#fbbf24'); R(2, 2, 6, 2, '#fde68a'); R(4, 4, 2, 1, '#fde68a'); R(2, 5, 6, 2, '#fde68a'); R(1, 7, 8, 1, '#fbbf24'); R(3, 6, 4, 1, '#f59e0b');
+                    R(6, 18, 3, 2, '#e8e2d0'); R(23, 18, 3, 2, '#e8e2d0');
+                },
+                demon(R, C) {
+                    R(1, 9, 7, 2, '#7f1d1d'); R(0, 11, 6, 7, '#7f1d1d'); R(2, 12, 3, 4, '#b91c1c');
+                    R(24, 9, 7, 2, '#7f1d1d'); R(26, 11, 6, 7, '#7f1d1d'); R(27, 12, 3, 4, '#b91c1c');
+                    C(16, 21, 9, 9, '#b91c1c'); R(12, 18, 8, 6, '#dc2626');
+                    C(15, 11, 7, 6.5, '#dc2626'); R(7, 2, 3, 6, '#1f1f1f'); R(21, 2, 3, 6, '#1f1f1f'); R(6, 1, 2, 2, '#1f1f1f'); R(23, 1, 2, 2, '#1f1f1f');
+                    R(10, 9, 4, 2, '#fde047'); R(16, 9, 4, 2, '#fde047'); R(10, 9, 2, 2, EYE); R(16, 9, 2, 2, EYE); R(9, 7, 5, 1, '#450a0a'); R(16, 7, 5, 1, '#450a0a');
+                    R(11, 14, 9, 3, '#450a0a'); R(12, 14, 1, 2, '#fff'); R(18, 14, 1, 2, '#fff');
+                    R(5, 18, 4, 6, '#b91c1c'); R(3, 23, 4, 2, '#1f1f1f'); R(23, 18, 4, 6, '#b91c1c'); R(25, 23, 4, 2, '#1f1f1f');
+                    R(11, 29, 4, 3, '#7f1d1d'); R(18, 29, 4, 3, '#7f1d1d');
+                },
+                vampire(R, C) {
+                    C(16, 23, 13, 9, '#111827'); R(9, 17, 14, 14, '#991b1b'); R(4, 26, 4, 6, '#111827'); R(24, 26, 4, 6, '#111827');
+                    R(7, 12, 5, 7, '#111827'); R(20, 12, 5, 7, '#111827'); R(8, 13, 2, 5, '#991b1b'); R(22, 13, 2, 5, '#991b1b');
+                    C(15.5, 10, 5.5, 6.5, '#e5e7eb'); R(10, 3, 12, 4, '#111'); R(9, 5, 2, 5, '#111'); R(21, 5, 2, 5, '#111'); R(15, 7, 2, 2, '#111');
+                    R(11, 10, 3, 1, '#ef4444'); R(17, 10, 3, 1, '#ef4444'); R(12, 10, 1, 1, '#fff'); R(13, 14, 6, 1, '#7f1d1d'); R(14, 15, 1, 1, '#fff'); R(17, 15, 1, 1, '#fff');
+                    R(14, 18, 4, 3, '#e5e7eb'); R(15, 21, 2, 2, '#fbbf24');
+                    R(12, 29, 3, 3, '#1f2937'); R(18, 29, 3, 3, '#1f2937');
+                },
+                mirror(R, C) {
+                    C(16, 16, 11.5, 14.5, '#a16207'); C(16, 16, 10.5, 13.5, '#ca8a04'); C(16, 16, 9, 12, '#94a3b8'); C(14, 12, 5, 6, '#cbd5e1');
+                    R(11, 13, 3, 2, '#7c3aed'); R(18, 13, 3, 2, '#7c3aed'); R(11, 13, 1, 1, '#fff'); R(18, 13, 1, 1, '#fff'); R(10, 11, 4, 1, '#1e1b4b'); R(18, 11, 4, 1, '#1e1b4b');
+                    R(11, 20, 10, 2, '#1e1b4b'); R(12, 20, 1, 1, '#fff'); R(14, 20, 1, 1, '#fff'); R(16, 20, 1, 1, '#fff'); R(18, 20, 1, 1, '#fff'); R(13, 22, 6, 1, '#1e1b4b');
+                    R(16, 0, 2, 2, '#fbbf24'); R(15, 30, 4, 2, '#a16207');
+                    R(1, 5, 2, 4, '#e2e8f0'); R(2, 4, 1, 1, '#e2e8f0'); R(29, 21, 2, 4, '#e2e8f0'); R(2, 25, 3, 2, '#cbd5e1'); R(28, 6, 2, 2, '#cbd5e1');
+                },
+                eagle(R, C) {
+                    for (let k = 0; k < 13; k++) { R(17 + k, 13 - k, 1, 3 + (k % 3), k % 3 === 2 ? '#1d4ed8' : '#2563eb'); } for (let k = 0; k < 13; k += 3) R(17 + k, 13 - k, 1, 1, '#93c5fd');
+                    C(18, 20, 8.5, 9, '#1e40af'); C(15, 20, 5, 6, '#e0e7ff'); R(24, 24, 7, 3, '#1e3a8a'); R(26, 27, 5, 2, '#1e3a8a');
+                    C(9, 11, 5.5, 5, '#f8fafc'); R(1, 11, 5, 3, '#fbbf24'); R(2, 14, 3, 1, '#f59e0b'); R(1, 11, 1, 1, '#f59e0b');
+                    R(6, 9, 3, 2, '#fde047'); R(7, 9, 1, 2, EYE); R(5, 8, 4, 1, '#cbd5e1');
+                    R(13, 28, 3, 4, '#fbbf24'); R(20, 28, 3, 4, '#fbbf24'); R(12, 31, 5, 1, '#f59e0b'); R(19, 31, 5, 1, '#f59e0b');
+                    R(27, 11, 2, 3, '#fde047'); R(25, 14, 3, 2, '#fde047'); R(27, 16, 2, 3, '#fde047');
+                },
+                ghost(R, C) {
+                    C(16, 26, 8, 5, 'rgba(103,232,249,.55)'); R(10, 28, 2, 4, 'rgba(103,232,249,.45)'); R(20, 28, 2, 3, 'rgba(103,232,249,.45)');
+                    R(9, 13, 14, 12, '#22d3ee'); R(10, 14, 12, 3, '#67e8f9'); R(15, 13, 2, 12, '#0e7490');
+                    R(10, 3, 11, 10, '#67e8f9'); R(11, 3, 3, 1, '#cffafe'); R(11, 8, 9, 2, '#0e7490'); R(12, 8, 2, 2, '#fff'); R(17, 8, 2, 2, '#fff');
+                    R(14, 0, 3, 3, '#a5f3fc'); R(20, 0, 2, 4, '#a5f3fc');
+                    R(4, 4, 2, 20, '#e0f2fe'); R(5, 4, 1, 20, '#bae6fd'); R(2, 20, 6, 2, '#a5f3fc'); R(4, 22, 2, 4, '#0e7490');
+                    R(6, 16, 3, 3, '#22d3ee'); R(23, 16, 3, 5, '#22d3ee');
+                },
+                oni(R, C) {
+                    R(8, 2, 16, 6, '#f97316'); R(9, 0, 2, 3, '#fbbf24'); R(13, 0, 2, 2, '#fbbf24'); R(17, 0, 2, 3, '#fbbf24'); R(21, 0, 2, 2, '#fbbf24'); R(6, 4, 2, 4, '#f97316'); R(24, 4, 2, 4, '#f97316');
+                    C(16, 15, 9, 9, '#dc2626'); R(9, 4, 2, 5, '#f5f5f4'); R(21, 4, 2, 5, '#f5f5f4');
+                    R(10, 11, 5, 1, '#450a0a'); R(17, 11, 5, 1, '#450a0a'); R(11, 12, 3, 2, '#fde047'); R(18, 12, 3, 2, '#fde047'); R(11, 12, 1, 2, EYE); R(18, 12, 1, 2, EYE);
+                    R(15, 15, 2, 2, '#991b1b'); R(11, 19, 10, 3, '#450a0a'); R(11, 17, 1, 3, '#fff'); R(20, 17, 1, 3, '#fff'); R(13, 19, 6, 1, '#fff');
+                    R(9, 24, 14, 8, '#991b1b'); R(13, 24, 6, 8, '#7f1d1d'); R(5, 25, 4, 5, '#dc2626'); R(23, 25, 4, 5, '#dc2626');
+                    R(3, 22, 2, 3, '#fbbf24'); R(27, 21, 2, 3, '#f97316');
+                }
+            };
+            return {
+                hero: cls => make('h_' + cls, 16, HERO[cls]),
+                boss: id => make('b_' + id, 32, BOSS[id] || BOSS.slime)
+            };
+        })();
+
+        // =====================================================================
+        //  遊戲本體：知識魔王戰（輪流作答・站位・恐懼值）
+        // =====================================================================
+        const TRAITS = {
+            armor:     { icon: '🛡️', name: '鐵甲', desc: '受到的傷害減半；連續 3 位勇者答對就破甲，接下來 3 次攻擊傷害 ×1.5', hp: 0.8 },
+            vamp:      { icon: '🩸', name: '吸血', desc: '每有人答錯，魔王回 3 血' },
+            split:     { icon: '🫧', name: '分裂', desc: '血量剩一半時分裂成兩隻：每回合行動兩次，但每次受到的傷害 +1' },
+            timecurse: { icon: '⏳', name: '時間詛咒', desc: '每 3 次行動施法一次，接下來 2 題作答時間少 5 秒' },
+            fog:       { icon: '🌫️', name: '迷霧', desc: '每題一半機率起霧，選項前 3 秒看不清楚' },
+            mirror:    { icon: '🪞', name: '鏡像', desc: '答錯的人會被反彈受傷；但答對時多打 1' },
+            thunder:   { icon: '⚡', name: '雷擊', desc: '魔王行動時 30% 機率落雷，隨機打一位勇者 2 點' },
+            ghost:     { icon: '👻', name: '閃避', desc: '每次攻擊有 20% 機率被閃開（大招必中）', hp: 0.85 },
+            burn:      { icon: '🔥', name: '灼燒', desc: '狂暴之後，魔王每次行動全隊 −1 血' }
+        };
+        const BOSSES = [
+            { e: '🟢', px: 'slime', n: '史萊姆王', t: 'split' },
+            { e: '🐉', px: 'dragon', n: '鐵甲巨龍', t: 'armor' },
+            { e: '💀', px: 'lich', n: '時間巫妖', t: 'timecurse' },
+            { e: '😈', px: 'demon', n: '混沌惡魔', t: 'fog' },
+            { e: '🧛', px: 'vampire', n: '吸血鬼伯爵', t: 'vamp' },
+            { e: '👺', px: 'mirror', n: '鏡像魔', t: 'mirror' },
+            { e: '🦅', px: 'eagle', n: '雷霆神鷹', t: 'thunder' },
+            { e: '👻', px: 'ghost', n: '幽靈騎士', t: 'ghost' },
+            { e: '👹', px: 'oni', n: '烈焰鬼王', t: 'burn' }
+        ];
+        const RANKS = {
+            normal: { label: '', hp: 1, atk: 0, color: '#d946ef' },
+            elite:  { label: '菁英', hp: 1.2, atk: 1, color: '#38bdf8' },
+            legend: { label: '傳說', hp: 1.4, atk: 1, color: '#fbbf24' }
+        };
+        // 技能：tier = 題目難度；req = 要站的位置（front 前排、back 後排、any 都可以）
+        const SKILLS = {
+            warrior: [
+                { id: 'slash', icon: '🗡️', name: '揮砍', tier: 1, req: 'front', dmg: 4, desc: '4 傷害' },
+                { id: 'smash', icon: '🔨', name: '重擊', tier: 2, req: 'front', dmg: 7, desc: '7 傷害' },
+                { id: 'rush', icon: '💨', name: '衝鋒', tier: 2, req: 'back', dmg: 4, move: true, desc: '衝到最前排，4 傷害' }
+            ],
+            knight: [
+                { id: 'bash', icon: '🛡️', name: '盾擊', tier: 1, req: 'front', dmg: 3, desc: '3 傷害' },
+                { id: 'guard', icon: '🏰', name: '守護', tier: 1, req: 'any', guard: true, desc: '魔王的單體攻擊改打騎士，騎士只受一半傷害' },
+                { id: 'holy', icon: '✨', name: '聖光打擊', tier: 2, req: 'front', dmg: 5, teamStress: -10, desc: '5 傷害，全隊恐懼 −10' }
+            ],
+            mage: [
+                { id: 'fire', icon: '🔥', name: '火球', tier: 1, req: 'back', dmg: 3, crit: true, fx: '🔥', desc: '3 傷害，35% 爆擊 ×2' },
+                { id: 'bolt', icon: '⚡', name: '雷擊', tier: 2, req: 'any', dmg: 5, crit: true, fx: '⚡', desc: '5 傷害，35% 爆擊 ×2' },
+                { id: 'ice', icon: '❄️', name: '冰封', tier: 3, req: 'back', dmg: 4, freeze: true, fx: '❄️', desc: '4 傷害，魔王下次不能行動' }
+            ],
+            healer: [
+                { id: 'heal', icon: '💚', name: '治療', tier: 1, req: 'any', heal: 7, desc: '血最少的隊友 +7，可以救起倒地的人' },
+                { id: 'pray', icon: '🙏', name: '祈禱', tier: 2, req: 'back', healAll: 3, teamStress: -15, desc: '全隊 +3 血、恐懼 −15' },
+                { id: 'smite', icon: '🌟', name: '聖光彈', tier: 1, req: 'any', dmg: 2, fx: '🌟', desc: '2 傷害' }
+            ]
+        };
+        const RISE = { id: 'rise', icon: '💪', name: '掙扎起身', tier: 1, req: 'any', desc: '答對就站起來，回 40% 血' };
+        const ULTS = {
+            warrior: { name: '破天斬', icon: '⚔️', color: '#f87171', desc: '一刀 14 傷害，無視鐵甲與閃避' },
+            mage:    { name: '流星雨', icon: '☄️', color: '#c084fc', desc: '三顆流星，共 9～18 傷害' },
+            knight:  { name: '聖光壁壘', icon: '🛡️', color: '#7dd3fc', desc: '全隊護盾 +6，並守護全隊' },
+            healer:  { name: '生命之泉', icon: '⛲', color: '#4ade80', desc: '全隊回 8 血、救起倒地的人、恐懼 −30' }
+        };
+        const ITEMS = {
+            potion: { icon: '🧪', name: '回復藥水', desc: '血最少的隊友 +8' },
+            tea: { icon: '🍵', name: '安神茶', desc: '輪到的人恐懼 −40' },
+            hourglass: { icon: '⏳', name: '時光沙漏', desc: '這題（或下一題）多 10 秒' },
+            lens: { icon: '🔍', name: '放大鏡', desc: '答題時刪掉一個錯誤選項' },
+            bomb: { icon: '💣', name: '炸彈', desc: '直接炸魔王 8 點' },
+            feather: { icon: '🪶', name: '鳳凰羽毛', desc: '有人倒下時自動救起（不用點）' }
+        };
+        const ITEM_KEYS = Object.keys(ITEMS);
+        const BAG_MAX = 5;
+        const N_HP = [1.6, 1.25, 1.1, 1];      // 人少時勇者血量加成
+        const N_ATK = [0.55, 0.9, 1.05, 1.15];      // 人少時魔王攻擊減輕
+        const CHEERS = 2;
+
+        function hasT(t) { return game && game.traits.includes(t); }
+
+        let game = null;
+        let timerInterval = null;
+        let battleTimer = null;
+        function stopTimers() { clearInterval(timerInterval); clearTimeout(battleTimer); }
+        function timeFor(tier) { return QUESTION_TIME + (tier === 3 ? 5 : 0); }
+        const FAST = () => window.__fast === true;
+        function wait(ms) { return new Promise(r => { if (FAST()) r(); else setTimeout(r, ms); }); }
+
+        // ---------- 開局 ----------
+        function startGame(mode) {
+            saveApiKeyFromModal(); saveQuizSettings(); saveGroupSettings();
+            const prevLog = (game && game.log) ? game.log : [];
+            setReplay(mode === 'replay' ? prevLog : []);
+            if (!bankSize()) { alert('還沒有題庫，請先上傳教材、選主題，或用內建題目試玩。'); showSetup(); return; }
+            if (mode === 'new' && isDemoBank && unusedCount() < 6) refillBank();
+            topUpBank();
+            syncEmoji();
+            const n = groupCount;
+            const boss = BOSSES[Math.floor(Math.random() * BOSSES.length)];
+            const roll = Math.random();
+            const rank = roll < 0.10 ? 'legend' : roll < 0.35 ? 'elite' : 'normal';
+            const traits = [boss.t];
+            if (rank === 'legend') { const others = Object.keys(TRAITS).filter(t => t !== boss.t); traits.push(others[Math.floor(Math.random() * others.length)]); }
+            const hpMult = RANKS[rank].hp * traits.reduce((m, t) => m * (TRAITS[t].hp || 1), 1);
+            const bMax = bossMaxHp(n, difficulty, hpMult);
+            const heroes = Array.from({ length: n }, (_, i) => {
+                const cls = heroClass(i), maxHp = Math.round(CLASSES[cls].hp * N_HP[n - 1]);
+                return { cls, maxHp, hp: maxHp, stress: 0, energy: 0, shield: 0, down: false, crisis: 0, awaken: 0, guard: false, marked: false, cheers: CHEERS, moved: false,
+                    dmg: 0, correct: 0, wrong: 0, heals: 0, shields: 0, ults: 0, crits: 0, downs: 0, cheered: 0 };
+            });
+            const pos = [...Array(n).keys()].sort((a, b) => (CLASSES[heroes[a].cls].home === 'front' ? 0 : 1) - (CLASSES[heroes[b].cls].home === 'front' ? 0 : 1) || a - b);
+            game = {
+                n, diff: difficulty, rank, traits, boss, bossMax: bMax, bossHp: bMax, enraged: false, split: false,
+                heroes, pos, queue: [], round: 0, active: -1, phase: 'intro', cur: null,
+                bossActs: 0, charging: false, frozen: false, curse: 0, armorStreak: 0, armorBroken: 0, extraTime: 0,
+                bag: [], log: [], over: false, win: null, say: '', turnNo: 0
+            };
+            game.teams = game.heroes;
+            $('menu').classList.add('hidden');
+            $('gameScreen').classList.remove('hidden');
+            buildScene();
+            renderAll();
+            toast(`${rank !== 'normal' ? `【${RANKS[rank].label}】` : ''}${boss.e} ${boss.n} 出現了！`, rank === 'normal' ? '#f472b6' : RANKS[rank].color);
+            if (rank === 'legend') { flash('#fbbf24'); SFX.charge(); }
+        }
+
+        // ---------- 位置 ----------
+        function rankOf(i) { return game.pos.indexOf(i) + 1; }
+        function isFront(r) { return r <= Math.ceil(game.n / 2); }
+        function isBack(r) { return r > Math.floor(game.n / 2); }
+        function canUse(sk, i) { const r = rankOf(i); return sk.req === 'any' || (sk.req === 'front' && isFront(r)) || (sk.req === 'back' && isBack(r)); }
+        function reqText(req) { return req === 'front' ? '前排' : req === 'back' ? '後排' : ''; }
+        function moveHero(i, newRank) {
+            const p = game.pos.filter(x => x !== i);
+            p.splice(Math.max(0, Math.min(p.length, newRank - 1)), 0, i);
+            game.pos = p;
+        }
+        function alive() { return game.heroes.map((h, i) => i).filter(i => !game.heroes[i].down); }
+
+        function hpRatio() { return game.bossHp / game.bossMax; }
+        function bossAtk() { return Math.max(1, Math.round((DIFFICULTY[game.diff].atk + RANKS[game.rank].atk) * (game.enraged ? 1.3 : 1) * N_ATK[game.n - 1])); }
+        function modDmg(dmg, pierce) {
+            if (hasT('armor') && !pierce) dmg = game.armorBroken ? Math.ceil(dmg * 1.5) : Math.ceil(dmg / 2);
+            if (game.split) dmg += 1;
+            return dmg;
+        }
+        function bossName() { return game.split ? game.boss.n + ' ×2' : game.boss.n; }
+
+        // ---------- 回合流程 ----------
+        function beginBattle() {
+            if (game.phase !== 'intro') return;
+            SFX.select();
+            nextTurn();
+        }
+        function buildRound() {
+            game.round++;
+            const list = game.heroes.map((h, i) => ({ type: 'hero', i, ini: CLASSES[h.cls].spd + Math.random() * 3 }));
+            list.push({ type: 'boss', ini: 4.5 + Math.random() * 3 });
+            if (game.split) list.push({ type: 'boss', ini: 2 + Math.random() * 3, second: true });
+            list.sort((a, b) => b.ini - a.ini);
+            game.queue = list;
+        }
+        function nextTurn() {
+            if (!game || game.over) return;
+            if (checkEnd()) return;
+            if (!game.queue.length) buildRound();
+            const t = game.queue.shift();
+            game.turn = t;
+            if (t.type === 'hero') startHeroTurn(t.i);
+            else bossTurn();
+        }
+        function checkEnd() {
+            if (game.bossHp <= 0) { bossDefeated(); return true; }
+            if (game.heroes.every(h => h.down)) { game.phase = 'anim'; renderAll(); setTimeout(() => endGame(false), FAST() ? 0 : 1200); return true; }
+            return false;
+        }
+
+        function startHeroTurn(i) {
+            const h = game.heroes[i];
+            game.active = i;
+            game.turnNo++;
+            h.moved = false;
+            if (h.guard) h.guard = false;
+            game.cur = null;
+            game.phase = 'choose';
+            game.say = h.down ? `💤 ${escapeHtml(teamName(i))} 倒在地上…答對一題就能站起來！` : `輪到 ${escapeHtml(teamName(i))}（${CLASSES[h.cls].name}・第 ${rankOf(i)} 排）選一個招式`;
+            SFX.select();
+            renderAll();
+            pulseSprite(i);
+        }
+
+        function chooseSkill(i, id) {
+            if (!game || game.phase !== 'choose' || game.active !== i) return;
+            const h = game.heroes[i];
+            if (id === 'ult') { if (h.energy >= 100 && !h.down) doUlt(i); return; }
+            const sk = id === 'rise' ? RISE : (SKILLS[h.cls] || []).find(s => s.id === id);
+            if (!sk) return;
+            if (id === 'rise' ? !h.down : (h.down || !canUse(sk, i))) return;
+            const q = replayQueue.length ? shuffleOpts(replayQueue.shift()) : drawQuestion(sk.tier);
+            if (!q) { toast('題庫是空的，請回設定出題', '#f87171'); return; }
+            const tier = q.tier || sk.tier;
+            const removed = new Set();
+            if (h.crisis > 0) { const wrong = shuffle([0, 1, 2, 3].filter(k => k !== q.answer)); removed.add(wrong[0]); removed.add(wrong[1]); }
+            let limit = timeFor(tier) + game.extraTime;
+            if (game.extraTime) toast(`⏳ 沙漏生效：這題多 ${game.extraTime} 秒`, '#fbbf24');
+            game.extraTime = 0;
+            if (game.curse > 0) { limit = Math.max(8, limit - 5); game.curse--; toast('⏳ 時間詛咒！這題少 5 秒', '#a78bfa'); }
+            const fog = hasT('fog') && Math.random() < 0.5;
+            game.cur = { i, sk, q, tier, t0: performance.now(), limit, removed, fogUntil: fog ? performance.now() + 3000 : 0, cheer: 0 };
+            game.phase = 'question';
+            game.say = '';
+            SFX.select();
+            renderAll();
+            startQTimer();
+            if (fog) {
+                toast('🌫️ 起霧了！選項 3 秒後才看得清楚', '#94a3b8');
+                setTimeout(() => { if (game && game.phase === 'question' && game.cur && game.cur.fogUntil) { game.cur.fogUntil = 0; renderStage(); } }, 3000);
+            }
+        }
+
+        function startQTimer() {
+            stopTimers();
+            let lastShown = 99;
+            updateTimerUI();
+            timerInterval = setInterval(() => {
+                const left = updateTimerUI();
+                const shown = Math.ceil(left);
+                if (shown !== lastShown && shown <= 5 && shown > 0) SFX.tick();
+                lastShown = shown;
+                if (left <= 0) { stopTimers(); answerQ(game.cur.i, -1); }
+            }, 100);
+        }
+        function updateTimerUI() {
+            const c = game && game.cur;
+            if (!c || !c.limit) return 0;
+            const left = Math.max(0, c.limit - (performance.now() - c.t0) / 1000);
+            if ($('qTimer')) $('qTimer').innerText = Math.ceil(left);
+            if ($('qBar')) { $('qBar').style.width = Math.min(100, left / c.limit * 100) + '%'; $('qBar').style.background = left <= 5 ? '#ef4444' : '#fbbf24'; }
+            return left;
+        }
+
+        function answerQ(i, opt) {
+            const c = game && game.cur;
+            if (!c || game.phase !== 'question' || game.active !== i || c.done) return;
+            if (opt >= 0 && c.removed.has(opt)) return;
+            c.done = true;
+            stopTimers();
+            const h = game.heroes[i], q = c.q;
+            const ok = opt === q.answer;
+            const sec = Math.round((performance.now() - c.t0) / 100) / 10;
+            c.ok = ok; c.pick = opt; c.sec = sec; c.fast = ok && sec <= c.limit * 0.4;
+            ok ? h.correct++ : h.wrong++;
+            game.log.push({ q: q.q, options: q.options, answer: q.answer, explanation: q.explanation, source: q.source, tier: c.tier,
+                hero: i, skill: c.sk.name, pick: opt, ok, sec });
+            h.energy = Math.min(100, h.energy + (ok ? 25 + (c.fast ? 10 : 0) : 10));
+            if (ok) { if (c.fast) addStress(i, -5); if (game.n === 1 && !h.down) h.hp = Math.min(h.maxHp, h.hp + 2); }
+            else addStress(i, 15);
+            game.phase = 'result';
+            ok ? SFX.correct() : SFX.wrong();
+            renderAll();
+            if (ok) battleTimer = setTimeout(proceed, FAST() ? 0 : (q.explanation ? 2000 : 1300));
+        }
+        function proceed() {
+            if (!game || game.phase !== 'result') return;
+            clearTimeout(battleTimer);
+            game.phase = 'anim';
+            renderAll();
+            resolveAction().catch(e => { console.error(e); endHeroTurn(); });
+        }
+
+        // ---------- 恐懼值 ----------
+        function addStress(i, v) {
+            const h = game.heroes[i];
+            if (h.down && v > 0) return;
+            h.stress = Math.max(0, Math.min(100, h.stress + v));
+            if (h.stress >= 100 && !h.crisis && !h.awaken) {
+                const name = teamName(i);
+                if (Math.random() < 0.3) {
+                    h.stress = 40; h.awaken = 3;
+                    game.heroes.forEach((o, k) => { if (k !== i) o.stress = Math.max(0, o.stress - 10); });
+                    setTimeout(() => { toast(`✨ ${name} 勇氣覺醒！接下來 3 次攻擊 +2，全隊恐懼 −10`, '#fde047'); fxOn(spr(i), '✨覺醒', '#fde047', 44); SFX.chest(); }, 200);
+                } else {
+                    h.stress = 60; h.crisis = 2;
+                    setTimeout(() => { toast(`😱 ${name} 嚇壞了！接下來 2 題只剩 2 個選項，但效果減半`, '#c084fc'); fxOn(spr(i), '😱崩潰', '#c084fc', 44); SFX.wrong(); }, 200);
+                }
+            }
+        }
+
+        // ---------- 勇者行動 ----------
+        async function resolveAction() {
+            const c = game.cur, i = c.i, h = game.heroes[i], sk = c.sk;
+            const name = escapeHtml(teamName(i));
+            if (!c.ok) {
+                game.say = `${name} 的 ${sk.name} 失手了…`;
+                renderAll();
+                await animFail(i);
+                if (hasT('vamp')) { const heal = Math.min(game.bossMax - game.bossHp, 3); if (heal > 0) { game.bossHp += heal; fxOn(bossEl(), `🩸+${heal}`, '#f43f5e'); game.say += `　🩸 魔王吸血 +${heal}`; } }
+                if (hasT('mirror') && !h.down) { const d = Math.max(1, Math.round(bossAtk() / 2)); await hurtHero(i, d, '🪞反彈'); }
+                if (hasT('armor')) game.armorStreak = 0;
+                if (h.crisis > 0) h.crisis--;
+                renderAll();
+                await wait(500);
+                endHeroTurn();
+                return;
+            }
+            if (hasT('armor') && sk.dmg) {
+                if (game.armorBroken) game.armorBroken--;
+                else if (++game.armorStreak >= 3) { game.armorStreak = 0; game.armorBroken = 3; toast('💥 鐵甲被打破了！接下來 3 次攻擊傷害 ×1.5', '#fde047'); }
+            }
+            const half = h.crisis > 0;
+            const bonus = (c.fast ? 1 : 0) + (h.awaken > 0 ? 2 : 0) + c.cheer + (hasT('mirror') ? 1 : 0);
+            if (sk.id === 'rise') {
+                h.down = false; h.hp = Math.ceil(h.maxHp * 0.4); h.stress = Math.max(h.stress, 30);
+                game.say = `💪 ${name} 站起來了！`;
+                renderAll(); fxHeal(spr(i), `+${h.hp}`); SFX.heal();
+                await wait(800);
+            }
+            if (sk.move) { moveHero(i, 1); game.say = `💨 ${name} 衝到最前排！`; renderAll(); await wait(450); }
+            if (sk.dmg) {
+                let d = sk.dmg + bonus, crit = false;
+                if (sk.crit && Math.random() < 0.35) { d *= 2; crit = true; h.crits++; }
+                if (half) d = Math.ceil(d / 2);
+                const dodge = hasT('ghost') && Math.random() < 0.2;
+                d = modDmg(d);
+                game.say = dodge ? `👻 ${escapeHtml(bossName())} 閃開了 ${name} 的 ${sk.name}！`
+                    : `${sk.icon} ${name} 的 ${sk.name}！造成 <b class="text-rose-300">${d}</b> 傷害${c.fast ? ' ⚡快攻' : ''}${crit ? ' 💥爆擊！' : ''}${c.cheer ? ' 📣' : ''}${half ? '（嚇壞了，減半）' : ''}`;
+                renderAll();
+                await animAttack(i, sk, d, crit, dodge);
+                if (!dodge) { hitBoss(d); h.dmg += d; }
+                renderAll();
+            }
+            if (sk.guard) {
+                h.guard = true;
+                game.say = `🏰 ${name} 舉起盾牌守護全隊！魔王的單體攻擊會打騎士`;
+                renderAll(); fxShield(spr(i)); SFX.block();
+                await wait(700);
+            }
+            if (sk.teamStress) { game.heroes.forEach((o, k) => addStress(k, sk.teamStress)); fxAll(`😌${sk.teamStress}`, '#c4b5fd'); }
+            if (sk.heal) {
+                const t = healTarget();
+                const amt = half ? Math.ceil(sk.heal / 2) : sk.heal;
+                const got = healHero(t, amt);
+                h.heals += got;
+                game.say = `💚 ${name} 治療 ${escapeHtml(teamName(t))} +${got}`;
+                renderAll(); fxHeal(spr(t), `+${got}`); SFX.heal();
+                await wait(800);
+            }
+            if (sk.healAll) {
+                let tot = 0;
+                game.heroes.forEach((o, k) => { if (!o.down) { const g = healHero(k, half ? 2 : sk.healAll); tot += g; fxHeal(spr(k), `+${g}`); } });
+                h.heals += tot;
+                game.say = `🙏 ${name} 祈禱，全隊回血、恐懼降低`;
+                renderAll(); SFX.heal();
+                await wait(800);
+            }
+            if (sk.freeze && game.bossHp > 0) { game.frozen = true; game.say += '　❄️ 魔王被冰封了！'; renderAll(); }
+            if (h.crisis > 0) h.crisis--;
+            if (h.awaken > 0 && sk.dmg) h.awaken--;
+            if (Math.random() < 0.22 && game.bag.length < BAG_MAX) {
+                const it = ITEM_KEYS[Math.floor(Math.random() * ITEM_KEYS.length)];
+                game.bag.push(it);
+                toast(`🎒 ${teamName(i)} 撿到 ${ITEMS[it].icon} ${ITEMS[it].name}！`, '#fbbf24'); SFX.chest();
+            }
+            renderAll();
+            await wait(500);
+            endHeroTurn();
+        }
+        function healTarget() {
+            const idx = game.heroes.map((h, k) => k);
+            const downed = idx.filter(k => game.heroes[k].down);
+            if (downed.length) return downed[0];
+            return idx.sort((a, b) => game.heroes[a].hp / game.heroes[a].maxHp - game.heroes[b].hp / game.heroes[b].maxHp)[0];
+        }
+        function healHero(k, amt) {
+            const o = game.heroes[k];
+            if (o.down) { o.down = false; o.hp = 0; }
+            const before = o.hp;
+            o.hp = Math.min(o.maxHp, o.hp + amt);
+            return o.hp - before;
+        }
+        function endHeroTurn() {
+            if (!game || game.over) return;
+            game.active = -1;
+            game.cur = null;
+            game.phase = 'anim';
+            renderAll();
+            setTimeout(nextTurn, FAST() ? 0 : 500);
+        }
+
+        function hitBoss(dmg) {
+            game.bossHp = Math.max(0, game.bossHp - dmg);
+            if (!game.enraged && game.bossHp > 0 && hpRatio() <= 0.5) {
+                game.enraged = true;
+                setTimeout(() => { toast(`🔥 ${game.boss.n} 狂暴化了！攻擊變強！`, '#f43f5e'); flash('#f43f5e'); SFX.steal(); }, 300);
+                if (hasT('split') && !game.split) {
+                    game.split = true;
+                    setTimeout(() => { toast(`🫧 ${game.boss.n} 分裂成兩隻了！每回合會行動兩次`, '#4ade80'); renderScene(); }, 900);
+                }
+            }
+        }
+
+        // ---------- 大招（放在自己的選項框，不用答題，用掉這回合）----------
+        async function doUlt(i) {
+            const h = game.heroes[i], u = ULTS[h.cls], name = teamName(i);
+            h.energy = 0; h.ults++;
+            game.phase = 'anim';
+            game.say = `${u.icon} ${escapeHtml(name)} 發動大招【${u.name}】！`;
+            renderAll();
+            SFX.ult(); bigShake(); flash(u.color);
+            showUltText(`${u.icon}<br>${escapeHtml(name)}<br>${u.name}！`, u.color);
+            await wait(900);
+            if (h.cls === 'warrior') {
+                const d = modDmg(14, true);
+                await animUltWarrior(i, d);
+                hitBoss(d); h.dmg += d;
+            } else if (h.cls === 'mage') {
+                let total = 0;
+                for (let k = 0; k < 3; k++) {
+                    const d = modDmg(3 + Math.floor(Math.random() * 4));
+                    await animMeteor(d);
+                    hitBoss(d); total += d; renderScene();
+                }
+                h.dmg += total;
+                game.say = `☄️ 流星雨共造成 <b class="text-rose-300">${total}</b> 傷害！`;
+            } else if (h.cls === 'knight') {
+                game.heroes.forEach((o, k) => { if (!o.down) { o.shield = Math.min(12, o.shield + 6); fxShield(spr(k)); } });
+                h.guard = true; h.shields += 6 * alive().length;
+                SFX.block();
+                game.say = '🛡️ 全隊護盾 +6，騎士守護全隊！';
+                await wait(900);
+            } else if (h.cls === 'healer') {
+                let tot = 0;
+                game.heroes.forEach((o, k) => { const g = healHero(k, 8); tot += g; o.stress = Math.max(0, o.stress - 30); fxHeal(spr(k), `+${g}`); });
+                h.heals += tot; game.curse = 0;
+                SFX.heal();
+                game.say = '⛲ 生命之泉！全隊回血、恐懼 −30，倒地的人也站起來了！';
+                await wait(1000);
+            }
+            renderAll();
+            await wait(500);
+            endHeroTurn();
+        }
+
+        // ---------- 免費行動：換位、打氣、道具 ----------
+        function stepMove(i, dir) {
+            if (!game || game.phase !== 'choose' || game.active !== i) return;
+            const h = game.heroes[i];
+            if (h.moved || h.down) return;
+            const r = rankOf(i), nr = r + dir;
+            if (nr < 1 || nr > game.n) return;
+            moveHero(i, nr);
+            h.moved = true;
+            SFX.select();
+            renderAll();
+        }
+        function cheer(j) {
+            if (!game || game.over || (game.phase !== 'choose' && game.phase !== 'question')) return;
+            const a = game.active;
+            if (a < 0 || j === a) return;
+            const g = game.heroes[j];
+            if (g.cheers <= 0) return;
+            g.cheers--; g.cheered++;
+            addStress(a, -15);
+            if (game.cur && game.phase === 'question') game.cur.cheer = Math.min(2, game.cur.cheer + 1);
+            fxOn(spr(a), '📣加油！', TEAM_STYLES[j].color, 36);
+            toast(`📣 ${teamName(j)} 為 ${teamName(a)} 加油！恐懼 −15${game.phase === 'question' ? '，答對傷害 +1' : ''}`, TEAM_STYLES[j].color);
+            SFX.select();
+            renderAll();
+        }
+        function useItem(idx) {
+            if (!game || game.over || (game.phase !== 'choose' && game.phase !== 'question')) { toast('輪到勇者行動時才能用道具', '#94a3b8'); return; }
+            const k = game.bag[idx];
+            if (!k || k === 'feather') return;
+            const a = game.active;
+            if (k === 'lens') {
+                if (game.phase !== 'question') { toast('🔍 放大鏡要在答題時使用', '#94a3b8'); return; }
+                const wrong = [0, 1, 2, 3].filter(o => o !== game.cur.q.answer && !game.cur.removed.has(o));
+                if (!wrong.length) { toast('沒有可以刪的選項了', '#94a3b8'); return; }
+                game.cur.removed.add(wrong[Math.floor(Math.random() * wrong.length)]);
+                toast('🔍 刪掉一個錯誤選項！', '#fbbf24');
+            } else if (k === 'potion') {
+                const t = healTarget();
+                const g = healHero(t, 8);
+                fxHeal(spr(t), `🧪+${g}`);
+            } else if (k === 'tea') {
+                addStress(a, -40); fxOn(spr(a), '🍵 −40', '#c4b5fd');
+            } else if (k === 'hourglass') {
+                if (game.phase === 'question') { game.cur.limit += 10; toast('⏳ 這題多 10 秒！', '#fbbf24'); }
+                else { game.extraTime += 10; toast('⏳ 這題會多 10 秒！', '#fbbf24'); }
+            } else if (k === 'bomb') {
+                const d = modDmg(8);
+                hitBoss(d);
+                fxBoom(bossEl(), `💣−${d}`);
+                flash('#fb923c');
+            }
+            game.bag.splice(idx, 1);
+            SFX.chest();
+            renderAll();
+            if (game.bossHp <= 0) { stopTimers(); bossDefeated(); }
+        }
+
+        // ---------- 魔王行動 ----------
+        async function bossTurn() {
+            game.active = -1;
+            game.phase = 'boss';
+            game.cur = null;
+            const name = escapeHtml(bossName());
+            renderAll();
+            await wait(500);
+            if (game.frozen) {
+                game.frozen = false;
+                game.say = `❄️ ${name} 被冰封，這次不能行動！`;
+                renderAll(); fxOn(bossEl(), '❄️', '#7dd3fc', 60);
+                await wait(1100);
+                return endBossTurn();
+            }
+            game.bossActs++;
+            const atk = bossAtk();
+            const live = alive();
+            const front = live.filter(k => isFront(rankOf(k)));
+            const back = live.filter(k => isBack(rankOf(k)));
+            const pickOne = arr => arr[Math.floor(Math.random() * arr.length)];
+            const marked = live.find(k => game.heroes[k].marked);
+            let act;
+            if (game.charging) act = 'nova';
+            else if (game.bossActs % 4 === 0) act = 'chargeUp';
+            else {
+                const opts = [['claw', 34], ['spell', 24], ['roar', 12]];
+                if (game.n >= 2) opts.push(['sweep', 12], ['shove', 8]);
+                if (game.n >= 2 && marked === undefined) opts.push(['mark', 10]);
+                let r = Math.random() * opts.reduce((s, o) => s + o[1], 0);
+                act = opts.find(o => (r -= o[1]) < 0)[0];
+            }
+            if (act === 'claw') {
+                const t = marked !== undefined ? marked : pickOne(front.length ? front : live);
+                game.say = `${game.boss.e} ${name} 揮爪攻擊 ${escapeHtml(teamName(t))}！`;
+                renderAll();
+                await animBossMelee(t);
+                await hurtHero(t, atk * (game.heroes[t].marked ? 1.5 : 1), null, true);
+                game.heroes[t].marked = false;
+            } else if (act === 'spell') {
+                const t = marked !== undefined ? marked : pickOne(back.length ? back : live);
+                game.say = `${game.boss.e} ${name} 對 ${escapeHtml(teamName(t))} 施放黑暗魔法！`;
+                renderAll();
+                await animBossSpell(t);
+                await hurtHero(t, atk * (game.heroes[t].marked ? 1.5 : 1), null, true);
+                game.heroes[t].marked = false;
+            } else if (act === 'sweep') {
+                const ts = front.length ? front : live.slice(0, 2);
+                game.say = `${game.boss.e} ${name} 橫掃前排！`;
+                renderAll();
+                await animBossSweep(ts);
+                for (const t of ts) await hurtHero(t, Math.max(1, Math.round(atk * 0.6)), null, false, true);
+            } else if (act === 'roar') {
+                const t = pickOne(live);
+                game.say = `${game.boss.e} ${name} 發出恐怖的咆哮！${escapeHtml(teamName(t))} 嚇得發抖`;
+                renderAll();
+                await animRoar();
+                live.forEach(k => addStress(k, k === t ? 25 : 10));
+                live.forEach(k => fxOn(spr(k), k === t ? '😨+25' : '😟+10', '#c084fc', 28));
+            } else if (act === 'shove') {
+                const t = game.pos.find(k => !game.heroes[k].down);
+                game.say = `${game.boss.e} ${name} 把 ${escapeHtml(teamName(t))} 撞到最後面！`;
+                renderAll();
+                await animBossMelee(t);
+                moveHero(t, game.n);
+                await hurtHero(t, Math.max(1, Math.round(atk * 0.5)), null, true);
+            } else if (act === 'mark') {
+                const t = pickOne(back.length ? back : live);
+                game.heroes[t].marked = true;
+                game.say = `👁 ${name} 盯上了 ${escapeHtml(teamName(t))}！下一擊會特別痛（騎士可以守護）`;
+                renderAll();
+                await animMark(t);
+            } else if (act === 'chargeUp') {
+                game.charging = true;
+                game.say = `⚡ ${name} 開始蓄力！下次行動會攻擊全隊！快補血、開護盾或用冰封打斷！`;
+                renderAll(); SFX.charge(); flash('#f43f5e');
+                fxOn(bossEl(), '⚡蓄力', '#f43f5e', 56);
+                await wait(1400);
+            } else if (act === 'nova') {
+                game.charging = false;
+                game.say = `💥 ${name} 釋放大招，攻擊全隊！`;
+                renderAll();
+                await animNova();
+                for (const t of live) await hurtHero(t, Math.round(atk * 1.2), null, false, true);
+            }
+            // 特性
+            if (hasT('thunder') && Math.random() < 0.3 && alive().length) {
+                const t = pickOne(alive());
+                SFX.thunder(); flash('#fde047');
+                await hurtHero(t, 2, '⚡落雷', false);
+            }
+            if (hasT('burn') && game.enraged) for (const t of alive()) await hurtHero(t, 1, '🔥', false, true);
+            if (hasT('timecurse') && game.bossActs % 3 === 0) { game.curse = 2; toast(`⏳ ${game.boss.n} 施放時間詛咒！接下來 2 題少 5 秒`, '#a78bfa'); }
+            renderAll();
+            await wait(700);
+            endBossTurn();
+        }
+        function endBossTurn() {
+            if (!game || game.over) return;
+            game.phase = 'anim';
+            renderAll();
+            setTimeout(nextTurn, FAST() ? 0 : 300);
+        }
+        // single = 單體攻擊（可被騎士守護）；quiet = 不加恐懼
+        async function hurtHero(t, raw, label, single, quiet) {
+            let target = t;
+            let dmg = Math.round(raw);
+            const knight = game.heroes.findIndex((o, k) => o.guard && !o.down && k !== t);
+            if (single && knight >= 0) { target = knight; dmg = Math.ceil(dmg / 2); fxShield(spr(knight)); }
+            else if (game.heroes[t].guard) dmg = Math.ceil(dmg / 2);
+            const h = game.heroes[target];
+            if (h.down) return;
+            const absorbed = Math.min(h.shield, dmg);
+            h.shield -= absorbed; dmg -= absorbed;
+            h.hp -= dmg;
+            h.energy = Math.min(100, h.energy + 10);
+            fxHit(spr(target), dmg ? `${label ? label + ' ' : ''}−${dmg}` : '🛡️擋下', dmg ? '#f87171' : '#7dd3fc');
+            if (dmg) SFX.wrong(); else SFX.block();
+            if (!quiet && dmg) addStress(target, 10);
+            if (h.hp <= 0) {
+                h.hp = 0; h.down = true; h.downs++; h.marked = false; h.guard = false; h.crisis = 0;
+                const fi = game.bag.indexOf('feather');
+                if (fi >= 0) {
+                    game.bag.splice(fi, 1);
+                    h.down = false; h.hp = Math.ceil(h.maxHp / 2);
+                    setTimeout(() => { fxHeal(spr(target), '🪶復活！'); SFX.chest(); }, 400);
+                    toast(`🪶 鳳凰羽毛發動！${teamName(target)} 復活了`, '#fde047');
+                } else toast(`💤 ${teamName(target)} 倒下了！輪到他時答對一題就能站起來`, '#f87171');
+            }
+            renderAll();
+            await wait(350);
+        }
+
+        function bossDefeated() {
+            if (game.over || game.phase === 'dying') return;
+            game.phase = 'dying';
+            stopTimers();
+            const el = bossEl();
+            if (el) el.classList.add('boss-die');
+            flash('#fde047'); bigShake();
+            game.say = `🏆 ${escapeHtml(game.boss.n)} 被打倒了！`;
+            renderAll();
+            setTimeout(() => endGame(true), FAST() ? 0 : 1500);
+        }
+
+        // =====================================================================
+        //  畫面
+        // =====================================================================
+        function bar(pct, color, h = 'h-4 md:h-5') {
+            return `<div class="${h} bg-slate-900 rounded-full overflow-hidden border border-slate-600"><div class="h-full rounded-full transition-all duration-500" style="width:${Math.max(0, Math.min(1, pct)) * 100}%;background:${color}"></div></div>`;
+        }
+        function spr(i) { return $('spr' + i); }
+        function bossEl() { return $('bossSpr'); }
+        function rankLeft(r) { return 44 - (r - 1) * 11; }
+
+        function buildScene() {
+            const heroes = game.heroes.map((h, i) => `<div id="spr${i}" class="spr absolute -translate-x-1/2 text-center" style="left:${rankLeft(rankOf(i))}%;bottom:6%;transition:left .55s cubic-bezier(.34,1.3,.64,1)">
+                    <div class="spr-tags h-7 text-xl leading-7"></div>
+                    <img class="spr-body inline-block w-[72px] h-[72px] md:w-[90px] md:h-[90px]" src="${PIXEL.hero(h.cls)}" alt="" style="image-rendering:pixelated;filter:drop-shadow(0 6px 0 rgba(0,0,0,.45))">
+                    <div class="spr-info w-28 md:w-32 mt-1"></div>
+                </div>`).join('');
+            $('scene').innerHTML = `
+                <div class="absolute inset-x-0 bottom-0 h-[22%]" style="background:linear-gradient(180deg,#2a1d3a,#120c1c)"></div>
+                <div class="absolute inset-x-0 bottom-[22%] h-px bg-fuchsia-900/60"></div>
+                ${heroes}
+                <div id="bossInfo" class="absolute top-2 right-3 md:right-5 w-60 md:w-80 text-center z-10"></div>
+                <div id="bossWrap" class="absolute text-center" style="right:6%;bottom:6%">
+                    <div id="bossSpr" class="inline-flex items-end justify-center leading-none" style="filter:drop-shadow(0 8px 0 rgba(0,0,0,.5))"></div>
+                </div>
+                <div id="fx" class="absolute inset-0 pointer-events-none overflow-hidden"></div>`;
+        }
+
+        function renderAll() {
+            if (!game) return;
+            const sc = $('scene');
+            const small = game.phase === 'question' || game.phase === 'result';
+            if (sc) { sc.style.height = small ? '26vh' : '36vh'; sc.style.setProperty('--bs', small ? 'min(150px, 16vh)' : 'min(190px, 21vh)'); }
+            renderOrder();
+            renderScene();
+            renderStage();
+        }
+
+        function renderOrder() {
+            const cur = game.turn;
+            const chip = (t, now) => {
+                if (t.type === 'boss') return `<span class="shrink-0 px-2 py-1 rounded-lg text-sm md:text-base font-black ${now ? 'bg-rose-600 text-white ring-2 ring-white' : 'bg-slate-800 text-rose-300'}">${game.boss.e}</span>`;
+                const s = TEAM_STYLES[t.i], h = game.heroes[t.i];
+                return `<span class="shrink-0 px-2 py-1 rounded-lg text-sm md:text-base font-black whitespace-nowrap ${now ? 'ring-2 ring-white' : 'opacity-80'} ${h.down ? 'grayscale' : ''}" style="background:${now ? s.color : s.dark};color:#fff">${CLASSES[h.cls].icon} ${escapeHtml(teamName(t.i))}</span>`;
+            };
+            const list = (cur && game.phase !== 'intro' ? [chip(cur, true)] : []).concat(game.queue.map(t => chip(t, false)));
+            const bag = game.bag.map((k, idx) => {
+                const it = ITEMS[k], passive = k === 'feather';
+                return `<button onclick="useItem(${idx})" ${passive ? 'disabled' : ''} title="${it.name}：${it.desc}" class="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-slate-900 border-2 border-amber-400/60 text-xl md:text-2xl active:scale-90 transition ${passive ? 'opacity-70' : 'hover:border-amber-300'}">${it.icon}</button>`;
+            }).join('') + Array.from({ length: BAG_MAX - game.bag.length }, () => `<div class="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-slate-900/50 border-2 border-dashed border-slate-700"></div>`).join('');
+            $('orderBar').innerHTML = `<div class="flex items-center gap-2 min-w-0 overflow-hidden">
+                    <span class="shrink-0 text-xs md:text-sm font-black text-slate-400">${game.round ? `第 ${game.round} 回合` : '行動順序'}</span>
+                    <div class="flex items-center gap-1.5 min-w-0 overflow-hidden">${list.join('<span class="text-slate-600">›</span>')}</div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0"><span class="text-xs font-bold text-amber-300">🎒</span>${bag}</div>`;
+            $('roundInfo').innerText = game.over ? '戰鬥結束' : `已答 ${game.log.length} 題`;
+        }
+
+        function renderScene() {
+            game.heroes.forEach((h, i) => {
+                const el = spr(i);
+                if (!el) return;
+                const r = rankOf(i), s = TEAM_STYLES[i];
+                el.style.left = rankLeft(r) + '%';
+                const body = el.querySelector('.spr-body');
+                body.style.filter = `drop-shadow(0 6px 0 rgba(0,0,0,.45))${h.down ? ' grayscale(1) brightness(.6)' : ''}`;
+                body.style.transform = h.down ? 'rotate(-80deg) translateX(-14px)' : '';
+                body.classList.toggle('active-hero', game.active === i && !game.over);
+                const tags = [h.marked ? '👁' : '', h.guard ? '🏰' : '', h.shield ? `🛡️${h.shield}` : '', h.crisis ? '😱' : '', h.awaken ? '✨' : '', h.down ? '💤' : ''].filter(Boolean).join(' ');
+                el.querySelector('.spr-tags').innerHTML = tags;
+                el.querySelector('.spr-info').innerHTML = `
+                    <div class="text-xs md:text-sm font-black truncate rounded-md px-1 ${game.active === i ? 'text-slate-900' : 'text-white'}" style="background:${game.active === i ? '#fde047' : s.color}">${r}・${escapeHtml(teamName(i))}</div>
+                    <div class="flex items-center gap-1 mt-1"><span class="text-[10px] w-4">❤️</span><div class="flex-1">${bar(h.hp / h.maxHp, h.hp / h.maxHp <= 0.3 ? '#ef4444' : '#22c55e', 'h-2.5')}</div><span class="text-[11px] font-black w-9 text-right">${h.hp}/${h.maxHp}</span></div>
+                    <div class="flex items-center gap-1 mt-0.5"><span class="text-[10px] w-4">😨</span><div class="flex-1">${bar(h.stress / 100, h.stress >= 70 ? '#d946ef' : '#8b5cf6', 'h-2')}</div><span class="text-[11px] font-black w-9 text-right text-violet-300">${h.stress}</span></div>`;
+            });
+            const b = game.boss, rk = RANKS[game.rank];
+            const be = bossEl();
+            if (be && !be.classList.contains('boss-die')) {
+                const key = game.split ? 'split' : 'one';
+                if (be.dataset.k !== key) {
+                    be.dataset.k = key;
+                    const one = sz => `<img src="${PIXEL.boss(b.px)}" alt="" style="image-rendering:pixelated;width:${sz};height:${sz}">`;
+                    be.innerHTML = game.split ? one('calc(var(--bs) * .75)') + one('calc(var(--bs) * .75)') : one('var(--bs)');
+                }
+                be.style.filter = `drop-shadow(0 8px 0 rgba(0,0,0,.5))${game.enraged ? ' drop-shadow(0 0 18px #f43f5e)' : ''}${game.frozen ? ' hue-rotate(180deg) brightness(1.3)' : ''}`;
+            }
+            const traitChips = game.traits.map(t => `<span title="${TRAITS[t].desc}" class="inline-flex items-center gap-1 text-[11px] md:text-xs font-black px-1.5 py-0.5 rounded-md bg-slate-900/80 border border-slate-600 text-slate-200">${TRAITS[t].icon} ${TRAITS[t].name}</span>`).join('');
+            const status = [
+                game.charging ? '<span class="text-rose-300 animate-pulse">⚡ 蓄力中</span>' : '',
+                game.frozen ? '<span class="text-sky-300">❄️ 冰封</span>' : '',
+                hasT('armor') ? (game.armorBroken ? `<span class="text-amber-300">💥 破甲 ${game.armorBroken}</span>` : `<span class="text-slate-300">🛡️ 連對 ${game.armorStreak}/3 破甲</span>`) : '',
+                game.curse ? `<span class="text-violet-300">⏳ 詛咒 ${game.curse}</span>` : ''
+            ].filter(Boolean).join('　');
+            $('bossInfo').innerHTML = `<div class="flex items-center justify-between gap-2 text-sm md:text-lg font-black ${game.enraged ? 'text-rose-300' : 'text-fuchsia-200'}">
+                    <span class="truncate">${rk.label ? `<span class="text-xs px-1.5 py-0.5 rounded mr-1 align-middle" style="background:${rk.color};color:#0f172a">${rk.label}</span>` : ''}${game.enraged ? '🔥' : ''}${escapeHtml(bossName())}</span>
+                    <span class="shrink-0 text-white">${Math.max(0, game.bossHp)}<span class="text-xs text-slate-400">/${game.bossMax}</span></span></div>
+                ${bar(hpRatio(), game.enraged ? '#f43f5e' : rk.color)}
+                <div class="flex flex-wrap justify-center gap-1 mt-1">${traitChips}<span class="text-[11px] text-slate-400 font-bold">攻擊 ${bossAtk()}</span></div>
+                ${status ? `<div class="text-xs font-bold mt-0.5">${status}</div>` : ''}`;
+        }
+
+        function renderStage() {
+            const st = $('stage');
+            const ph = game.phase;
+            let top = '';
+            if (ph === 'intro') {
+                top = `<div class="text-center py-2">
+                    <div class="text-2xl md:text-3xl font-black text-amber-300 mb-2">${game.boss.e} ${escapeHtml(game.boss.n)} 擋住了去路！</div>
+                    ${game.rank !== 'normal' ? `<div class="text-lg font-black mb-1" style="color:${RANKS[game.rank].color}">${game.rank === 'legend' ? '🌟 傳說魔王降臨！血更厚、有兩個特性' : '💠 菁英魔王！血更厚、攻擊更強'}</div>` : ''}
+                    <div class="max-w-3xl mx-auto grid gap-1.5 mb-3">${game.traits.map(t => `<div class="bg-slate-800/80 border border-slate-600 rounded-xl px-4 py-1.5 text-base md:text-lg"><b class="text-fuchsia-300">${TRAITS[t].icon} ${TRAITS[t].name}</b>　<span class="text-slate-200">${TRAITS[t].desc}</span></div>`).join('')}</div>
+                    <div class="text-slate-300 text-sm md:text-base mb-3">依照上面的行動順序<b class="text-amber-300">輪流作答</b>：輪到的人在<b class="text-amber-300">自己的框</b>選招式、回答自己的題目。沒輪到的人可以按 📣 幫忙加油！</div>
+                    <button onclick="beginBattle()" class="px-12 py-4 rounded-2xl bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white text-2xl font-black shadow-xl pulse-big">⚔️ 開始戰鬥</button>
+                </div>`;
+            } else if (ph === 'question' || ph === 'result') {
+                const c = game.cur, q = c.q, reveal = ph === 'result';
+                const fogged = !reveal && c.fogUntil && performance.now() < c.fogUntil;
+                const opts = q.options.map((o, k) => {
+                    const isAns = reveal && k === q.answer, mine = reveal && k === c.pick, gone = c.removed.has(k);
+                    return `<div class="flex items-center gap-3 px-4 py-2 md:py-3 rounded-2xl border-4 text-lg md:text-2xl font-black ${isAns ? (c.ok ? 'opt-correct' : 'opt-reveal') : mine ? 'opt-wrong' : (reveal || gone) ? 'opacity-30 border-slate-700 bg-slate-800' : 'border-slate-600 bg-slate-800'}">
+                        <span class="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-amber-400 text-slate-900">${k + 1}</span>
+                        <span class="${fogged ? 'fog-opt' : ''} ${gone ? 'line-through' : ''}">${escapeHtml(o)}</span></div>`;
+                }).join('');
+                const s = TEAM_STYLES[c.i];
+                top = `<div class="proj-z">
+                    <div class="flex items-center gap-3 mb-1.5">
+                        <span class="shrink-0 px-3 py-1 rounded-lg font-black text-white" style="background:${s.color}">${CLASSES[game.heroes[c.i].cls].icon} ${escapeHtml(teamName(c.i))}・${c.sk.icon}${c.sk.name}</span>
+                        <span class="text-lg text-amber-300 font-black">${'★'.repeat(c.tier)}</span>
+                        ${q.source === '延伸' ? '<span class="text-xs font-black text-emerald-300 bg-emerald-950/80 border border-emerald-600 px-2 py-0.5 rounded-md">🔭 延伸</span>' : ''}
+                        <div class="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden"><div id="qBar" class="h-full rounded-full" style="width:${reveal ? 0 : 100}%;background:#fbbf24"></div></div>
+                        <span id="qTimer" class="text-3xl font-black text-amber-400 w-12 text-right">${reveal ? '' : ''}</span>
+                    </div>
+                    <div class="text-2xl md:text-3xl font-black leading-snug text-center my-1.5">${escapeHtml(q.q)}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${opts}</div>
+                    ${reveal ? `<div class="flex flex-col md:flex-row items-stretch gap-3 mt-2">
+                        <div class="flex-1 text-base md:text-lg font-bold ${c.ok ? 'text-green-200 bg-green-950/60 border-green-700' : 'text-amber-100 bg-red-950/50 border-red-700'} border rounded-2xl px-4 py-2">${c.ok ? `✔ 答對了！${c.fast ? ' ⚡快攻 +1' : ''}` : (c.pick < 0 ? '⏰ 時間到！' : '✘ 答錯了，招式失手')}　✅ 正解：${escapeHtml(q.options[q.answer])}${q.explanation ? '<br>💡 ' + escapeHtml(q.explanation) : ''}</div>
+                        ${c.ok ? '' : `<button onclick="proceed()" class="shrink-0 px-8 py-3 rounded-2xl bg-amber-400 text-slate-900 text-xl md:text-2xl font-black shadow-xl pulse-big">繼續 ▶</button>`}
+                    </div>` : ''}
+                </div>`;
+            } else {
+                top = `<div class="text-center text-xl md:text-3xl font-black py-3 md:py-5 min-h-[4rem]">${game.say || ''}</div>`;
+            }
+            st.innerHTML = `<div id="msg" class="max-w-6xl w-full mx-auto">${top}</div>
+                <div class="mt-auto grid gap-2 md:gap-3 pt-2" style="grid-template-columns:repeat(${game.n}, minmax(0, 1fr))">${game.heroes.map((h, i) => heroBox(i)).join('')}</div>`;
+            st.querySelectorAll('.ans-btn').forEach(b => b.addEventListener('pointerdown', ev => { ev.preventDefault(); answerQ(Number(b.dataset.i), Number(b.dataset.o)); }));
+            if (ph === 'question') updateTimerUI();
+        }
+
+        function heroBox(i) {
+            const h = game.heroes[i], s = TEAM_STYLES[i], cls = CLASSES[h.cls];
+            const active = game.active === i;
+            const ph = game.phase;
+            const head = `<div class="flex items-center justify-between gap-1 mb-1.5">
+                <div class="font-black text-sm md:text-lg truncate" style="color:${active ? '#fde047' : s.color}">${cls.icon} ${escapeHtml(teamName(i))}</div>
+                <div class="shrink-0 text-[11px] md:text-xs font-bold text-slate-300">第 ${rankOf(i)} 排</div></div>`;
+            const energy = `<div class="flex items-center gap-1"><span class="text-[10px]">💥</span><div class="flex-1">${bar(h.energy / 100, h.energy >= 100 ? '#fde047' : s.color, 'h-2')}</div></div>`;
+            let body = '';
+            if (active && ph === 'choose') {
+                if (h.down) {
+                    body = skillBtn(i, RISE, true);
+                } else {
+                    const skills = SKILLS[h.cls].map(sk => skillBtn(i, sk, canUse(sk, i))).join('');
+                    const u = ULTS[h.cls], ready = h.energy >= 100;
+                    const ult = `<button onclick="chooseSkill(${i}, 'ult')" ${ready ? '' : 'disabled'} title="${u.desc}" class="w-full rounded-xl px-2 py-1.5 border-2 text-left font-black ${ready ? 'ult-ready border-amber-300 bg-gradient-to-r from-amber-500 to-rose-500 text-white' : 'border-slate-700 bg-slate-900/60 text-slate-500'}">
+                        <div class="flex items-center gap-2 text-sm md:text-base"><span class="shrink-0">${u.icon} 大招・${u.name}</span><span class="flex-1 min-w-0 truncate text-[11px] md:text-xs font-bold opacity-90">${ready ? u.desc : ''}</span><span class="shrink-0 text-xs">${ready ? '不用答題！' : `能量 ${h.energy}/100`}</span></div></button>`;
+                    const r = rankOf(i);
+                    const mv = game.n > 1 ? `<div class="grid grid-cols-2 gap-1.5">
+                        <button onclick="stepMove(${i}, 1)" ${h.moved || r >= game.n ? 'disabled' : ''} class="rounded-lg py-1.5 text-xs md:text-sm font-black bg-slate-700 disabled:opacity-30">◀ 往後退</button>
+                        <button onclick="stepMove(${i}, -1)" ${h.moved || r <= 1 ? 'disabled' : ''} class="rounded-lg py-1.5 text-xs md:text-sm font-black bg-slate-700 disabled:opacity-30">往前進 ▶</button></div>` : '';
+                    body = `<div class="grid gap-1.5">${skills}${ult}${mv}</div>`;
+                }
+            } else if (active && ph === 'question') {
+                const c = game.cur;
+                body = `<div class="grid grid-cols-2 gap-2">${[0, 1, 2, 3].map(k => `<button data-i="${i}" data-o="${k}" ${c.removed.has(k) ? 'disabled' : ''} class="ans-btn min-h-[56px] md:min-h-[68px] rounded-xl text-4xl md:text-5xl font-black text-white border-4 border-white/30 active:scale-95 transition shadow-lg disabled:opacity-20" style="background:${s.color}">${k + 1}</button>`).join('')}</div>`;
+            } else if (active && ph === 'result') {
+                const c = game.cur;
+                body = `<div class="py-3 text-center ${c.ok ? 'text-green-400' : 'text-red-400'}"><div class="text-5xl font-black">${c.ok ? '✔' : (c.pick < 0 ? '⏰' : '✘')}</div><div class="font-black">${c.ok ? '答對了！' : '失手了…'}</div></div>`;
+            } else {
+                const canCheer = !game.over && (ph === 'choose' || ph === 'question') && game.active >= 0 && h.cheers > 0;
+                body = `<div class="space-y-1">
+                    <div class="flex items-center gap-1"><span class="text-[10px]">❤️</span><div class="flex-1">${bar(h.hp / h.maxHp, h.hp / h.maxHp <= 0.3 ? '#ef4444' : '#22c55e', 'h-2.5')}</div><span class="text-[11px] font-black">${h.hp}</span></div>
+                    <div class="flex items-center gap-1"><span class="text-[10px]">😨</span><div class="flex-1">${bar(h.stress / 100, '#8b5cf6', 'h-2')}</div><span class="text-[11px] font-black text-violet-300">${h.stress}</span></div>
+                    ${energy}
+                    <div class="text-center text-xs md:text-sm font-bold text-slate-400 py-1">${h.down ? '💤 倒地中' : '等待中'}${h.crisis ? '・😱嚇壞了' : ''}${h.awaken ? '・✨覺醒' : ''}</div>
+                    <button onclick="cheer(${i})" ${canCheer ? '' : 'disabled'} class="w-full rounded-xl py-2 md:py-3 text-sm md:text-lg font-black border-2 ${canCheer ? 'bg-sky-600 border-sky-300 text-white active:scale-95' : 'bg-slate-900/60 border-slate-700 text-slate-500'}">📣 打氣（剩 ${h.cheers}）</button>
+                </div>`;
+            }
+            return `<div class="flex flex-col rounded-2xl border-4 p-2 transition ${active ? 'shadow-[0_0_24px_rgba(253,224,71,.45)]' : ''}" style="border-color:${active ? '#fde047' : s.color};background:linear-gradient(180deg, ${s.dark}, #0f172a);${!active && game.active >= 0 ? 'opacity:.85' : ''}">
+                ${head}${active && (ph === 'choose') && !h.down ? `<div class="mb-1.5">${energy}</div>` : ''}<div class="flex-1">${body}</div></div>`;
+        }
+        function skillBtn(i, sk, ok) {
+            const why = !ok ? `要站${reqText(sk.req)}` : '';
+            return `<button onclick="chooseSkill(${i}, '${sk.id}')" ${ok ? '' : 'disabled'} title="${sk.desc}" class="w-full rounded-xl px-2 py-1.5 border-2 text-left font-black transition active:scale-[.98] ${ok ? 'bg-slate-800 border-slate-500 hover:border-amber-300 text-white' : 'bg-slate-900/60 border-slate-800 text-slate-500'}">
+                <div class="flex items-center gap-2 text-sm md:text-base"><span class="shrink-0">${sk.icon} ${sk.name}</span><span class="flex-1 min-w-0 truncate text-[11px] md:text-xs font-bold ${ok ? 'text-slate-300' : 'text-rose-400'}">${ok ? sk.desc : `${why}才能用`}</span><span class="shrink-0 text-amber-300 text-xs">${'★'.repeat(sk.tier)}</span></div></button>`;
+        }
+
+        // =====================================================================
+        //  動畫（Web Animations）
+        // =====================================================================
+        function centerOf(el) {
+            const sc = $('scene').getBoundingClientRect();
+            const r = (el.querySelector('.spr-body') || el).getBoundingClientRect();
+            return { x: r.left - sc.left + r.width / 2, y: r.top - sc.top + r.height / 2 };
+        }
+        function fxNode(html, x, y, cls = '', style = '') {
+            const d = document.createElement('div');
+            d.className = 'absolute -translate-x-1/2 -translate-y-1/2 ' + cls;
+            d.style.cssText = `left:${x}px;top:${y}px;${style}`;
+            d.innerHTML = html;
+            $('fx').appendChild(d);
+            return d;
+        }
+        function anim(el, frames, opt) {
+            if (FAST() || !el || !el.animate) return Promise.resolve();
+            return new Promise(r => { const a = el.animate(frames, opt); a.onfinish = r; a.oncancel = r; });
+        }
+        function fxOn(el, text, color, size = 40) {
+            if (FAST() || !el || !$('fx')) return;
+            const p = centerOf(el);
+            const d = fxNode(text, p.x, p.y - 10, 'font-black whitespace-nowrap', `color:${color};font-size:${size}px;text-shadow:0 2px 8px #000,0 0 3px #000`);
+            anim(d, [{ opacity: 0, transform: 'translate(-50%,-30%) scale(.6)' }, { opacity: 1, transform: 'translate(-50%,-60%) scale(1.15)', offset: .2 }, { opacity: 0, transform: 'translate(-50%,-150%) scale(1)' }], { duration: 1300, easing: 'ease-out' }).then(() => d.remove());
+        }
+        function fxHit(el, text, color) {
+            if (FAST() || !el) return;
+            const body = el.querySelector('.spr-body') || el;
+            anim(body, [{ filter: 'brightness(1)' }, { filter: 'brightness(3) saturate(0)', transform: 'translateX(-10px)' }, { transform: 'translateX(8px)' }, { filter: 'brightness(1)', transform: 'translateX(0)' }], { duration: 320 });
+            fxOn(el, text, color, 40);
+        }
+        function fxHeal(el, text) {
+            if (FAST() || !el) return;
+            const p = centerOf(el);
+            for (let k = 0; k < 6; k++) {
+                const d = fxNode('✚', p.x + (Math.random() - .5) * 60, p.y + 20, 'font-black', 'color:#4ade80;font-size:22px;text-shadow:0 0 8px #22c55e');
+                anim(d, [{ opacity: 0, transform: 'translate(-50%,0)' }, { opacity: 1, offset: .3 }, { opacity: 0, transform: 'translate(-50%,-90px)' }], { duration: 900 + k * 80, delay: k * 60, easing: 'ease-out' }).then(() => d.remove());
+            }
+            fxOn(el, text, '#4ade80', 36);
+        }
+        function fxShield(el) {
+            if (FAST() || !el) return;
+            const p = centerOf(el);
+            const d = fxNode('', p.x, p.y, 'rounded-full', 'width:110px;height:110px;border:5px solid #7dd3fc;box-shadow:0 0 24px #38bdf8, inset 0 0 24px #38bdf8;');
+            anim(d, [{ opacity: 0, transform: 'translate(-50%,-50%) scale(.4)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1.05)', offset: .4 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.2)' }], { duration: 900 }).then(() => d.remove());
+        }
+        function fxBoom(el, text) {
+            if (FAST() || !el) return;
+            const p = centerOf(el);
+            const d = fxNode('💥', p.x, p.y, '', 'font-size:90px');
+            anim(d, [{ opacity: 0, transform: 'translate(-50%,-50%) scale(.3)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1.3)', offset: .3 }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.6)' }], { duration: 600 }).then(() => d.remove());
+            bossHitFlash();
+            fxOn(el, text, '#fb923c', 52);
+        }
+        function fxAll(text, color) { game.heroes.forEach((h, k) => { if (!h.down) fxOn(spr(k), text, color, 26); }); }
+        function bossHitFlash() {
+            const b = bossEl(); if (!b || FAST()) return;
+            anim(b, [{ filter: 'brightness(1)', transform: 'translateX(0)' }, { filter: 'brightness(4) saturate(0)', transform: 'translateX(18px) rotate(4deg)' }, { transform: 'translateX(-6px)' }, { filter: 'brightness(1)', transform: 'translateX(0)' }], { duration: 380 });
+        }
+        function slashFx(color, big) {
+            const b = bossEl(); if (!b || FAST()) return Promise.resolve();
+            const p = centerOf(b), sz = big ? 240 : 150;
+            const d = fxNode('', p.x, p.y, 'rounded-full', `width:${sz}px;height:${sz}px;border-top:${big ? 14 : 9}px solid ${color};border-right:${big ? 6 : 3}px solid transparent;filter:drop-shadow(0 0 10px ${color})`);
+            return anim(d, [{ opacity: 0, transform: 'translate(-50%,-50%) rotate(-120deg) scale(.6)' }, { opacity: 1, offset: .2 }, { opacity: 0, transform: 'translate(-50%,-50%) rotate(80deg) scale(1.1)' }], { duration: 380, easing: 'ease-out' }).then(() => d.remove());
+        }
+        function pulseSprite(i) { const el = spr(i); if (el) anim(el.querySelector('.spr-body'), [{ transform: 'scale(1)' }, { transform: 'scale(1.25) translateY(-10px)' }, { transform: 'scale(1)' }], { duration: 450 }); }
+
+        async function animAttack(i, sk, d, crit, dodge) {
+            if (FAST()) return;
+            const el = spr(i), body = el.querySelector('.spr-body'), b = bossEl();
+            const hp = centerOf(el), bp = centerOf(b);
+            const melee = !sk.fx;
+            if (melee) {
+                const dx = bp.x - hp.x - 90;
+                await anim(body, [{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px) translateY(-20px) rotate(10deg)`, offset: .45 }, { transform: `translateX(${dx}px)`, offset: .6 }, { transform: 'translateX(0)' }], { duration: 650, easing: 'ease-in-out', composite: 'replace' }).then(() => {});
+                // 在衝到最近的時候砍
+            } else {
+                anim(body, [{ transform: 'translateX(0)' }, { transform: 'translateX(16px) scale(1.1)' }, { transform: 'translateX(0)' }], { duration: 360 });
+                const proj = fxNode(sk.fx, hp.x + 30, hp.y, '', `font-size:${sk.id === 'ice' ? 54 : 46}px;filter:drop-shadow(0 0 12px ${sk.id === 'fire' ? '#f97316' : sk.id === 'ice' ? '#7dd3fc' : '#fde047'})`);
+                await anim(proj, [{ left: hp.x + 30 + 'px', top: hp.y + 'px', transform: 'translate(-50%,-50%) scale(.6) rotate(0deg)' }, { left: bp.x + 'px', top: bp.y + 'px', transform: 'translate(-50%,-50%) scale(1.3) rotate(360deg)' }], { duration: 480, easing: 'ease-in' });
+                proj.remove();
+            }
+            if (dodge) { anim(b, [{ transform: 'translateX(0)' }, { transform: 'translateX(60px)' }, { transform: 'translateX(0)' }], { duration: 400 }); fxOn(b, '👻 MISS', '#94a3b8', 48); SFX.select(); await wait(400); return; }
+            if (melee) slashFx(crit ? '#fde047' : '#ffffff', crit);
+            const boom = melee ? null : fxNode('💥', bp.x, bp.y, '', 'font-size:80px');
+            if (boom) anim(boom, [{ opacity: 1, transform: 'translate(-50%,-50%) scale(.4)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.5)' }], { duration: 500 }).then(() => boom.remove());
+            bossHitFlash();
+            fxOn(b, `${crit ? '💥' : ''}−${d}`, crit ? '#fde047' : '#f87171', crit ? 64 : 52);
+            crit ? (SFX.chest(), bigShake()) : SFX.hit();
+            await wait(450);
+        }
+        async function animFail(i) {
+            if (FAST()) return;
+            const body = spr(i).querySelector('.spr-body');
+            await anim(body, [{ transform: 'translateX(0) rotate(0)' }, { transform: 'translateX(30px) rotate(20deg)', offset: .4 }, { transform: 'translateX(20px) rotate(-30deg)', offset: .7 }, { transform: 'translateX(0) rotate(0)' }], { duration: 650 });
+            fxOn(spr(i), '💫 失手', '#94a3b8', 36);
+            const b = bossEl();
+            anim(b, [{ transform: 'scale(1)' }, { transform: 'scale(1.08) translateY(-8px)' }, { transform: 'scale(1)' }], { duration: 400, iterations: 2 });
+            fxOn(b, '😏', '#fff', 40);
+            await wait(500);
+        }
+        async function animBossMelee(t) {
+            if (FAST()) return;
+            const b = bossEl(), tp = centerOf(spr(t)), bp = centerOf(b);
+            const dx = tp.x - bp.x + 100;
+            await anim(b, [{ transform: 'translateX(0)' }, { transform: `translateX(${dx * 0.5}px) translateY(-30px) scale(1.1)`, offset: .5 }, { transform: `translateX(${dx}px)`, offset: .75 }, { transform: 'translateX(0)' }], { duration: 700, easing: 'ease-in' });
+            for (let k = 0; k < 3; k++) {
+                const d = fxNode('', tp.x - 20 + k * 20, tp.y, '', 'width:8px;height:90px;background:linear-gradient(#fff,#ef4444);border-radius:6px;box-shadow:0 0 10px #ef4444');
+                anim(d, [{ opacity: 0, transform: 'translate(-50%,-50%) rotate(25deg) scaleY(.2)' }, { opacity: 1, transform: 'translate(-50%,-50%) rotate(25deg) scaleY(1)', offset: .4 }, { opacity: 0 }], { duration: 450, delay: k * 50 }).then(() => d.remove());
+            }
+            flash('#ef4444');
+        }
+        async function animBossSpell(t) {
+            if (FAST()) return;
+            const b = bossEl(), tp = centerOf(spr(t)), bp = centerOf(b);
+            anim(b, [{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 500 });
+            const orb = fxNode('🔮', bp.x - 40, bp.y, '', 'font-size:52px;filter:drop-shadow(0 0 16px #a855f7)');
+            await anim(orb, [{ left: bp.x - 40 + 'px', top: bp.y + 'px' }, { left: tp.x + 'px', top: tp.y + 'px' }], { duration: 600, easing: 'ease-in' });
+            orb.remove();
+            const d = fxNode('', tp.x, tp.y, 'rounded-full', 'width:120px;height:120px;background:radial-gradient(#a855f7,transparent 70%)');
+            anim(d, [{ opacity: 1, transform: 'translate(-50%,-50%) scale(.3)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.6)' }], { duration: 500 }).then(() => d.remove());
+            flash('#a855f7');
+        }
+        async function animBossSweep(ts) {
+            if (FAST()) return;
+            const b = bossEl();
+            await anim(b, [{ transform: 'translateX(0) rotate(0)' }, { transform: 'translateX(-120px) rotate(-25deg)', offset: .5 }, { transform: 'translateX(0) rotate(0)' }], { duration: 650 });
+            const sc = $('scene').getBoundingClientRect();
+            const d = fxNode('', sc.width * 0.4, sc.height * 0.62, '', `width:${sc.width * 0.5}px;height:16px;background:linear-gradient(90deg,transparent,#fca5a5,#ef4444,transparent);border-radius:8px;box-shadow:0 0 16px #ef4444`);
+            anim(d, [{ opacity: 0, transform: 'translate(-20%,-50%) scaleX(.2)' }, { opacity: 1, offset: .3 }, { opacity: 0, transform: 'translate(-70%,-50%) scaleX(1)' }], { duration: 500 }).then(() => d.remove());
+            flash('#ef4444'); bigShake();
+        }
+        async function animRoar() {
+            if (FAST()) return;
+            const b = bossEl(), bp = centerOf(b);
+            anim(b, [{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 700 });
+            SFX.charge();
+            for (let k = 0; k < 3; k++) {
+                const d = fxNode('', bp.x, bp.y, 'rounded-full', 'width:120px;height:120px;border:6px solid #c084fc');
+                anim(d, [{ opacity: .9, transform: 'translate(-50%,-50%) scale(.5)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(7)' }], { duration: 900, delay: k * 200 }).then(() => d.remove());
+            }
+            bigShake();
+            await wait(900);
+        }
+        async function animMark(t) {
+            if (FAST()) return;
+            const b = bossEl(), tp = centerOf(spr(t)), bp = centerOf(b);
+            const eye = fxNode('👁', bp.x, bp.y - 40, '', 'font-size:56px;filter:drop-shadow(0 0 14px #f43f5e)');
+            await anim(eye, [{ left: bp.x + 'px', top: bp.y - 40 + 'px' }, { left: tp.x + 'px', top: tp.y - 70 + 'px' }], { duration: 700, easing: 'ease-out' });
+            await anim(eye, [{ opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(2)' }], { duration: 400 });
+            eye.remove();
+            SFX.steal();
+            await wait(500);
+        }
+        async function animNova() {
+            if (FAST()) return;
+            const b = bossEl(), bp = centerOf(b);
+            await anim(b, [{ transform: 'scale(1)' }, { transform: 'scale(1.35) translateY(-20px)', filter: 'brightness(2)' }, { transform: 'scale(1)' }], { duration: 700 });
+            const d = fxNode('', bp.x, bp.y, 'rounded-full', 'width:140px;height:140px;background:radial-gradient(#fde047,#f43f5e 60%,transparent 70%)');
+            anim(d, [{ opacity: 1, transform: 'translate(-50%,-50%) scale(.3)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(9)' }], { duration: 800 }).then(() => d.remove());
+            flash('#f43f5e'); bigShake(); SFX.thunder();
+            await wait(500);
+        }
+        async function animUltWarrior(i, d) {
+            if (FAST()) return;
+            const el = spr(i), body = el.querySelector('.spr-body'), hp = centerOf(el), bp = centerOf(bossEl());
+            const dx = bp.x - hp.x - 80;
+            await anim(body, [{ transform: 'translateX(0)' }, { transform: `translateX(${dx * 0.4}px) translateY(-120px) rotate(-30deg) scale(1.3)`, offset: .45 }, { transform: `translateX(${dx}px) translateY(0) rotate(40deg) scale(1.3)`, offset: .7 }, { transform: 'translateX(0)' }], { duration: 900, easing: 'ease-in-out' });
+            slashFx('#f87171', true); setTimeout(() => slashFx('#fde047', true), 120);
+            bossHitFlash(); bigShake();
+            fxOn(bossEl(), `⚔️−${d}`, '#f87171', 72);
+            await wait(700);
+        }
+        async function animMeteor(d) {
+            if (FAST()) return;
+            const bp = centerOf(bossEl());
+            const m = fxNode('☄️', bp.x + 160, -40, '', 'font-size:70px;filter:drop-shadow(0 0 16px #c084fc)');
+            await anim(m, [{ left: bp.x + 160 + 'px', top: '-40px' }, { left: bp.x + 'px', top: bp.y + 'px' }], { duration: 420, easing: 'ease-in' });
+            m.remove();
+            fxBoom(bossEl(), `☄️−${d}`);
+            SFX.hit();
+            await wait(250);
+        }
+
+        function showUltText(text, color) {
+            if (FAST()) return;
+            const el = document.createElement('div');
+            el.className = 'ult-text text-5xl md:text-7xl';
+            el.style.color = color;
+            el.innerHTML = text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1400);
+        }
+        function shake(id) { const el = $(id); if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+        function flash(color) {
+            if (FAST()) return;
+            const f = $('flash');
+            f.style.background = color;
+            f.classList.remove('hidden');
+            f.style.opacity = '0.3';
+            setTimeout(() => { f.style.opacity = '0'; f.classList.add('hidden'); }, 180);
+        }
+        function bigShake() { if (FAST()) return; const el = $('scene'); if (!el) return; el.classList.remove('big-shake'); void el.offsetWidth; el.classList.add('big-shake'); }
+
+        Object.assign(SFX, { hit: () => tone([180, 90], 0.09, 'square', 0.04, 0.12) });
+
+        // ---------- 撤退／設定 ----------
+        function confirmEnd() {
+            if (game && (game.phase === 'anim' || game.phase === 'boss')) { toast('等這個動作結束再撤退', '#94a3b8'); return; }
+            if (confirm('確定要撤退，結束這場戰鬥嗎？')) endGame(false, true);
+        }
+        function openMenu() {
+            if (game && !game.over && !confirm('要離開戰鬥回到設定嗎？')) return;
+            if (game) game.over = true;
+            showSetup();
+        }
+
+        // ---------- 結算 ----------
+        function endGame(win, retreat) {
+            if (!game || game.over) return;
+            stopTimers();
+            game.over = true;
+            game.win = win;
+            const order = [...Array(game.n).keys()].sort((a, b) => game.heroes[b].dmg + game.heroes[b].heals - (game.heroes[a].dmg + game.heroes[a].heals));
+            const mvp = order[0];
+            $('rankList').innerHTML = order.map(i => {
+                const s = TEAM_STYLES[i], h = game.heroes[i];
+                const rate = (h.correct + h.wrong) ? Math.round(h.correct / (h.correct + h.wrong) * 100) : 0;
+                return `<div class="rounded-2xl p-4 border-4 text-left ${i === mvp && game.n > 1 ? 'ring-4 ring-amber-400' : ''}" style="border-color:${s.color};background:linear-gradient(135deg, ${s.dark}, #0f172a)">
+                    <div class="flex items-center justify-between">
+                        <div class="text-2xl font-black">${i === mvp && game.n > 1 ? '🏅 ' : ''}${s.emoji} ${escapeHtml(teamName(i))} <span class="text-sm text-slate-300">${CLASSES[h.cls].name}</span></div>
+                        <div class="text-3xl font-black text-rose-300">${h.dmg}<span class="text-sm text-slate-300"> 傷害</span></div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 mt-2 text-center text-sm font-bold">
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-green-400">✔ 答對<br>${h.correct}</div>
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-red-400">✘ 答錯<br>${h.wrong}</div>
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-amber-300">答對率<br>${rate}%</div>
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-sky-300">${h.cls === 'healer' ? `💚 治療<br>${h.heals}` : h.cls === 'knight' ? `🛡️ 護盾<br>${h.shields}` : h.cls === 'mage' ? `💥 爆擊<br>${h.crits}` : `💤 倒地<br>${h.downs}`}<div class="text-xs text-slate-400">📣 打氣 ${h.cheered}${h.ults ? `・大招 ${h.ults}` : ''}</div></div>
+                    </div>
+                </div>`;
+            }).join('');
+            const missed = game.log.filter(e => !e.ok).slice(0, 4);
+            const pct = Math.round(Math.max(0, game.bossHp) / game.bossMax * 100);
+            $('resultExtra').innerHTML = `${!win ? `<div class="mb-3 bg-slate-800/80 border border-slate-600 rounded-2xl p-4">
+                    <div class="flex items-center justify-between text-lg font-black mb-2"><span>${game.boss.e} ${escapeHtml(game.boss.n)} 剩下</span><span class="text-rose-300">${pct}%</span></div>
+                    ${bar(pct / 100, '#f43f5e')}
+                    <div class="text-sm text-slate-300 mt-2">${pct <= 20 ? '只差一點點！再挑戰一次一定打得倒 💪' : pct <= 50 ? '已經打掉一大半了，檢討一下錯的題目再來！' : '魔王有點強，先把下面幾題弄懂再挑戰！'}</div></div>` : ''}
+                ${missed.length ? `<div class="bg-amber-950/40 border border-amber-700 rounded-2xl p-4 text-left">
+                    <div class="font-black text-amber-300 mb-2">📌 這場答錯的題目</div>
+                    ${missed.map(e => `<div class="py-2 border-t border-amber-900/60 first:border-0">
+                        <div class="font-bold text-slate-100">${escapeHtml(e.q)} <span class="text-xs" style="color:${TEAM_STYLES[e.hero].color}">（${escapeHtml(teamName(e.hero))}）</span></div>
+                        <div class="text-sm text-green-300 mt-0.5">✔ ${escapeHtml(e.options[e.answer])}</div></div>`).join('')}
+                    <div class="text-xs text-slate-400 mt-2">按下方「📋 題目檢討」可以看全部題目</div></div>`
+                : (game.log.length ? '<div class="text-center text-emerald-300 font-black">🎉 這場每一題都答對！</div>' : '')}`;
+            $('menuTitle').innerText = win ? '🏆 勝利！' : (retreat ? '🏳️ 撤退了' : '💀 全隊倒下…');
+            $('menuDesc').innerHTML = win
+                ? `<span class="text-xl font-black text-amber-300">${game.rank !== 'normal' ? `【${RANKS[game.rank].label}】` : ''}${game.boss.e} ${game.boss.n} 被打倒了！共答 ${game.log.length} 題、${game.round} 回合</span>`
+                : `<span class="text-xl font-black text-slate-300">${game.boss.e} ${game.boss.n} 還剩 ${game.bossHp} 血，${retreat ? '下次再來挑戰！' : '檢討題目後再挑戰一次吧！'}</span>`;
+            menuParts('resultPanel');
+            if (win) SFX.win(); else SFX.wrong();
+        }
+
+        // ===== 題目檢討 =====
+        let reviewFilter = 'all';
+        function openReview() {
+            reviewFilter = 'all';
+            renderReview();
+            $('reviewOverlay').classList.remove('hidden');
+            $('reviewList').scrollTop = 0;
+        }
+        function closeReview() { $('reviewOverlay').classList.add('hidden'); }
+        function setReviewFilter(f) { reviewFilter = f; renderReview(); }
+        function renderReview() {
+            const on = 'bg-emerald-500 border-emerald-400 text-slate-900', off = 'bg-slate-800 border-slate-600 text-slate-300';
+            $('filterAll').className = `px-3 py-1.5 rounded-lg border ${reviewFilter === 'all' ? on : off}`;
+            $('filterMiss').className = `px-3 py-1.5 rounded-lg border ${reviewFilter === 'miss' ? on : off}`;
+            const log = game ? game.log : [];
+            const html = log.map((e, idx) => {
+                if (reviewFilter === 'miss' && e.ok) return '';
+                const s = TEAM_STYLES[e.hero];
+                const opts = e.options.map((o, k) => {
+                    const isAns = k === e.answer, mine = k === e.pick;
+                    return `<div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 text-sm md:text-base font-bold ${
+                        isAns ? 'bg-green-900/50 border-green-500 text-green-100' : (mine ? 'bg-red-950/40 border-red-800' : 'bg-slate-800/60 border-slate-700 text-slate-300')}">
+                        <span><b class="text-amber-400 mr-2">${k + 1}.</b>${escapeHtml(o)}${isAns ? ' <span class="text-green-300">✔ 正解</span>' : ''}</span>${mine ? `<span class="shrink-0 text-[11px] font-black px-1.5 py-0.5 rounded text-white" style="background:${s.color}">${escapeHtml(teamName(e.hero))}</span>` : ''}</div>`;
+                }).join('');
+                return `<div class="max-w-4xl mx-auto mb-4 bg-slate-800/80 border ${e.ok ? 'border-slate-700' : 'border-red-800'} rounded-2xl p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs font-bold">
+                        <span class="text-slate-400">第 ${idx + 1} 題　<span class="text-amber-300">${'★'.repeat(e.tier)}</span>${e.source === '延伸' ? ' <span class="text-emerald-300">🔭 延伸</span>' : ''}　<span style="color:${s.color}">${escapeHtml(teamName(e.hero))}</span>・${escapeHtml(e.skill)}</span>
+                        <span class="${e.ok ? 'text-green-400' : 'text-red-400'}">${e.ok ? `✔ 答對・${e.sec} 秒` : (e.pick < 0 ? '⏰ 時間到' : '✘ 答錯')}</span>
+                    </div>
+                    <div class="text-lg md:text-xl font-bold text-slate-100 mb-3">${escapeHtml(e.q)}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${opts}</div>
+                    ${e.explanation ? `<div class="mt-3 text-sm font-bold text-green-300 bg-green-950/50 border border-green-800 rounded-lg px-3 py-2">💡 ${escapeHtml(e.explanation)}</div>` : ''}
+                </div>`;
+            }).join('');
+            $('reviewList').innerHTML = html || `<div class="text-center py-16 text-xl font-black text-emerald-300">${log.length ? '🎉 每一題都答對，沒有需要檢討的！' : '這一局還沒有作答紀錄。'}</div>`;
+        }
+
+        // ===== 規則 =====
+        function openRules() { $('rulesModal').classList.remove('hidden'); }
+        function closeRules() { $('rulesModal').classList.add('hidden'); }
+
+        // ===== 鍵盤：數字鍵 1～4 幫「輪到的人」作答；Enter 繼續 =====
+        document.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            if (!game || game.over || $('gameScreen').classList.contains('hidden')) return;
+            if (game.phase === 'question' && /^[1-4]$/.test(e.key)) { answerQ(game.active, Number(e.key) - 1); return; }
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            if (game.phase === 'intro') beginBattle();
+            else if (game.phase === 'result') proceed();
+        });
+
+        window.onload = function () {
+            renderProviderUI();
+            renderQuizSettings();
+            renderGroupSettings();
+            renderMute();
+            showSetup();
+        };
+    </script>
+
+    <script>
+        // ===== 投影模式：全螢幕＋題目字體大小（記在這台電腦）=====
+        (function () {
+            const STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.45, 1.6];
+            let i = STEPS.indexOf(Number(localStorage.getItem('proj_scale') || 1));
+            if (i < 0) i = 2;
+            function apply() {
+                document.documentElement.style.setProperty('--proj', STEPS[i]);
+                const el = document.getElementById('projLabel');
+                if (el) el.innerText = Math.round(STEPS[i] * 100) + '%';
+            }
+            window.projZoom = function (d) {
+                i = Math.max(0, Math.min(STEPS.length - 1, i + d));
+                try { localStorage.setItem('proj_scale', STEPS[i]); } catch (e) {}
+                apply();
+            };
+            window.projFull = function () {
+                if (document.fullscreenElement) document.exitFullscreen();
+                else (document.documentElement.requestFullscreen || function () {}).call(document.documentElement)?.catch?.(() => {});
+            };
+            document.addEventListener('fullscreenchange', () => {
+                const ic = document.getElementById('projIcon');
+                if (ic) ic.className = document.fullscreenElement ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+            });
+            // 鍵盤：+ 放大、- 縮小（輸入框裡不作用）
+            document.addEventListener('keydown', e => {
+                if (/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '') || e.ctrlKey || e.metaKey || e.altKey) return;
+                if (e.key === '+' || e.key === '=') projZoom(1);
+                else if (e.key === '-' || e.key === '_') projZoom(-1);
+            });
+            document.addEventListener('DOMContentLoaded', apply);
+            apply();
+        })();
+    </script>
+</body>
+</html>

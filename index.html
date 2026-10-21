@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>秉亨老師的 AI 課堂遊戲</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at top, #1e1b4b, #0b0716 70%); color: #fff;
+         font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 32px 16px; box-sizing: border-box; }
+  h1 { font-size: clamp(28px, 4vw, 44px); margin: 8px 0 4px; color: #fcd34d; font-weight: 900; }
+  p.sub { color: #cbd5e1; margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; width: 100%; max-width: 1100px; }
+  a.card { display: block; text-decoration: none; color: #fff; border-radius: 22px; padding: 26px 22px; border: 3px solid rgba(255,255,255,.15);
+           transition: transform .15s, border-color .15s; min-height: 170px; }
+  a.card:hover, a.card:focus { transform: translateY(-4px) scale(1.02); border-color: #fde047; }
+  .ic { font-size: 56px; line-height: 1; }
+  .t { font-size: 26px; font-weight: 900; margin: 12px 0 6px; }
+  .d { font-size: 15px; color: #e2e8f0; line-height: 1.5; }
+  .foot { margin-top: 32px; font-size: 13px; color: #64748b; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div style="font-size:52px">🎮</div>
+  <h1>AI 課堂遊戲</h1>
+  <p class="sub">上傳課本或選主題，AI 出題，邊玩邊複習！（四款遊戲共用同一組 AI Key）</p>
+  <div class="grid">
+    <a class="card" href="tug.html" style="background:linear-gradient(135deg,#7f1d1d,#1e3a8a)"><div class="ic">🪢</div><div class="t">AI 拔河大對決</div><div class="d">兩人搶答，答對就把繩子拉過來！</div></a>
+    <a class="card" href="territory.html" style="background:linear-gradient(135deg,#14532d,#0f172a)"><div class="ic">🗺️</div><div class="t">AI 知識領土戰</div><div class="d">分組答題搶地盤，轉盤、寶箱、隱藏格。</div></a>
+    <a class="card" href="boss.html" style="background:linear-gradient(135deg,#4c1d95,#0f172a)"><div class="ic">🐉</div><div class="t">AI 知識魔王戰</div><div class="d">1～4 人輪流作答，用站位和勇氣打倒魔王。</div></a>
+    <a class="card" href="castle.html" style="background:linear-gradient(135deg,#0c4a6e,#0f172a)"><div class="ic">🏰</div><div class="t">AI 知識城堡戰</div><div class="d">橫向跳躍闖三關，踩怪物要答題！</div></a>
+  </div>
+  <div class="foot">🍎 秉亨老師 × Claude 協同製作</div>
+</body>
+</html>

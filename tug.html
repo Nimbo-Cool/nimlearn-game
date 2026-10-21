@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智慧雙人拔河大對決</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        /* 投影模式：題目、選項、解析一起放大縮小 */
+        .proj-z { zoom: var(--proj, 1); }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; user-select: none; }
+        @keyframes toastIn { 0%{opacity:0;transform:translate(-50%,20px)} 12%{opacity:1;transform:translate(-50%,0)} 85%{opacity:1} 100%{opacity:0} }
+        .toast { animation: toastIn 2.6s forwards; }
+        .rope-transition { transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+        .shake { animation: shake 0.4s; }
+        @keyframes popUp { 0%{opacity:0;transform:translate(-50%,10px) scale(.8)} 20%{opacity:1;transform:translate(-50%,0) scale(1.15)} 80%{opacity:1} 100%{opacity:0;transform:translate(-50%,-30px) scale(1)} }
+        .pop { animation: popUp 1.2s forwards; }
+        .opt-correct { background:#16a34a !important; border-color:#4ade80 !important; color:#fff !important; box-shadow:0 0 0 3px rgba(74,222,128,.35); }
+        .opt-wrong { background:#dc2626 !important; border-color:#f87171 !important; color:#fff !important; }
+        .opt-reveal { background:rgba(22,163,74,.25) !important; border-color:#4ade80 !important; border-style:dashed !important; }
+        .opt-dim { opacity:.35; }
+        .panel-flash-ok { box-shadow:0 0 0 4px #4ade80, 0 0 30px rgba(74,222,128,.5) !important; }
+        .panel-flash-bad { box-shadow:0 0 0 4px #f87171, 0 0 30px rgba(248,113,113,.5) !important; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- 上方控制區與標題 -->
+    <header class="p-4 bg-slate-800 border-b border-slate-700 shadow-md">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🪢</span>
+                <h1 class="text-2xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-amber-300 to-blue-400">
+                    AI 智慧雙人拔河大對決
+                </h1>
+                <span class="hidden md:inline text-[11px] font-bold text-slate-500 ml-2 whitespace-nowrap">秉亨老師 × Claude 協同製作</span>
+            </div>
+
+            <!-- 切換選單按鈕 -->
+            <div class="flex flex-wrap items-center gap-3">
+<div class="flex items-center h-8 rounded-xl bg-slate-700 overflow-hidden font-bold shrink-0" title="題目字體大小（鍵盤 + / -）">
+                    <button onclick="projZoom(-1)" class="px-2.5 h-full hover:bg-slate-600 text-xs">A−</button>
+                    <span id="projLabel" class="min-w-[2.8rem] text-center text-xs text-slate-300">100%</span>
+                    <button onclick="projZoom(1)" class="px-2.5 h-full hover:bg-slate-600 text-xs">A＋</button>
+                </div>
+                <button onclick="projFull()" class="w-9 h-8 rounded-xl bg-slate-700 hover:bg-slate-600 shrink-0" title="全螢幕"><i id="projIcon" class="fa-solid fa-expand"></i></button>
+                <button onclick="openMenuModal()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-gear"></i> 設定 API / 切換題庫
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 遊戲主舞台 -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 flex flex-col justify-between relative">
+        
+        <!-- 拔河比分與進度條 -->
+        <div class="bg-slate-800/80 backdrop-blur p-4 rounded-2xl border border-slate-700 mb-4 shadow-xl">
+            <div class="flex justify-between items-center mb-2 px-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded-full bg-red-500 inline-block animate-ping"></span>
+                    <span class="font-bold text-red-400 text-lg">紅隊（左邊）</span>
+                    <span class="text-xs font-bold bg-slate-900 px-2 py-0.5 rounded-md"><span class="text-green-400">✔ <span id="leftCorrect">0</span></span> <span class="text-red-400 ml-1">✘ <span id="leftWrong">0</span></span></span>
+                </div>
+                <div class="text-center">
+                    <span id="questionProgress" class="text-xs bg-slate-700 px-3 py-1 rounded-full text-slate-300 font-mono">第 1 / 10 題</span>
+                    <div id="timer" class="text-2xl font-black text-amber-400 mt-1">15</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold bg-slate-900 px-2 py-0.5 rounded-md"><span class="text-green-400">✔ <span id="rightCorrect">0</span></span> <span class="text-red-400 ml-1">✘ <span id="rightWrong">0</span></span></span>
+                    <span class="font-bold text-blue-400 text-lg">藍隊（右邊）</span>
+                    <span class="w-4 h-4 rounded-full bg-blue-500 inline-block animate-ping"></span>
+                </div>
+            </div>
+
+            <!-- 拔河賽道 -->
+            <div class="relative h-20 bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center">
+                <div class="absolute inset-y-0 w-1 bg-amber-400 z-10 left-1/2 -translate-x-1/2 opacity-70"></div>
+                <div class="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] text-amber-400 font-mono z-10">勝負中線</div>
+
+                <!-- 繩子與人物容器 -->
+                <div id="ropeContainer" class="absolute w-full flex items-center justify-center rope-transition" style="transform: translateX(0px);">
+                    <div class="flex items-center gap-1 mr-[-10px]">
+                        <span class="text-4xl transform -scale-x-100">🤼</span>
+                        <span class="text-3xl transform -scale-x-100">🧒</span>
+                    </div>
+                    <div class="w-2/3 h-4 bg-amber-700 border-y-2 border-amber-900 relative flex items-center justify-center shadow-inner">
+                        <div class="w-6 h-8 bg-red-600 rounded-sm shadow-md animate-bounce"></div>
+                    </div>
+                    <div class="flex items-center gap-1 ml-[-10px]">
+                        <span class="text-3xl">🧒</span>
+                        <span class="text-4xl">🤼</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 題目顯示區 -->
+        <div class="bg-slate-800/90 rounded-2xl p-6 border border-slate-700 shadow-2xl min-h-[140px] flex flex-col justify-center items-center text-center my-2 relative">
+            <div id="topicTag" class="absolute top-3 left-4 text-xs font-bold text-indigo-400 bg-indigo-950/80 border border-indigo-800 px-2.5 py-1 rounded-md">
+                題庫：預設基礎題庫
+            </div>
+            <div id="questionBadge" class="hidden absolute top-3 right-4 text-xs font-black text-emerald-300 bg-emerald-950/80 border border-emerald-600 px-2.5 py-1 rounded-md">
+                🔭 延伸挑戰題
+            </div>
+            <h2 id="questionText" class="proj-z text-xl md:text-2xl font-bold leading-relaxed text-slate-100 mt-4">
+                請在設定選單中選擇或上傳題庫開始比賽！
+            </h2>
+            <p id="explainText" class="proj-z hidden mt-3 text-sm md:text-base font-bold text-green-300 bg-green-950/60 border border-green-700 px-4 py-2 rounded-xl"></p>
+        </div>
+
+        <!-- 雙人搶答選項區（左隊 vs 右隊） -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-2">
+            <!-- 紅隊選項區 -->
+            <div id="leftPanel" class="relative bg-red-950/30 border-2 border-red-900/50 rounded-2xl p-4 shadow-lg flex flex-col gap-2 transition-shadow">
+                <span id="leftPop" class="absolute left-1/2 top-1/2 z-20 text-4xl font-black pointer-events-none opacity-0 whitespace-nowrap drop-shadow-lg"></span>
+                <div class="text-xs font-bold text-red-400 flex justify-between items-center mb-1">
+                    <span>🔴 紅隊搶答區</span>
+                    <span class="text-[11px] opacity-80">按鍵：Q, W, E, R</span>
+                </div>
+                <div id="leftOptions" class="proj-z grid grid-cols-1 gap-2"></div>
+            </div>
+
+            <!-- 藍隊選項區 -->
+            <div id="rightPanel" class="relative bg-blue-950/30 border-2 border-blue-900/50 rounded-2xl p-4 shadow-lg flex flex-col gap-2 transition-shadow">
+                <span id="rightPop" class="absolute left-1/2 top-1/2 z-20 text-4xl font-black pointer-events-none opacity-0 whitespace-nowrap drop-shadow-lg"></span>
+                <div class="text-xs font-bold text-blue-400 flex justify-between items-center mb-1">
+                    <span>🔵 藍隊搶答區</span>
+                    <span class="text-[11px] opacity-80">按鍵：U, I, O, P</span>
+                </div>
+                <div id="rightOptions" class="proj-z grid grid-cols-1 gap-2"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="toast" class="hidden fixed bottom-8 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2 bg-slate-900"></div>
+
+    <!-- 啟動 Modal 視窗 -->
+    <div id="overlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 text-center overflow-y-auto">
+        <div id="overlayContent" class="max-w-md w-full bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-2xl space-y-5 my-auto">
+            <div>
+                <div class="text-5xl mb-2">🪢</div>
+                <h3 id="overlayTitle" class="text-2xl font-black text-amber-400">AI 智慧拔河大對決</h3>
+                <p id="overlayDesc" class="text-slate-300 text-xs mt-1">設定 API Key 與題庫開始遊戲：</p>
+            </div>
+
+            <!-- 比賽結算 -->
+            <div id="resultArea" class="hidden grid grid-cols-2 gap-3 text-left"></div>
+
+            <div id="setupSections" class="space-y-5">
+            <!-- 1. AI 來源切換 + API Key 輸入框（自動記憶於瀏覽器） -->
+            <div class="bg-slate-900/80 border border-amber-500/40 p-4 rounded-xl text-left space-y-2">
+                <div class="grid grid-cols-3 gap-2 mb-1">
+                    <button type="button" id="btn_gemini" onclick="switchProvider('gemini')" class="py-2 rounded-lg text-xs font-bold transition border">
+                        ✨ Gemini
+                    </button>
+                    <button type="button" id="btn_openai" onclick="switchProvider('openai')" class="py-2 rounded-lg text-xs font-bold transition border">
+                        🤖 GPT
+                    </button>
+                    <button type="button" id="btn_xai" onclick="switchProvider('xai')" class="py-2 rounded-lg text-xs font-bold transition border">
+                        ⚡ Grok
+                    </button>
+                </div>
+                <label class="block text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-key text-amber-400"></i> <span id="keyLabel">Gemini API Key 設定：</span>
+                </label>
+                <div class="relative">
+                    <input type="password" id="apiKeyInputModal" onchange="saveApiKeyFromModal()" placeholder="請貼上您的 Gemini API Key..." 
+                        class="w-full bg-slate-800 border border-slate-600 focus:border-amber-400 rounded-lg p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition pr-10">
+                    <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs">
+                        <i id="eyeIcon" class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-[11px] text-slate-400">輕點輸入框外即可自動儲存。金鑰僅儲存於個人瀏覽器。</p>
+                    <button type="button" onclick="testConnection()" class="shrink-0 px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded-md text-[11px] font-bold transition">
+                        <i class="fa-solid fa-plug"></i> 測試連線
+                    </button>
+                </div>
+                <p id="connStatus" class="text-[11px] font-bold hidden"></p>
+            </div>
+
+            <!-- 出題設定：年級與延伸程度 -->
+            <div class="bg-slate-900/80 border border-emerald-500/40 p-4 rounded-xl text-left grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-300 mb-1.5">🎒 學生年級</label>
+                    <select id="gradeSelect" onchange="saveQuizSettings()" class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold text-slate-100 focus:outline-none focus:border-emerald-400">
+                        <option value="1">一年級</option>
+                        <option value="2">二年級</option>
+                        <option value="3">三年級</option>
+                        <option value="4">四年級</option>
+                        <option value="5">五年級</option>
+                        <option value="6">六年級</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-emerald-300 mb-1.5">🔭 延伸程度</label>
+                    <select id="extendSelect" onchange="saveQuizSettings()" class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold text-slate-100 focus:outline-none focus:border-emerald-400">
+                        <option value="0">只考課本</option>
+                        <option value="3">微延伸</option>
+                        <option value="5">多延伸</option>
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <button type="button" onclick="toggleTimePanel()" class="w-full flex items-center justify-between bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-xs font-bold text-emerald-300 transition">
+                        <span>⏱️ 每題答題時間：<span id="timeSummary" class="text-slate-100">15 秒</span></span>
+                        <i id="timeChevron" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </button>
+                    <div id="timePanel" class="hidden flex items-center gap-2 mt-2">
+                        <button type="button" onclick="stepTime(-5)" class="w-9 h-9 shrink-0 rounded-lg bg-slate-700 hover:bg-slate-600 font-black text-lg">−</button>
+                        <input type="number" id="timeInput" min="5" max="120" step="1" value="15" onchange="saveQuizSettings()"
+                            class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-center text-base font-black text-slate-100 focus:outline-none focus:border-emerald-400">
+                        <span class="text-xs font-bold text-slate-300 shrink-0">秒</span>
+                        <button type="button" onclick="stepTime(5)" class="w-9 h-9 shrink-0 rounded-lg bg-slate-700 hover:bg-slate-600 font-black text-lg">＋</button>
+                    </div>
+                </div>
+                <p class="col-span-2 text-[11px] text-slate-400">出完題 AI 會再逐題檢查答案，有疑慮的題目自動剔除。</p>
+            </div>
+
+            <!-- 2. 核心功能：上傳教冊 PDF -->
+            <div class="bg-indigo-950/50 border-2 border-indigo-500 hover:border-indigo-400 p-5 rounded-2xl text-left transition shadow-lg">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl font-bold">
+                        📄
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-indigo-200 text-base">匯入教師手冊 / 課本檔</h4>
+                        <p class="text-xs text-slate-300">可一次選多份 PDF（例如好幾個單元），AI 從全部內容出題</p>
+                    </div>
+                </div>
+                <label class="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-center font-extrabold text-sm rounded-xl cursor-pointer block transition shadow-md">
+                    <i class="fa-solid fa-file-pdf mr-1.5"></i> 選擇教冊 PDF（可一次多選）
+                    <input type="file" id="pdfInputModal" accept=".pdf,.txt" multiple class="hidden" onchange="handleFileUpload(event)">
+                </label>
+            </div>
+
+            <!-- 3. 次要功能：選擇主題 AI 出題 -->
+            <div class="bg-slate-700/50 border border-slate-600 p-4 rounded-xl text-left">
+                <label class="block text-xs font-bold text-amber-300 mb-2">✨ 或挑選預設 AI 主題生成題目：</label>
+                <select id="topicSelectModal" onchange="generateQuestionsByTopic(this.value)" class="w-full bg-slate-800 border border-slate-600 p-2.5 rounded-lg text-xs font-bold text-slate-100 cursor-pointer focus:outline-none focus:border-amber-400">
+                    <option value="" disabled selected>-- 點擊選擇主題（每次出題不同） --</option>
+                    <option value="自然科學小常識">🌱 自然科學小常識</option>
+                    <option value="成語典故與成語接龍">📚 成語典故與活用</option>
+                    <option value="台灣歷史與地理人文">🗺️ 台灣歷史與地理</option>
+                    <option value="日常生活生活常識與安全">💡 日常生活與安全常識</option>
+                    <option value="國小基礎英文單字與文法">🔤 基礎英文單字與語感</option>
+                    <option value="趣味數學邏輯推理">🔢 趣味數學與邏輯腦筋急轉彎</option>
+                </select>
+            </div>
+            </div>
+
+            <!-- 4. 預設按鈕區 -->
+            <div id="actionBtnArea" class="pt-1 space-y-2">
+                <button id="reviewBtn" onclick="openReview()" class="hidden w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-900 font-extrabold rounded-xl text-sm transition">
+                    📋 題目檢討（回顧這 10 題）
+                </button>
+                <button id="overlayBtn" onclick="startGame()" class="w-full py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-xl text-sm transition">
+                    🚀 直接使用預設題目開始遊戲
+                </button>
+                <button id="regenBtn" onclick="regenAction()" class="hidden w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-900 font-extrabold rounded-xl text-sm transition">
+                    🔄 用同一份教材，AI 重新出 10 題
+                </button>
+                <button id="backMenuBtn" onclick="openMenuModal()" class="hidden w-full py-2 text-slate-400 hover:text-white text-xs font-bold transition">
+                    ⚙️ 回設定選單（換教材 / 換主題）
+                </button>
+            </div>
+            <p class="text-[11px] font-bold text-slate-500">🍎 秉亨老師 × Claude 協同製作</p>
+        </div>
+    </div>
+
+    <!-- 題目檢討畫面 -->
+    <div id="reviewOverlay" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[60] flex flex-col">
+        <div class="shrink-0 bg-slate-800 border-b border-slate-700 px-4 py-3">
+            <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-xl font-black text-emerald-300">📋 題目檢討</h3>
+                <div class="flex items-center gap-2 text-xs font-bold">
+                    <button id="filterAll" onclick="setReviewFilter('all')" class="px-3 py-1.5 rounded-lg border transition">全部</button>
+                    <button id="filterMiss" onclick="setReviewFilter('miss')" class="px-3 py-1.5 rounded-lg border transition">只看有人答錯／沒答</button>
+                </div>
+            </div>
+        </div>
+        <div id="reviewList" class="flex-1 overflow-y-auto px-4 py-4">
+        </div>
+        <div class="shrink-0 bg-slate-800 border-t border-slate-700 px-4 py-3">
+            <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button onclick="closeReview()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs md:text-sm font-bold transition">◀ 回結算畫面</button>
+                <button onclick="closeReview(); startGame()" class="py-2.5 bg-slate-600 hover:bg-slate-500 rounded-xl text-xs md:text-sm font-bold transition">🔁 原題重玩</button>
+                <button id="reviewRegenBtn" onclick="closeReview(); regenerateQuestions()" class="py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-900 rounded-xl text-xs md:text-sm font-extrabold transition">🆕 出新題</button>
+                <button onclick="closeReview(); openMenuModal()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs md:text-sm font-bold transition">⚙️ 回設定選單</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== AI 來源設定 =====
+        const PROVIDERS = {
+            gemini: {
+                name: 'Gemini',
+                // 第一個是 Google 官方「自動指向最新 Flash」的別名，舊模型下架也不用改程式
+                models: ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'],
+                placeholder: '請貼上您的 Gemini API Key（AIza 開頭）...',
+                keyHint: 'AIza 開頭'
+            },
+            openai: {
+                name: 'GPT',
+                // 便宜又快的 mini 等級，失敗時自動往下換
+                models: ['gpt-5.4-mini', 'gpt-mini-latest', 'gpt-5-mini'],
+                placeholder: '請貼上您的 OpenAI API Key（sk- 開頭）...',
+                keyHint: 'sk- 開頭',
+                base: 'https://api.openai.com/v1',
+                jsonMode: true
+            },
+            xai: {
+                name: 'Grok',
+                // 快速、便宜的非推理版優先；名稱都失效時會自動查詢帳號可用的模型
+                models: ['grok-4-1-fast-non-reasoning', 'grok-4-fast-non-reasoning', 'grok-4.7'],
+                placeholder: '請貼上您的 xAI API Key（xai- 開頭）...',
+                keyHint: 'xai- 開頭',
+                base: 'https://api.x.ai/v1',
+                jsonMode: false   // 靠提示詞要求 JSON，避免參數不相容
+            }
+        };
+
+        let provider = localStorage.getItem('ai_provider') || 'gemini';
+        if (!PROVIDERS[provider]) provider = 'gemini';
+        let apiKey = localStorage.getItem(`${provider}_api_key`) || '';
+        let workingModel = localStorage.getItem(`${provider}_working_model`) || '';
+
+        function switchProvider(p) {
+            saveApiKeyFromModal();
+            provider = p;
+            localStorage.setItem('ai_provider', p);
+            apiKey = localStorage.getItem(`${p}_api_key`) || '';
+            workingModel = localStorage.getItem(`${p}_working_model`) || '';
+            renderProviderUI();
+        }
+
+        function renderProviderUI() {
+            const on = 'bg-amber-500 border-amber-400 text-slate-900';
+            const off = 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700';
+            Object.keys(PROVIDERS).forEach(p => {
+                document.getElementById(`btn_${p}`).className = `py-2 rounded-lg text-xs font-bold transition border ${provider === p ? on : off}`;
+            });
+            document.getElementById('keyLabel').innerText = `${PROVIDERS[provider].name} API Key 設定：`;
+            const input = document.getElementById('apiKeyInputModal');
+            input.placeholder = PROVIDERS[provider].placeholder;
+            input.value = apiKey;
+            document.getElementById('connStatus').classList.add('hidden');
+        }
+
+        let currentQuestions = [];
+        let currentQuestionIdx = 0;
+        let ropePosition = 0;
+        let timerInterval = null;
+        let timeLeft = 15;
+        let isQuestionActive = false;
+        let leftAnswered = false;
+        let rightAnswered = false;
+
+        // ===== 計分規則 =====
+        let QUESTION_TIME = 15;     // 每題秒數（可在設定選單自訂，預設 15）
+        const MAX_PULL = 36;        // 一答對就按：拉最多
+        const MIN_PULL = 8;         // 最後一秒才答對：拉最少
+        const ROPE_LIMIT = 220;     // 繩子最遠位移
+        let questionStartTime = 0;
+        let revealTimeout = null;
+        let stats = null;
+
+        // ===== 出題來源（重新出題用） =====
+        let lastSource = null;      // {type:'pdf', name, text} 或 {type:'topic', topic}
+        let previousQs = [];        // 已出過的題目，重出時請 AI 避開
+
+        function resetStats() {
+            stats = {
+                left:  { correct: 0, wrong: 0, none: 0, pull: 0, picks: [] },
+                right: { correct: 0, wrong: 0, none: 0, pull: 0, picks: [] }
+            };
+            updateScoreBoard();
+        }
+
+        function updateScoreBoard() {
+            document.getElementById('leftCorrect').innerText = stats.left.correct;
+            document.getElementById('leftWrong').innerText = stats.left.wrong;
+            document.getElementById('rightCorrect').innerText = stats.right.correct;
+            document.getElementById('rightWrong').innerText = stats.right.wrong;
+        }
+
+        // ===== 出題設定（年級、延伸程度）=====
+        const GRADE_NAMES = ['', '一', '二', '三', '四', '五', '六'];
+        function clampTime(v) {
+            if (v === '' || v === null || v === undefined) return 15;
+            v = Math.round(Number(v));
+            if (!Number.isFinite(v)) return 15;
+            return Math.min(120, Math.max(5, v));
+        }
+        function getQuizSettings() {
+            return {
+                grade: Number(localStorage.getItem('quiz_grade') || 4),
+                extend: Number(localStorage.getItem('quiz_extend') ?? 3),
+                time: clampTime(localStorage.getItem('quiz_time') ?? 15)
+            };
+        }
+        function saveQuizSettings() {
+            localStorage.setItem('quiz_grade', document.getElementById('gradeSelect').value);
+            localStorage.setItem('quiz_extend', document.getElementById('extendSelect').value);
+            const t = clampTime(document.getElementById('timeInput').value);
+            document.getElementById('timeInput').value = t;
+            localStorage.setItem('quiz_time', t);
+            QUESTION_TIME = t;
+            document.getElementById('timeSummary').innerText = `${t} 秒`;
+            if (!isQuestionActive) document.getElementById('timer').innerText = t;
+        }
+        function toggleTimePanel(force) {
+            const panel = document.getElementById('timePanel');
+            const open = force !== undefined ? force : panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', !open);
+            document.getElementById('timeChevron').classList.toggle('rotate-180', open);
+            if (open) document.getElementById('timeInput').focus();
+        }
+        function stepTime(d) {
+            const input = document.getElementById('timeInput');
+            input.value = clampTime(Number(input.value) + d);
+            saveQuizSettings();
+        }
+        function renderQuizSettings() {
+            const s = getQuizSettings();
+            document.getElementById('gradeSelect').value = String(s.grade);
+            document.getElementById('extendSelect').value = String(s.extend);
+            document.getElementById('timeInput').value = s.time;
+            QUESTION_TIME = s.time;
+            document.getElementById('timeSummary').innerText = `${s.time} 秒`;
+            document.getElementById('timer').innerText = s.time;
+        }
+
+        const JSON_FORMAT = `請嚴格以 JSON 格式輸出陣列，answer 為正確選項的索引（0~3），正確答案的位置請平均分散；
+source 標示題目來源："課本" 或 "延伸"：
+                [
+                  {
+                    "q": "題目敘述",
+                    "options": ["選項0", "選項1", "選項2", "選項3"],
+                    "answer": 0,
+                    "explanation": "一句話解析",
+                    "source": "課本"
+                  }
+                ]`;
+
+        // ===== 三種難度題庫：每局 10 題由淺入深（★3、★★4、★★★3）=====
+        const TIERS = {
+            1: { n: 14, min: 8, name: '★ 基礎', desc: '課本直接寫到的重點、名詞、基本事實，認真上過課的學生一看就會。' },
+            2: { n: 12, min: 6, name: '★★ 理解', desc: '需要理解概念才答得出來，例如比較、分類、因果關係、為什麼會這樣。' },
+            3: { n: 10, min: 4, name: '★★★ 挑戰', desc: '把概念應用到生活情境、需要兩步推理，或判斷實驗設計，難度明顯較高但仍在該年級能力範圍內。' }
+        };
+        const ROUND_MIX = { 1: 3, 2: 4, 3: 3 };
+        let bank = { 1: [], 2: [], 3: [] };      // 還沒出過的題目
+        let bankAll = { 1: [], 2: [], 3: [] };   // 這份題庫的全部題目
+
+        function tierExtendRule(tier, extend, gradeName) {
+            const rule = `延伸題必須和課本主題直接相關，只往外多走一小步（生活應用、常見例子、簡單原因），${gradeName}年級學生想一想答得出來；只能用教科書等級、公認正確的事實，不確定或會變動的內容（最新紀錄、精確統計數字）一律不要出；延伸題的 explanation 要說明和課本哪個概念有關。`;
+            if (!extend || tier === 1) return `\n- 全部只能根據上述內容出題，source 一律填 "課本"。`;
+            if (extend === 3) return tier === 3 ? `\n- 其中約一半可以是「微加深加廣」的延伸題（source 填 "延伸"），其餘根據課本。${rule}` : `\n- 全部根據課本內容，source 填 "課本"。`;
+            return tier === 3 ? `\n- 其中大部分可以是延伸題（source 填 "延伸"）。${rule}` : `\n- 其中約三分之一可以是延伸題（source 填 "延伸"），其餘根據課本。${rule}`;
+        }
+
+        function buildTierPrompt(src, tier, n) {
+            const { grade, extend } = getQuizSettings();
+            const gradeName = GRADE_NAMES[grade];
+            const audience = `台灣國小${gradeName}年級學生`;
+            const T = TIERS[tier];
+            const quality = `\n\n【品質要求】
+- 用繁體中文、台灣用語，用字符合${gradeName}年級程度，題目敘述簡短，適合投影在大螢幕上全班一起看。
+- 每題只有一個正確答案，三個錯誤選項要看起來合理但明確是錯的，不可以有兩個都算對的選項。
+- 避免「以上皆是」「以上皆非」與否定句考法。
+- 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。`;
+            const avoid = previousQs.length
+                ? `\n\n以下題目已經出過，請出不同的新題目：\n${previousQs.slice(-60).map(q => '- ' + q).join('\n')}`
+                : '';
+            const tierText = `\n\n【難度：${T.name}】${T.desc}`;
+            if (src.type === 'pdf') {
+                return `請根據以下教材內文，為${audience}出 ${n} 道四選一選擇題。\n\n【教材內文】\n${src.text}${tierText}\n【出題範圍】${tierExtendRule(tier, extend, gradeName)}${quality}${avoid}\n\n${JSON_FORMAT}`;
+            }
+            return `請針對主題「${src.topic}」，為${audience}設計 ${n} 道四選一單選題，可以生活化、有趣一點。source 一律填 "課本"。${tierText}${quality}${avoid}\n\n${JSON_FORMAT}`;
+        }
+
+        // ===== 答案檢查：請 AI 當審題老師，獨立重做一遍 =====
+        async function verifyQuestions(questions) {
+            const { grade } = getQuizSettings();
+            const list = questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
+            const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（不要猜出題者的意思，依照公認正確的知識判斷），並檢查每題品質。
+對每一題回報：
+- best：你認為唯一正確的選項索引（0~3）
+- ok：true 代表這題事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級太多）就填 false
+
+題目：
+${JSON.stringify(list)}
+
+請嚴格以 JSON 格式輸出：{"results":[{"id":0,"best":1,"ok":true}]}`;
+            const raw = await callGeminiRaw(prompt);
+            const parsed = parseJsonLoose(raw);
+            const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
+                .filter(r => r && r.id !== undefined && r.best !== undefined);
+            // 審題結果格式不對：視為檢查失敗，交給外層保留原題
+            if (results.length < questions.length / 2) throw new Error('審題結果格式不符');
+            const byId = new Map(results.map(r => [Number(r.id), r]));
+            const kept = questions.filter((q, i) => {
+                const r = byId.get(i);
+                return r && r.ok === true && Number(r.best) === q.answer;
+            });
+            return { kept, removed: questions.length - kept.length };
+        }
+
+        function shuffleArr(a) {
+            for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+            return a;
+        }
+
+        // 出一個難度：出題 → 審題（審題失敗就保留原題）
+        async function makeTier(src, tier, n, report) {
+            const raw = normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n))));
+            previousQs.push(...raw.map(q => q.q));
+            report(tier, '審題中');
+            try {
+                const { kept, removed } = await verifyQuestions(raw);
+                return { qs: kept, removed, checked: true };
+            } catch (e) {
+                console.warn('審題失敗，保留原題', e);
+                return { qs: raw, removed: 0, checked: false };
+            }
+        }
+
+        async function generateFromSource(src, isRegen) {
+            const label = src.type === 'pdf' ? `教冊「${src.name}」` : `主題「${src.topic}」`;
+            const status = { 1: '出題中', 2: '出題中', 3: '出題中' };
+            const t0 = Date.now();
+            const paint = () => showLoading(
+                isRegen ? `AI 正在用${label}重新出題庫...` : `AI 正在根據${label}出題庫...`,
+                `★ ${status[1]}　★★ ${status[2]}　★★★ ${status[3]}　（已等待 ${Math.round((Date.now() - t0) / 1000)} 秒）`
+            );
+            const report = (tier, st) => { status[tier] = st; paint(); };
+            paint();
+            const ticker = setInterval(paint, 1000);
+            try {
+                const result = { 1: [], 2: [], 3: [] };
+                let removedTotal = 0, unchecked = false;
+                // 三種難度同時出題
+                const firsts = await Promise.all([1, 2, 3].map(t =>
+                    makeTier(src, t, TIERS[t].n, report).then(r => { report(t, `完成 ${r.qs.length} 題`); return r; })
+                ));
+                firsts.forEach((r, i) => { result[i + 1].push(...r.qs); removedTotal += r.removed; if (!r.checked) unchecked = true; });
+                // 某個難度被剔除太多就補一輪
+                const lacking = [1, 2, 3].filter(t => result[t].length < TIERS[t].min);
+                if (lacking.length) {
+                    lacking.forEach(t => report(t, '補題中'));
+                    const extra = await Promise.all(lacking.map(t => makeTier(src, t, TIERS[t].n, report).catch(() => ({ qs: [], removed: 0 }))));
+                    extra.forEach((r, i) => { const t = lacking[i]; result[t].push(...r.qs); removedTotal += r.removed; report(t, `完成 ${result[t].length} 題`); });
+                }
+                clearInterval(ticker);
+                const total = result[1].length + result[2].length + result[3].length;
+                if (total < 8) throw new Error('通過答案檢查的題目太少，請再出一次題。');
+
+                lastSource = src;
+                bankAll = { 1: [...result[1]], 2: [...result[2]], 3: [...result[3]] };
+                bank = { 1: shuffleArr([...result[1]]), 2: shuffleArr([...result[2]]), 3: shuffleArr([...result[3]]) };
+                currentQuestions = drawRound().qs;
+                document.getElementById('topicTag').innerText = src.type === 'pdf' ? `來源教冊：${src.name}` : `主題：${src.topic}`;
+                const ext = [1, 2, 3].reduce((n, t) => n + result[t].filter(q => q.source === '延伸').length, 0);
+                const note = unchecked ? '（部分題目這次沒有完成答案檢查，建議先自己看過）'
+                    : (removedTotal ? `，已剔除 ${removedTotal} 題有疑慮的題目` : '，全部通過答案檢查');
+                showSuccessPrompt(
+                    isRegen ? `${label}新題庫完成！` : `${label}題庫完成！`,
+                    `★ ${result[1].length} 題　★★ ${result[2].length} 題　★★★ ${result[3].length} 題${ext ? `（含 ${ext} 題延伸）` : ''}${note}\n每局 10 題由淺入深，玩完按「下一局」直接換新題，不用再等。`
+                );
+            } catch (err) {
+                clearInterval(ticker);
+                alert('出題失敗：' + err.message);
+                openMenuModal();
+            }
+        }
+
+        function unusedCount() { return bank[1].length + bank[2].length + bank[3].length; }
+        function bankTotal() { return bankAll[1].length + bankAll[2].length + bankAll[3].length; }
+
+        // 抽一局：★3、★★4、★★★3，由淺入深；某難度不夠就向相鄰難度借；全部用完才重複舊題
+        function drawRound() {
+            let repeated = false;
+            const pick = t => {
+                const order = t === 1 ? [1, 2, 3] : t === 2 ? [2, 1, 3] : [3, 2, 1];
+                for (const k of order) if (bank[k].length) return { ...bank[k].pop(), tier: k };
+                return null;
+            };
+            const qs = [];
+            for (const t of [1, 2, 3]) {
+                for (let i = 0; i < ROUND_MIX[t]; i++) {
+                    let q = pick(t);
+                    if (!q && bankTotal()) {
+                        repeated = true;
+                        bank = { 1: shuffleArr([...bankAll[1]]), 2: shuffleArr([...bankAll[2]]), 3: shuffleArr([...bankAll[3]]) };
+                        qs.forEach(x => { bank[x.tier] = bank[x.tier].filter(y => y.q !== x.q); });
+                        q = pick(t);
+                    }
+                    if (q) qs.push(q);
+                }
+            }
+            qs.sort((a, b) => a.tier - b.tier);
+            topUpBank();
+            return { qs, repeated };
+        }
+
+        // 背景補題：沒出過的題目不到 12 題時，AI 依同一份教材再出一批（避開出過的題目），不打斷遊戲
+        let toppingUp = false;
+        async function topUpBank() {
+            if (toppingUp || !lastSource || unusedCount() >= 12) return;
+            toppingUp = true;
+            const tiers = [1, 2, 3].sort((a, b) => bank[a].length - bank[b].length).slice(0, 2);
+            try {
+                const results = await Promise.all(tiers.map(t => makeTier(lastSource, t, 8, () => {}).catch(() => ({ qs: [] }))));
+                let added = 0;
+                results.forEach((r, i) => {
+                    const t = tiers[i];
+                    bank[t].unshift(...r.qs);
+                    bankAll[t].push(...r.qs);
+                    added += r.qs.length;
+                });
+                if (added) toast(`📚 AI 在背景補了 ${added} 題新題目`, '#34d399');
+            } finally {
+                toppingUp = false;
+            }
+        }
+
+        // 下一局：從題庫直接抽 10 題沒出過的
+        function nextRound() {
+            const { qs, repeated } = drawRound();
+            if (!qs.length) return regenerateQuestions();
+            currentQuestions = qs;
+            startGame();
+            if (repeated) toast('新題目還在補，這局有部分舊題', '#38bdf8');
+        }
+
+        // 結算畫面的黃色按鈕＝下一局；其他時候＝重新出整份題庫
+        let regenMode = 'rebuild';
+        function regenAction() {
+            if (regenMode === 'next' && lastSource && bankTotal()) return nextRound();
+            return regenerateQuestions();
+        }
+
+        function regenerateQuestions() {
+            saveApiKeyFromModal();
+            if (!lastSource) {
+                alert("目前用的是預設題目，請先上傳教材或選一個主題，AI 才能出新題。");
+                closeReview();
+                openMenuModal();
+                return;
+            }
+            previousQs = previousQs.slice(-60);
+            return generateFromSource(lastSource, true);
+        }
+
+        function toast(text, color = '#fbbf24') {
+            const el = document.getElementById('toast');
+            el.innerText = text;
+            el.style.color = color;
+            el.style.borderColor = color;
+            el.classList.remove('hidden', 'toast');
+            void el.offsetWidth;
+            el.classList.add('toast');
+            clearTimeout(el._t);
+            el._t = setTimeout(() => el.classList.add('hidden'), 2600);
+        }
+
+        const defaultQuestions = [
+            { q: "下列哪一種動物屬於哺乳類動物？", options: ["企鵝", "海豚", "鱷魚", "綠蠵龜"], answer: 1, explanation: "海豚用肺呼吸且胎生哺乳，屬於哺乳類。" },
+            { q: "植物進行光合作用時，主要吸收哪種氣體？", options: ["氧氣", "二氧化碳", "氮氣", "氫氣"], answer: 1, explanation: "植物吸收二氧化碳與水，利用陽光製造養分與氧氣。" },
+            { q: "地球繞太陽公轉一圈大約需要多久時間？", options: ["1 天", "1 個月", "1 年", "10 年"], answer: 2, explanation: "地球公轉一圈約為 365 天（一年）。" },
+            { q: "水在常壓下加熱到幾度會沸騰變成水蒸氣？", options: ["50℃", "80℃", "100℃", "200℃"], answer: 2, explanation: "水的標準沸點為 100 攝氏度。" },
+            { q: "「百折不撓」這個成語常用來形容什麼樣的精神？", options: ["意志堅定不屈", "辦事效率極高", "性格十分隨和", "學習速度飛快"], answer: 0, explanation: "百折不撓指遭受挫折仍不屈服。" }
+        ];
+
+        window.onload = function() {
+            currentQuestions = [...defaultQuestions];
+            renderProviderUI();
+            renderQuizSettings();
+            openMenuModal();
+        };
+
+        function saveApiKeyFromModal() {
+            // 去掉空白、換行、誤貼的引號
+            const inputVal = document.getElementById('apiKeyInputModal').value.replace(/[\s"'「」]/g, '');
+            document.getElementById('apiKeyInputModal').value = inputVal;
+            if (inputVal !== apiKey) {
+                workingModel = '';
+                localStorage.removeItem(`${provider}_working_model`);
+            }
+            apiKey = inputVal;
+            localStorage.setItem(`${provider}_api_key`, apiKey);
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('apiKeyInputModal');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function setConnStatus(text, ok) {
+            const el = document.getElementById('connStatus');
+            el.classList.remove('hidden', 'text-green-400', 'text-red-400', 'text-slate-300');
+            el.classList.add(ok === true ? 'text-green-400' : ok === false ? 'text-red-400' : 'text-slate-300');
+            el.innerText = text;
+        }
+
+        async function testConnection() {
+            saveApiKeyFromModal();
+            setConnStatus('連線測試中...', null);
+            try {
+                await callGeminiRaw('請只回覆 JSON：{"ok":true}', 1);
+                setConnStatus(`✅ 連線成功（使用模型：${workingModel}）`, true);
+            } catch (err) {
+                setConnStatus('❌ ' + err.message, false);
+            }
+        }
+
+        // 控制 overlay 裡各區塊的顯示
+        function setOverlayParts({ setup, result, regen, back }) {
+            document.getElementById('setupSections').classList.toggle('hidden', !setup);
+            document.getElementById('resultArea').classList.toggle('hidden', !result);
+            document.getElementById('regenBtn').classList.toggle('hidden', !(regen && lastSource));
+            document.getElementById('backMenuBtn').classList.toggle('hidden', !back);
+            document.getElementById('reviewBtn').classList.add('hidden');
+            document.getElementById('regenBtn').innerText = "🔄 用同一份教材，AI 重新出整份題庫";
+            regenMode = 'rebuild';
+        }
+
+        function openMenuModal() {
+            pauseGame();
+            resetDescStyle();
+            document.getElementById('overlayTitle').innerText = "AI 智慧拔河大對決";
+            document.getElementById('overlayDesc').innerText = "設定 API Key 與題庫開始遊戲：";
+            document.getElementById('actionBtnArea').style.display = "block";
+            setOverlayParts({ setup: true, result: false, regen: true, back: false });
+            toggleTimePanel(false);
+            document.getElementById('overlayBtn').innerText = "🚀 直接使用目前題目開始遊戲";
+            document.getElementById('topicSelectModal').selectedIndex = 0;
+            document.getElementById('pdfInputModal').value = '';
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function withTimeout(promise, ms, label) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`${label}讀取逾時`)), ms))
+            ]);
+        }
+
+        // 太長時切成約 1000 字的小段，從頭到尾平均挑，確保每一章都會被看到
+        function sampleEvenly(pageTexts, limit) {
+            const text = pageTexts.map(t => t.replace(/[ \t　]+/g, ' ').trim()).filter(Boolean).join('\n');
+            if (text.length <= limit) return text;
+            const SZ = 1000, blocks = [];
+            for (let i = 0; i < text.length; i += SZ) blocks.push(text.slice(i, i + SZ));
+            const keep = Math.max(1, Math.floor(limit / SZ));
+            const out = [];
+            for (let k = 0; k < keep; k++) out.push(blocks[Math.floor(k * blocks.length / keep)]);
+            return out.join('\n…\n');
+        }
+
+        // 一次讀多份教材（PDF / txt），每份平均分配字數，合併成一份教材給 AI
+        const MAX_BOOK_FILES = 8;
+        async function readBookFiles(fileList) {
+            const all = Array.from(fileList || []);
+            const ok = all.filter(f => /\.(pdf|txt)$/i.test(f.name));
+            const files = ok.slice(0, MAX_BOOK_FILES);
+            if (!files.length) throw new Error('請選擇 PDF 或 .txt 檔。');
+            const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/';
+            const parts = [], bad = [];
+            for (let f = 0; f < files.length; f++) {
+                const file = files[f];
+                const tag = files.length > 1 ? `第 ${f + 1}/${files.length} 份「${file.name}」` : '教冊內文';
+                const pages = [];
+                try {
+                    if (/\.pdf$/i.test(file.name)) {
+                        const pdf = await withTimeout(pdfjsLib.getDocument({
+                            data: await file.arrayBuffer(), cMapUrl: PDFJS_BASE + 'cmaps/', cMapPacked: true,
+                            standardFontDataUrl: PDFJS_BASE + 'standard_fonts/'
+                        }).promise, 30000, '開啟 PDF');
+                        let skipped = 0;
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            showLoading(`正在讀取${tag} (${i}/${pdf.numPages} 頁)...`, skipped ? `已略過 ${skipped} 頁讀不出來的頁面` : '這可能需要幾秒鐘');
+                            try {
+                                const page = await withTimeout(pdf.getPage(i), 8000, `第 ${i} 頁`);
+                                const content = await withTimeout(page.getTextContent(), 8000, `第 ${i} 頁`);
+                                pages.push(content.items.map(item => item.str).join(' '));
+                                page.cleanup();
+                            } catch (e) { skipped++; }
+                        }
+                        pdf.destroy && pdf.destroy();
+                    } else {
+                        showLoading(`正在讀取${tag}...`, '');
+                        pages.push(await file.text());
+                    }
+                } catch (e) { console.warn('讀檔失敗', file.name, e); }
+                const len = pages.join('').replace(/\s/g, '').length;
+                if (len < 50) bad.push(file.name); else parts.push({ name: file.name, pages, len, order: f });
+            }
+            if (!parts.length) throw new Error('讀不到文字（可能是掃描成圖片的 PDF），請改用有文字層的 PDF 或 .txt。');
+            // 一份 30000 字，每多一份 +10000，最多 60000；短的檔案用不完的字數讓給長的
+            let remain = Math.min(60000, 30000 + 10000 * (parts.length - 1));
+            [...parts].sort((a, b) => a.len - b.len).forEach((p, i, arr) => {
+                p.text = sampleEvenly(p.pages, Math.floor(remain / (arr.length - i)));
+                remain -= p.text.length;
+            });
+            const text = parts.length > 1
+                ? parts.map(p => `【教材：${p.name}】\n${p.text}`).join('\n\n')
+                : parts[0].text;
+            const name = parts.length > 1 ? `${parts[0].name} 等 ${parts.length} 份` : parts[0].name;
+            const notes = [];
+            if (bad.length) notes.push(`略過讀不到文字的檔案：${bad.join('、')}`);
+            if (all.length > ok.length) notes.push(`只能讀 PDF 或 .txt，已略過：${all.filter(f => !ok.includes(f)).map(f => f.name).join('、')}`);
+            if (ok.length > files.length) notes.push(`一次最多 ${MAX_BOOK_FILES} 份，第 ${MAX_BOOK_FILES + 1} 份之後沒有讀`);
+            return { name, text, count: parts.length, notes };
+        }
+
+        async function handleFileUpload(event) {
+            saveApiKeyFromModal();
+            const fileList = event.target.files;
+            if (!fileList || !fileList.length) return;
+            showLoading('正在解析教冊檔案...', '準備開始提取內文文字');
+            let book;
+            try {
+                book = await readBookFiles(fileList);
+            } catch (err) {
+                alert('讀取檔案失敗：' + err.message);
+                event.target.value = '';
+                openMenuModal();
+                return;
+            }
+            event.target.value = '';
+            if (book.notes.length) alert(book.notes.join('\n'));
+            showLoading('教冊讀取完成！', `共 ${book.count} 份、約 ${book.text.replace(/\s/g, '').length} 字，準備交給 AI 出題`);
+            previousQs = [];
+            await generateFromSource({ type: 'pdf', name: book.name, text: book.text }, false);
+        }
+
+        async function generateQuestionsByTopic(topic) {
+            saveApiKeyFromModal();
+            if (!topic) return;
+            if (!lastSource || lastSource.type !== 'topic' || lastSource.topic !== topic) previousQs = [];
+            await generateFromSource({ type: 'topic', topic }, false);
+        }
+
+        // 單一模型呼叫：回傳 {ok, status, text, msg, reason}
+        async function requestModel(model, promptText) {
+            let url, options;
+            if (provider === 'gemini') {
+                url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+                options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                };
+            } else {
+                // OpenAI 與 Grok 都是相同的 chat/completions 格式
+                const P = PROVIDERS[provider];
+                url = `${P.base}/chat/completions`;
+                const body = {
+                    model,
+                    messages: [
+                        { role: 'system', content: '你是台灣國小教師的出題助手。只輸出 JSON，不要任何其他文字或 markdown。依使用者指定的格式輸出；若指定的是陣列，請包成 {"questions": 陣列}。' },
+                        { role: 'user', content: promptText }
+                    ]
+                };
+                if (P.jsonMode) body.response_format = { type: 'json_object' };
+                options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify(body)
+                };
+            }
+
+            // 最多等 60 秒，避免畫面永遠卡在「出題中」
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 60000);
+            options.signal = controller.signal;
+
+            let response;
+            try {
+                response = await fetch(url, options);
+            } catch (e) {
+                clearTimeout(timer);
+                if (e.name === 'AbortError') {
+                    return { ok: false, status: 408, msg: `${model} 超過 60 秒沒回應` };
+                }
+                return { ok: false, status: 0, msg: `網路連不到 ${PROVIDERS[provider].name}（可能被學校網路/防火牆擋住，或目前離線）` };
+            }
+            clearTimeout(timer);
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                const text = provider === 'gemini'
+                    ? (data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '')
+                    : (data.choices?.[0]?.message?.content || '');
+                return { ok: true, status: 200, text };
+            }
+            return {
+                ok: false,
+                status: response.status,
+                msg: data.error?.message || `HTTP ${response.status}`,
+                reason: JSON.stringify(data.error || {})
+            };
+        }
+
+        // 查詢這把 Key 能用的文字模型，快速／便宜的排前面
+        async function discoverModels(P) {
+            try {
+                const r = await fetch(`${P.base}/models`, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                if (!r.ok) return [];
+                const data = await r.json();
+                const ids = (data.data || data.models || []).map(m => m.id || m).filter(id => typeof id === 'string');
+                const textModels = ids.filter(id =>
+                    /^(gpt|grok)/i.test(id) &&
+                    !/image|vision|audio|realtime|tts|transcribe|embed|search|imagine|video|code/i.test(id));
+                const score = id => (/fast|mini/i.test(id) ? 0 : 1) + (/reasoning/i.test(id) && !/non-reasoning/i.test(id) ? 1 : 0);
+                return textModels.sort((a, b) => score(a) - score(b) || b.localeCompare(a));
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // 呼叫 API：自動找能用的模型，錯誤訊息翻成看得懂的中文
+        async function callGeminiRaw(promptText, retries = 3) {
+            const P = PROVIDERS[provider];
+            if (!apiKey) throw new Error(`請先在上方框框中輸入或貼上 ${P.name} API Key！`);
+
+            const queue = workingModel
+                ? [workingModel, ...P.models.filter(m => m !== workingModel)]
+                : [...P.models];
+            const tried = new Set();
+            let discovered = false;
+
+            let lastMsg = '';
+            while (true) {
+                let model = queue.shift();
+                // 預設名稱都失效：向 API 查詢這把 Key 可用的模型清單再試
+                if (!model && P.base && !discovered) {
+                    discovered = true;
+                    showLoadingIfOpen(`正在查詢 ${P.name} 可用的模型...`, '預設的模型名稱可能已經更新');
+                    queue.push(...(await discoverModels(P)).filter(m => !tried.has(m)).slice(0, 3));
+                    model = queue.shift();
+                }
+                if (!model) break;
+                if (tried.has(model)) continue;
+                tried.add(model);
+
+                for (let i = 0; i < retries; i++) {
+                    const res = await requestModel(model, promptText);
+
+                    if (res.ok) {
+                        workingModel = model;
+                        localStorage.setItem(`${provider}_working_model`, model);
+                        if (!res.text) throw new Error("AI 沒有回傳內容（可能被安全過濾擋下），請換個主題或教材再試。");
+                        return res.text;
+                    }
+
+                    lastMsg = res.msg;
+                    const detail = (res.reason || '') + res.msg;
+
+                    // Key 問題：不必重試、不必換模型
+                    if ((res.status === 400 && /API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) || res.status === 401) {
+                        throw new Error(`API Key 無效：請重新複製完整的 ${P.name} Key（${P.keyHint}）。`);
+                    }
+                    // Grok 帳戶沒有額度
+                    if (/credits|spending limit/i.test(detail)) {
+                        throw new Error(`${P.name} 帳戶沒有可用額度：請到 console.x.ai 確認儲值或額度後再試。`);
+                    }
+                    if (res.status === 403) {
+                        throw new Error("這把 API Key 沒有權限（可能被停用、限制了網域，或專案未開通）。原始訊息：" + res.msg);
+                    }
+                    if (res.status === 0) throw new Error(res.msg);
+
+                    // GPT 帳戶沒錢：重試也沒用
+                    if (res.status === 429 && /insufficient_quota|billing/i.test(detail)) {
+                        throw new Error("OpenAI 帳戶餘額不足：請到 platform.openai.com 的 Billing 儲值後再試。");
+                    }
+
+                    // 模型不存在 / 已下架 / 帳號等級還用不到：換下一個模型
+                    if (res.status === 404 || /model_not_found|model not found|invalid model|does not exist|do not have access/i.test(detail)) break;
+
+                    // 超時：不重試同一個模型，直接換下一個
+                    if (res.status === 408) {
+                        showLoadingIfOpen("這個模型太慢了，換一個試試...", `改用下一個模型`);
+                        break;
+                    }
+
+                    // 額度用完：等一下再試，最後一次就換模型
+                    if (res.status === 429) {
+                        if (i < retries - 1) {
+                            showLoadingIfOpen("免費額度暫時用完，等待中...", `自動重試 (${i + 1}/${retries - 1})`);
+                            await new Promise(r => setTimeout(r, 5000 * (i + 1)));
+                            continue;
+                        }
+                        break;
+                    }
+
+                    // 500/503 伺服器忙碌：重試
+                    if (i < retries - 1) {
+                        showLoadingIfOpen("伺服器忙碌中...", `自動重試 (${i + 1}/${retries - 1})`);
+                        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+                        continue;
+                    }
+                    break;
+                }
+            }
+            throw new Error("所有模型都連線失敗。最後的錯誤訊息：" + lastMsg);
+        }
+
+        async function callGeminiAI(promptText) {
+            const raw = await callGeminiRaw(promptText);
+            return normalizeQuestions(parseJsonLoose(raw));
+        }
+
+        // 容錯解析：去掉 ```json 包裝、支援 {questions:[...]} 外層
+        function parseJsonLoose(text) {
+            let t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+            try { return JSON.parse(t); } catch (e) {}
+            const start = t.indexOf('['), end = t.lastIndexOf(']');
+            if (start !== -1 && end > start) {
+                try { return JSON.parse(t.slice(start, end + 1)); } catch (e) {}
+            }
+            throw new Error("AI 回傳的格式無法解析，請再按一次試試。");
+        }
+
+        function normalizeQuestions(parsed) {
+            let arr = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.items || Object.values(parsed).find(Array.isArray));
+            if (!Array.isArray(arr)) throw new Error("AI 回傳的不是題目清單，請再試一次。");
+            arr = arr.filter(q =>
+                q && typeof q.q === 'string' &&
+                Array.isArray(q.options) && q.options.length === 4 &&
+                Number.isInteger(Number(q.answer)) && Number(q.answer) >= 0 && Number(q.answer) <= 3
+            ).map(q => ({ ...q, answer: Number(q.answer) }));
+            if (arr.length === 0) throw new Error("生成的題目格式都不完整，請再試一次。");
+            return arr;
+        }
+
+        function showLoadingIfOpen(title, desc) {
+            if (!document.getElementById('overlay').classList.contains('hidden') &&
+                document.getElementById('actionBtnArea').style.display === 'none') {
+                showLoading(title, desc);
+            }
+        }
+
+        function startGame() {
+            saveApiKeyFromModal();
+            hideOverlay();
+            currentQuestionIdx = 0;
+            ropePosition = 0;
+            resetStats();
+            updateRopeUI();
+            loadQuestion(0);
+        }
+
+        function pauseGame() {
+            isQuestionActive = false;
+            clearInterval(timerInterval);
+            clearTimeout(revealTimeout);
+        }
+
+        function loadQuestion(idx) {
+            if (idx >= currentQuestions.length) {
+                endGame();
+                return;
+            }
+
+            isQuestionActive = true;
+            leftAnswered = false;
+            rightAnswered = false;
+            currentQuestionIdx = idx;
+
+            const qData = currentQuestions[idx];
+            document.getElementById('questionProgress').innerText = `第 ${idx + 1} / ${currentQuestions.length} 題${qData.tier ? '　' + '★'.repeat(qData.tier) : ''}`;
+            document.getElementById('questionText').innerText = qData.q;
+            document.getElementById('explainText').classList.add('hidden');
+            document.getElementById('questionBadge').classList.toggle('hidden', qData.source !== '延伸');
+
+            ['leftPanel', 'rightPanel'].forEach(id =>
+                document.getElementById(id).classList.remove('panel-flash-ok', 'panel-flash-bad'));
+
+            makeDisplayOrders(qData.options.length);
+            renderOptionGroup('leftOptions', qData.options, ['Q', 'W', 'E', 'R'], 'left');
+            renderOptionGroup('rightOptions', qData.options, ['U', 'I', 'O', 'P'], 'right');
+
+            startTimer();
+        }
+
+        // 兩隊的選項順序各自打亂，避免偷看對方位置；兩邊順序一定不一樣，正解位置也盡量不同
+        let displayOrder = { left: [0, 1, 2, 3], right: [0, 1, 2, 3] };
+        function shuffled(n) {
+            const a = [...Array(n).keys()];
+            for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+            return a;
+        }
+        function makeDisplayOrders(n) {
+            const ans = currentQuestions[currentQuestionIdx].answer;
+            const left = shuffled(n);
+            let right = shuffled(n), tries = 0;
+            while (tries++ < 30 && (right.join() === left.join() || right.indexOf(ans) === left.indexOf(ans))) right = shuffled(n);
+            displayOrder = { left, right };
+        }
+        function optBtnOf(team, orig) {
+            return document.querySelector(`#${team === 'left' ? 'leftOptions' : 'rightOptions'} button[data-orig="${orig}"]`);
+        }
+
+        function renderOptionGroup(containerId, options, keys, team) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            displayOrder[team].forEach((orig, i) => {
+                const opt = options[orig];
+                const btn = document.createElement('button');
+                btn.dataset.orig = orig;
+                btn.className = `w-full text-left p-3 rounded-xl border-2 text-sm md:text-base font-bold flex items-center justify-between transition ${
+                    team === 'left'
+                    ? 'bg-slate-800 hover:bg-red-900/40 border-slate-700 hover:border-red-500'
+                    : 'bg-slate-800 hover:bg-blue-900/40 border-slate-700 hover:border-blue-500'
+                }`;
+                const label = document.createElement('span');
+                label.innerHTML = `<b class="text-amber-400 mr-2">${i + 1}.</b>`;
+                label.appendChild(document.createTextNode(String(opt)));
+                const mark = document.createElement('span');
+                mark.className = 'mark text-[10px] bg-slate-700 px-2 py-0.5 rounded font-mono';
+                mark.innerText = keys[i];
+                btn.appendChild(label);
+                btn.appendChild(mark);
+                btn.onclick = () => handleAnswer(team, orig);
+                container.appendChild(btn);
+            });
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            questionStartTime = performance.now();
+            timeLeft = QUESTION_TIME;
+            const timerEl = document.getElementById('timer');
+            timerEl.innerText = timeLeft;
+            timerEl.classList.remove('text-red-500');
+
+            timerInterval = setInterval(() => {
+                const elapsed = (performance.now() - questionStartTime) / 1000;
+                timeLeft = Math.max(0, Math.ceil(QUESTION_TIME - elapsed));
+                timerEl.innerText = timeLeft;
+                timerEl.classList.toggle('text-red-500', timeLeft <= 5);
+                if (elapsed >= QUESTION_TIME) {
+                    clearInterval(timerInterval);
+                    revealAnswer();
+                }
+            }, 200);
+        }
+
+        // 越快答對拉越多：剩餘時間比例 × (最大 - 最小) + 最小
+        function calcPull() {
+            const elapsed = (performance.now() - questionStartTime) / 1000;
+            const ratio = Math.max(0, 1 - elapsed / QUESTION_TIME);
+            return Math.round(MIN_PULL + (MAX_PULL - MIN_PULL) * ratio);
+        }
+
+        function handleAnswer(team, optionIdx) {
+            if (!isQuestionActive) return;
+            if ((team === 'left' && leftAnswered) || (team === 'right' && rightAnswered)) return;
+
+            const qData = currentQuestions[currentQuestionIdx];
+            const isCorrect = (optionIdx === qData.answer);
+            const containerId = team === 'left' ? 'leftOptions' : 'rightOptions';
+            const panel = document.getElementById(team === 'left' ? 'leftPanel' : 'rightPanel');
+
+            if (team === 'left') leftAnswered = true; else rightAnswered = true;
+            disableOptionGroup(containerId);
+
+            const btns = document.querySelectorAll(`#${containerId} button`);
+            const picked = optBtnOf(team, optionIdx);
+            const usedSec = Math.round((performance.now() - questionStartTime) / 100) / 10;
+            stats[team].picks[currentQuestionIdx] = { pick: optionIdx, sec: usedSec };
+
+            if (isCorrect) {
+                const pull = calcPull();
+                ropePosition += team === 'left' ? -pull : pull;
+                stats[team].correct++;
+                stats[team].pull += pull;
+                picked.classList.add('opt-correct');
+                picked.querySelector('.mark').innerText = '✔ 答對';
+                panel.classList.add('panel-flash-ok');
+                showPop(team, `✔ +${pull}`, '#4ade80');
+            } else {
+                stats[team].wrong++;
+                picked.classList.add('opt-wrong', 'shake');
+                picked.querySelector('.mark').innerText = '✘ 答錯';
+                panel.classList.add('panel-flash-bad');
+                showPop(team, '✘ 不動', '#f87171');
+            }
+            // 其他選項變暗，讓選到的更明顯
+            btns.forEach(b => { if (Number(b.dataset.orig) !== optionIdx) b.classList.add('opt-dim'); });
+
+            updateRopeUI();
+            updateScoreBoard();
+
+            if (leftAnswered && rightAnswered) revealAnswer();
+        }
+
+        function showPop(team, text, color) {
+            const el = document.getElementById(team === 'left' ? 'leftPop' : 'rightPop');
+            el.innerText = text;
+            el.style.color = color;
+            el.classList.remove('pop');
+            void el.offsetWidth; // 重新觸發動畫
+            el.classList.add('pop');
+        }
+
+        // 公布答案：標出正確選項、顯示解析，2.5 秒後下一題
+        function revealAnswer() {
+            if (!isQuestionActive) return;
+            isQuestionActive = false;
+            clearInterval(timerInterval);
+
+            const qData = currentQuestions[currentQuestionIdx];
+            ['left', 'right'].forEach(team => {
+                const answered = team === 'left' ? leftAnswered : rightAnswered;
+                if (!answered) {
+                    stats[team].none++;
+                    stats[team].picks[currentQuestionIdx] = { pick: null };
+                    showPop(team, '⏰ 沒作答', '#94a3b8');
+                }
+                const btns = document.querySelectorAll(`#${team === 'left' ? 'leftOptions' : 'rightOptions'} button`);
+                btns.forEach(b => b.disabled = true);
+                const correctBtn = optBtnOf(team, qData.answer);
+                if (correctBtn && !correctBtn.classList.contains('opt-correct')) {
+                    correctBtn.classList.remove('opt-dim');
+                    correctBtn.classList.add('opt-reveal');
+                    correctBtn.querySelector('.mark').innerText = '正解';
+                }
+            });
+
+            const exp = document.getElementById('explainText');
+            exp.innerText = `✅ 正解：${qData.options[qData.answer]}${qData.explanation ? '　｜　' + qData.explanation : ''}`;
+            exp.classList.remove('hidden');
+
+            revealTimeout = setTimeout(nextQuestion, 2500);
+        }
+
+        function disableOptionGroup(containerId) {
+            document.querySelectorAll(`#${containerId} button`).forEach(btn => btn.disabled = true);
+        }
+
+        function updateRopeUI() {
+            ropePosition = Math.max(-ROPE_LIMIT, Math.min(ROPE_LIMIT, ropePosition));
+            document.getElementById('ropeContainer').style.transform = `translateX(${ropePosition}px)`;
+        }
+
+        function nextQuestion() {
+            clearInterval(timerInterval);
+            clearTimeout(revealTimeout);
+            if (currentQuestionIdx + 1 < currentQuestions.length) {
+                loadQuestion(currentQuestionIdx + 1);
+            } else {
+                endGame();
+            }
+        }
+
+        function teamCard(name, s, color, total, isWinner) {
+            const rate = total ? Math.round(s.correct / total * 100) : 0;
+            return `
+                <div class="rounded-xl p-3 border-2 ${color === 'red' ? 'border-red-500 bg-red-950/50' : 'border-blue-500 bg-blue-950/50'} ${isWinner ? 'ring-4 ring-amber-400' : ''}">
+                    <div class="font-black text-base ${color === 'red' ? 'text-red-300' : 'text-blue-300'} mb-2">${isWinner ? '🏆 ' : ''}${name}</div>
+                    <div class="text-sm space-y-1 font-bold">
+                        <div class="flex justify-between"><span class="text-green-400">✔ 答對</span><span class="text-green-400 text-lg">${s.correct} 題</span></div>
+                        <div class="flex justify-between"><span class="text-red-400">✘ 答錯</span><span class="text-red-400 text-lg">${s.wrong} 題</span></div>
+                        <div class="flex justify-between text-slate-400"><span>⏰ 沒作答</span><span>${s.none} 題</span></div>
+                        <div class="flex justify-between text-amber-300 border-t border-slate-600 pt-1 mt-1"><span>答對率</span><span>${rate}%</span></div>
+                        <div class="flex justify-between text-slate-300"><span>總拉力</span><span>${s.pull}</span></div>
+                    </div>
+                </div>`;
+        }
+
+        function endGame() {
+            pauseGame();
+            const total = currentQuestions.length;
+            // 勝負看總拉力（答對又答得快的贏）
+            let winnerText = "🤝 雙方勢均力敵，打成平手！";
+            let winner = null;
+            if (stats.left.pull > stats.right.pull) { winner = 'left'; winnerText = "🔴 恭喜【紅隊】獲得最終勝利！"; }
+            else if (stats.right.pull > stats.left.pull) { winner = 'right'; winnerText = "🔵 恭喜【藍隊】獲得最終勝利！"; }
+
+            document.getElementById('resultArea').innerHTML =
+                teamCard('紅隊', stats.left, 'red', total, winner === 'left') +
+                teamCard('藍隊', stats.right, 'blue', total, winner === 'right');
+
+            document.getElementById('overlayTitle').innerText = "比賽結束！";
+            document.getElementById('overlayDesc').innerText = winnerText;
+            document.getElementById('overlayDesc').className = "text-amber-300 text-base font-black mt-1";
+            document.getElementById('actionBtnArea').style.display = "block";
+            document.getElementById('overlayBtn').innerText = "🔁 原題重玩 (Enter)";
+            setOverlayParts({ setup: false, result: true, regen: true, back: true });
+            document.getElementById('reviewBtn').classList.remove('hidden');
+            regenMode = 'next';
+            document.getElementById('regenBtn').innerText = lastSource
+                ? `🆕 下一局：換 10 題新題目（題庫還有 ${unusedCount()} 題沒出過）`
+                : "🆕 出新題（請先上傳教材或選主題）";
+            document.getElementById('regenBtn').classList.remove('hidden');
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        // ===== 題目檢討 =====
+        let reviewFilter = 'all';
+
+        function openReview() {
+            reviewFilter = 'all';
+            renderReview();
+
+            document.getElementById('reviewOverlay').classList.remove('hidden');
+            document.getElementById('reviewList').scrollTop = 0;
+        }
+
+        function closeReview() {
+            document.getElementById('reviewOverlay').classList.add('hidden');
+        }
+
+        function setReviewFilter(f) {
+            reviewFilter = f;
+            renderReview();
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function teamResult(p, q) {
+            if (!p || p.pick === null || p.pick === undefined) return { tag: '⏰ 沒作答', cls: 'text-slate-400', ok: false };
+            if (p.pick === q.answer) return { tag: `✔ 答對（${p.sec} 秒）`, cls: 'text-green-400', ok: true };
+            return { tag: `✘ 選「${escapeHtml(q.options[p.pick])}」`, cls: 'text-red-400', ok: false };
+        }
+
+        function renderReview() {
+            const on = 'bg-emerald-500 border-emerald-400 text-slate-900';
+            const off = 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700';
+            document.getElementById('filterAll').className = `px-3 py-1.5 rounded-lg border transition ${reviewFilter === 'all' ? on : off}`;
+            document.getElementById('filterMiss').className = `px-3 py-1.5 rounded-lg border transition ${reviewFilter === 'miss' ? on : off}`;
+
+            const cards = currentQuestions.map((q, i) => {
+                const L = teamResult(stats.left.picks[i], q);
+                const R = teamResult(stats.right.picks[i], q);
+                if (reviewFilter === 'miss' && L.ok && R.ok) return '';
+
+                const lp = stats.left.picks[i]?.pick, rp = stats.right.picks[i]?.pick;
+                const opts = q.options.map((o, k) => {
+                    const isAns = k === q.answer;
+                    const chips =
+                        (lp === k ? `<span class="ml-1 text-[10px] font-black px-1.5 py-0.5 rounded bg-red-600 text-white">紅隊</span>` : '') +
+                        (rp === k ? `<span class="ml-1 text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-600 text-white">藍隊</span>` : '');
+                    return `<div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 text-sm md:text-base font-bold ${
+                        isAns ? 'bg-green-900/50 border-green-500 text-green-100'
+                              : ((lp === k || rp === k) ? 'bg-red-950/40 border-red-800 text-slate-200' : 'bg-slate-800/60 border-slate-700 text-slate-300')}">
+                        <span><b class="text-amber-400 mr-2">${k + 1}.</b>${escapeHtml(o)}${isAns ? ' <span class="text-green-300">✔ 正解</span>' : ''}</span>
+                        <span class="shrink-0">${chips}</span>
+                    </div>`;
+                }).join('');
+
+                return `<div class="max-w-4xl mx-auto mb-4 bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span class="text-xs font-black text-slate-400">第 ${i + 1} 題 ${q.source === '延伸' ? '<span class="ml-1 text-emerald-300">🔭 延伸</span>' : ''}</span>
+                        <span class="text-xs font-bold">
+                            <span class="text-red-300">紅隊</span> <span class="${L.cls}">${L.tag}</span>
+                            <span class="mx-2 text-slate-600">｜</span>
+                            <span class="text-blue-300">藍隊</span> <span class="${R.cls}">${R.tag}</span>
+                        </span>
+                    </div>
+                    <div class="text-lg md:text-xl font-bold text-slate-100 mb-3">${escapeHtml(q.q)}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${opts}</div>
+                    ${q.explanation ? `<div class="mt-3 text-sm font-bold text-green-300 bg-green-950/50 border border-green-800 rounded-lg px-3 py-2">💡 ${escapeHtml(q.explanation)}</div>` : ''}
+                </div>`;
+            }).join('');
+
+            document.getElementById('reviewList').innerHTML = cards ||
+                `<div class="max-w-4xl mx-auto text-center py-16 text-xl font-black text-emerald-300">🎉 兩隊全部答對，沒有需要檢討的題目！</div>`;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            // 在輸入框打字時不觸發遊戲按鍵
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            // 檢討畫面開著時不觸發遊戲按鍵
+            if (!document.getElementById('reviewOverlay').classList.contains('hidden')) return;
+
+            if (e.key === 'Enter') {
+                const overlay = document.getElementById('overlay');
+                if (!overlay.classList.contains('hidden') && document.getElementById('actionBtnArea').style.display !== 'none') {
+                    e.preventDefault();
+                    startGame();
+                    return;
+                }
+            }
+
+            if (!isQuestionActive) return;
+            const k = e.key.toUpperCase();
+            if (['Q','W','E','R'].includes(k)) handleAnswer('left', displayOrder.left[['Q','W','E','R'].indexOf(k)]);
+            else if (['U','I','O','P'].includes(k)) handleAnswer('right', displayOrder.right[['U','I','O','P'].indexOf(k)]);
+        });
+
+        function resetDescStyle() {
+            document.getElementById('overlayDesc').className = "text-slate-300 text-xs mt-1";
+        }
+
+        function showLoading(title, desc) {
+            pauseGame();
+            resetDescStyle();
+            document.getElementById('overlayTitle').innerText = title;
+            document.getElementById('overlayDesc').innerText = desc;
+            document.getElementById('actionBtnArea').style.display = "none";
+            setOverlayParts({ setup: false, result: false, regen: false, back: false });
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function showSuccessPrompt(title, desc) {
+            resetDescStyle();
+            document.getElementById('overlayTitle').innerText = title;
+            document.getElementById('overlayDesc').innerText = desc;
+            document.getElementById('actionBtnArea').style.display = "block";
+            document.getElementById('overlayBtn').innerText = "🚀 立即開始比賽 (Enter)";
+            setOverlayParts({ setup: false, result: false, regen: true, back: true });
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function hideOverlay() {
+            document.getElementById('overlay').classList.add('hidden');
+        }
+    </script>
+
+    <script>
+        // ===== 投影模式：全螢幕＋題目字體大小（記在這台電腦）=====
+        (function () {
+            const STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.45, 1.6];
+            let i = STEPS.indexOf(Number(localStorage.getItem('proj_scale') || 1));
+            if (i < 0) i = 2;
+            function apply() {
+                document.documentElement.style.setProperty('--proj', STEPS[i]);
+                const el = document.getElementById('projLabel');
+                if (el) el.innerText = Math.round(STEPS[i] * 100) + '%';
+            }
+            window.projZoom = function (d) {
+                i = Math.max(0, Math.min(STEPS.length - 1, i + d));
+                try { localStorage.setItem('proj_scale', STEPS[i]); } catch (e) {}
+                apply();
+            };
+            window.projFull = function () {
+                if (document.fullscreenElement) document.exitFullscreen();
+                else (document.documentElement.requestFullscreen || function () {}).call(document.documentElement)?.catch?.(() => {});
+            };
+            document.addEventListener('fullscreenchange', () => {
+                const ic = document.getElementById('projIcon');
+                if (ic) ic.className = document.fullscreenElement ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+            });
+            // 鍵盤：+ 放大、- 縮小（輸入框裡不作用）
+            document.addEventListener('keydown', e => {
+                if (/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '') || e.ctrlKey || e.metaKey || e.altKey) return;
+                if (e.key === '+' || e.key === '=') projZoom(1);
+                else if (e.key === '-' || e.key === '_') projZoom(-1);
+            });
+            document.addEventListener('DOMContentLoaded', apply);
+            apply();
+        })();
+    </script>
+</body>
+</html>

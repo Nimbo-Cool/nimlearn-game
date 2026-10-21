@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 知識領土戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        /* 投影模式：題目、選項、解析一起放大縮小 */
+        .proj-z { zoom: var(--proj, 1); }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .cell { transition: transform .15s, box-shadow .2s, background-color .4s; }
+        .cell:active { transform: scale(.94); }
+        @keyframes glow { 0%,100% { box-shadow: 0 0 0 3px var(--gc), 0 0 14px var(--gc); } 50% { box-shadow: 0 0 0 5px var(--gc), 0 0 26px var(--gc); } }
+        .cell-target { animation: glow 1.2s infinite; cursor: pointer; }
+        @keyframes claim { 0% { transform: scale(.4) rotate(-10deg); } 60% { transform: scale(1.15) rotate(3deg); } 100% { transform: scale(1); } }
+        .cell-claim { animation: claim .55s cubic-bezier(.34,1.56,.64,1); }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+        .shake { animation: shake .4s; }
+        @keyframes pulseBig { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+        .pulse-big { animation: pulseBig 0.8s infinite; }
+        @keyframes toastIn { 0%{opacity:0;transform:translate(-50%,20px)} 12%{opacity:1;transform:translate(-50%,0)} 85%{opacity:1} 100%{opacity:0} }
+        .toast { animation: toastIn 2.6s forwards; }
+        @keyframes chestPop { 0%{transform:scale(0) rotate(-20deg)} 70%{transform:scale(1.3) rotate(8deg)} 100%{transform:scale(1)} }
+        .chest-pop { animation: chestPop .6s cubic-bezier(.34,1.56,.64,1); }
+        .opt-correct { background:#16a34a !important; border-color:#4ade80 !important; color:#fff !important; box-shadow:0 0 0 4px rgba(74,222,128,.35); }
+        .opt-wrong { background:#dc2626 !important; border-color:#f87171 !important; color:#fff !important; }
+        .opt-out { opacity:.3; text-decoration: line-through; }
+        .opt-reveal { background:rgba(22,163,74,.3) !important; border-color:#4ade80 !important; border-style:dashed !important; }
+        input[type=number]::-webkit-inner-spin-button { opacity: 1; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen overflow-x-hidden">
+
+    <!-- ===================== 遊戲畫面 ===================== -->
+    <div id="gameScreen" class="hidden min-h-screen flex flex-col">
+        <header class="shrink-0 bg-slate-800 border-b border-slate-700 px-4 py-2.5 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🗺️</span>
+                <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 via-amber-300 to-rose-300">AI 知識領土戰</h1>
+                <span class="hidden md:inline text-[11px] font-bold text-slate-500 ml-2 whitespace-nowrap">秉亨老師 × Claude 協同製作</span>
+                <span id="roundInfo" class="ml-2 text-xs md:text-sm font-bold bg-slate-700 px-3 py-1 rounded-full text-slate-200"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleMute()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-lg" title="音效"><i id="muteIcon" class="fa-solid fa-volume-high"></i></button>
+<div class="flex items-center h-10 rounded-xl bg-slate-700 overflow-hidden font-bold shrink-0" title="題目字體大小（鍵盤 + / -）">
+                    <button onclick="projZoom(-1)" class="px-2.5 h-full hover:bg-slate-600 text-sm">A−</button>
+                    <span id="projLabel" class="min-w-[2.8rem] text-center text-xs text-slate-300">100%</span>
+                    <button onclick="projZoom(1)" class="px-2.5 h-full hover:bg-slate-600 text-sm">A＋</button>
+                </div>
+                <button onclick="projFull()" class="w-10 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 shrink-0" title="全螢幕"><i id="projIcon" class="fa-solid fa-expand"></i></button>
+                <button onclick="openRules()" class="px-3 h-10 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">📖 規則</button>
+                <button onclick="confirmEnd()" class="px-3 h-10 rounded-xl bg-rose-700 hover:bg-rose-600 text-sm font-bold">🏁 結束遊戲</button>
+            </div>
+        </header>
+
+        <main class="flex-1 flex flex-col lg:flex-row gap-4 p-3 md:p-4 items-center lg:items-start justify-center">
+            <!-- 地圖 -->
+            <div class="relative">
+                <div id="board" class="grid gap-1.5 md:gap-2 p-2 md:p-3 bg-slate-950 rounded-2xl border-2 border-slate-700 shadow-2xl"></div>
+            </div>
+
+            <!-- 側邊欄 -->
+            <aside class="w-full lg:w-[360px] shrink-0 flex flex-col gap-3">
+                <div id="turnBanner" class="rounded-2xl p-4 border-4 text-center shadow-xl">
+                </div>
+                <div id="scoreBoard" class="flex flex-col gap-2"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="skipTurn()" class="py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">⏭️ 跳過這組</button>
+                    <button onclick="openMenu()" class="py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">⚙️ 設定／題庫</button>
+                </div>
+                <div class="text-[12px] text-slate-400 leading-relaxed bg-slate-800/60 rounded-xl p-3 border border-slate-700">
+                    <b class="text-slate-200">格子說明：</b>★ 越多題目越難、分數越高；🎁 寶箱有驚喜；🏠 是各組基地（不能被攻打）。
+                    可以搶空地，也可以<b class="text-rose-300">攻打相鄰的別組格子</b>。
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- 提示訊息 -->
+    <div id="toast" class="hidden fixed bottom-8 left-1/2 z-[80] px-6 py-3 rounded-2xl text-lg md:text-xl font-black shadow-2xl border-2"></div>
+
+    <!-- ===================== 答題視窗 ===================== -->
+    <div id="qModal" class="hidden fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur flex items-center justify-center p-3 md:p-6">
+        <div class="w-full max-w-5xl">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div id="qWho" class="flex items-center gap-2 text-xl md:text-2xl font-black"></div>
+                <div class="flex items-center gap-3">
+                    <span id="qStars" class="text-2xl text-amber-300 font-black"></span>
+                    <span id="qExt" class="hidden text-sm font-black text-emerald-300 bg-emerald-950/80 border border-emerald-600 px-2.5 py-1 rounded-md">🔭 延伸</span>
+                    <span id="qTimer" class="text-4xl font-black text-amber-400 w-16 text-right">15</span>
+                </div>
+            </div>
+            <div class="h-3 bg-slate-800 rounded-full overflow-hidden mb-5">
+                <div id="qBar" class="h-full bg-amber-400 rounded-full" style="width:100%"></div>
+            </div>
+            <div id="qText" class="proj-z text-2xl md:text-4xl font-black leading-snug text-slate-50 mb-6 text-center"></div>
+            <div id="qOptions" class="proj-z grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"></div>
+
+            <!-- 搶答區 -->
+            <div id="stealArea" class="hidden mt-6 text-center">
+                <div class="text-2xl md:text-3xl font-black text-amber-300 mb-1">🎡 轉盤抽一組來搶答！</div>
+                <div id="stealHint" class="text-sm md:text-base text-slate-300 mb-4">抽到的組答對就拿走這一格，答錯不扣分</div>
+                <div id="stealBtns" class="flex flex-wrap justify-center gap-3"></div>
+                <button onclick="noSteal()" class="mt-4 px-5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">跳過搶答，公布答案</button>
+            </div>
+
+            <!-- 結果區 -->
+            <div id="resultArea" class="hidden mt-6">
+                <div id="resultMsg" class="text-center text-2xl md:text-3xl font-black mb-3"></div>
+                <div id="explainBox" class="proj-z text-base md:text-xl font-bold text-green-200 bg-green-950/60 border border-green-700 rounded-2xl px-5 py-3"></div>
+                <div id="chestBox" class="hidden mt-3 text-center"></div>
+                <div class="text-center mt-5">
+                    <button id="continueBtn" onclick="finishQuestion()" class="px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-900 text-xl font-black shadow-xl">繼續 ▶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== 規則 ===================== -->
+    <div id="rulesModal" class="hidden fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur flex items-center justify-center p-4" onclick="closeRules()">
+        <div class="max-w-2xl w-full bg-slate-800 border border-slate-600 rounded-2xl p-6 text-left space-y-3 text-base md:text-lg" onclick="event.stopPropagation()">
+            <h3 class="text-2xl font-black text-amber-300">📖 遊戲規則</h3>
+            <p>1️⃣ 各組輪流行動。輪到的組，點一個<b class="text-amber-300">發光的格子</b>：可以是和自己領土相鄰的空地，也可以是相鄰的別組格子（攻打）。</p>
+            <p>2️⃣ 答對就占下那一格。<b>★ 越多題目越難，分數也越高</b>（★=1 分、★★=2 分、★★★=3 分）。</p>
+            <p>3️⃣ 答錯或時間到，<b class="text-amber-300">🎡 轉盤</b>會從其他組抽一組來搶答：答對拿走這一格，答錯不扣分。原本的格主被抽到又答對，還能 +1 分守城獎勵。</p>
+            <p>4️⃣ ❓ <b>隱藏格</b>：選了才翻開，可能是 ★、★★、★★★，也可能藏著寶箱或 💣 炸彈。</p>
+            <p>5️⃣ 💣 <b>炸彈</b>：答對就拆彈成功（+2 分）；沒人答對就爆炸，挑戰的組會失去自己的一格。</p>
+            <p>6️⃣ 🎁 <b>寶箱</b>：💰 加分、✖️2 翻倍、🔁 再行動、🌀 傳送（空降任一空地）、🧱 城牆（一回合內不能被攻打）、🔍 透視（翻開 3 格隱藏格）。</p>
+            <p>7️⃣ 🏰 包圍：空地被同一組的格子（或地圖邊緣）完全包住，就自動歸那一組。🏠 基地不能被攻打。</p>
+            <p>8️⃣ 回合結束或地圖占滿時，<b>總分最高的組獲勝</b>。</p>
+            <div class="text-right"><button onclick="closeRules()" class="px-6 py-2.5 rounded-xl bg-emerald-500 text-slate-900 font-black">知道了</button></div>
+        </div>
+    </div>
+
+    <!-- ===================== 設定／結算 ===================== -->
+    <div id="menu" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md overflow-y-auto">
+        <div class="max-w-5xl mx-auto p-4 md:p-8">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-1">🗺️</div>
+                <h2 id="menuTitle" class="text-3xl font-black text-amber-300">AI 知識領土戰</h2>
+                <p id="menuDesc" class="text-slate-300 text-sm mt-1">分組搶地盤！AI 讀課本出題，答對就占領土地</p>
+            </div>
+
+            <!-- 結算 -->
+            <div id="resultPanel" class="hidden mb-6">
+                <div id="rankList" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 max-w-3xl mx-auto">
+                    <button onclick="openReview()" class="py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 font-black">📋 題目檢討</button>
+                    <button onclick="startGame('replay')" class="py-3 rounded-xl bg-slate-600 hover:bg-slate-500 font-bold">🔁 原題重玩</button>
+                    <button onclick="startGame('new')" class="py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 font-black">🆕 出新題再一局</button>
+                    <button onclick="showSetup()" class="py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold">⚙️ 回設定</button>
+                </div>
+            </div>
+
+            <!-- 載入中 -->
+            <div id="loadingPanel" class="hidden text-center py-10">
+                <div class="text-5xl mb-4 animate-bounce">🧭</div>
+                <div id="loadingTitle" class="text-2xl font-black text-amber-300"></div>
+                <div id="loadingDesc" class="text-slate-300 mt-2"></div>
+            </div>
+
+            <!-- 題庫完成 -->
+            <div id="readyPanel" class="hidden text-center py-6">
+                <div class="text-5xl mb-3">✅</div>
+                <div id="readyTitle" class="text-2xl font-black text-emerald-300"></div>
+                <div id="readyDesc" class="text-slate-300 mt-2 mb-6"></div>
+                <div class="flex flex-col items-center gap-3">
+                    <button onclick="startGame('fresh')" class="w-full max-w-md py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 text-xl font-black shadow-xl">🚀 開始遊戲</button>
+                    <button onclick="regenerateBank()" class="w-full max-w-md py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold">🔄 題目不滿意，重新出題</button>
+                    <button onclick="showSetup()" class="text-slate-400 hover:text-white text-sm font-bold">⚙️ 回設定</button>
+                </div>
+            </div>
+
+            <!-- 設定 -->
+            <div id="setupPanel" class="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
+                <div class="space-y-5">
+                    <!-- AI 來源 -->
+                    <div class="bg-slate-900/80 border border-amber-500/40 p-4 rounded-xl space-y-2">
+                        <div class="grid grid-cols-3 gap-2 mb-1">
+                            <button type="button" id="btn_gemini" onclick="switchProvider('gemini')" class="py-2 rounded-lg text-xs font-bold transition border">✨ Gemini</button>
+                            <button type="button" id="btn_openai" onclick="switchProvider('openai')" class="py-2 rounded-lg text-xs font-bold transition border">🤖 GPT</button>
+                            <button type="button" id="btn_xai" onclick="switchProvider('xai')" class="py-2 rounded-lg text-xs font-bold transition border">⚡ Grok</button>
+                        </div>
+                        <label class="block text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-key text-amber-400"></i> <span id="keyLabel">Gemini API Key 設定：</span>
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="apiKeyInputModal" onchange="saveApiKeyFromModal()" placeholder="請貼上您的 Gemini API Key..."
+                                class="w-full bg-slate-800 border border-slate-600 focus:border-amber-400 rounded-lg p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition pr-10">
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs">
+                                <i id="eyeIcon" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-[11px] text-slate-400">和拔河遊戲放在同一個網站時，Key 會共用。</p>
+                            <button type="button" onclick="testConnection()" class="shrink-0 px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded-md text-[11px] font-bold transition">
+                                <i class="fa-solid fa-plug"></i> 測試連線
+                            </button>
+                        </div>
+                        <p id="connStatus" class="text-[11px] font-bold hidden"></p>
+                    </div>
+
+                    <!-- 出題設定 -->
+                    <div class="bg-slate-900/80 border border-emerald-500/40 p-4 rounded-xl grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-300 mb-1.5">🎒 學生年級</label>
+                            <select id="gradeSelect" onchange="saveQuizSettings()" class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold">
+                                <option value="1">一年級</option><option value="2">二年級</option><option value="3">三年級</option>
+                                <option value="4">四年級</option><option value="5">五年級</option><option value="6">六年級</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-300 mb-1.5">🔭 延伸程度</label>
+                            <select id="extendSelect" onchange="saveQuizSettings()" class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold">
+                                <option value="0">只考課本</option>
+                                <option value="3">微延伸</option>
+                                <option value="5">多延伸</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <button type="button" onclick="toggleTimePanel()" class="w-full flex items-center justify-between bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-xs font-bold text-emerald-300 transition">
+                                <span>⏱️ 每題答題時間：<span id="timeSummary" class="text-slate-100">15 秒</span></span>
+                                <i id="timeChevron" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                            </button>
+                            <div id="timePanel" class="hidden mt-2">
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="stepTime(-5)" class="w-9 h-9 shrink-0 rounded-lg bg-slate-700 hover:bg-slate-600 font-black text-lg">−</button>
+                                    <input type="number" id="timeInput" min="5" max="120" step="1" value="15" onchange="saveQuizSettings()"
+                                        class="w-full bg-slate-800 border border-slate-600 p-2 rounded-lg text-center text-base font-black">
+                                    <span class="text-xs font-bold text-slate-300 shrink-0">秒</span>
+                                    <button type="button" onclick="stepTime(5)" class="w-9 h-9 shrink-0 rounded-lg bg-slate-700 hover:bg-slate-600 font-black text-lg">＋</button>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1.5">★★★ 難題會自動多給 5 秒。</p>
+                            </div>
+                        </div>
+                        <p class="col-span-2 text-[11px] text-slate-400">AI 會出 ★ 基礎、★★ 理解、★★★ 挑戰三種難度，並逐題檢查答案。</p>
+                    </div>
+
+                    <!-- 分組設定 -->
+                    <div class="bg-slate-900/80 border border-sky-500/40 p-4 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-sky-300">👥 分組數</label>
+                            <div id="groupCountBtns" class="flex gap-1.5"></div>
+                        </div>
+                        <div id="groupNames" class="grid grid-cols-2 gap-2"></div>
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="text-xs font-bold text-sky-300">🔁 比賽長度</label>
+                            <select id="roundSelect" onchange="saveGroupSettings()" class="bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold">
+                                <option value="12">短局（約 12 題）</option>
+                                <option value="20">標準（約 20 題）</option>
+                                <option value="30">長局（約 30 題）</option>
+                                <option value="0">不限（占滿地圖為止）</option>
+                            </select>
+                        </div>
+                        <p id="timeEstimate" class="text-[11px] text-slate-400 text-right"></p>
+                    </div>
+                </div>
+
+                <div class="space-y-5">
+                    <!-- 上傳教冊 -->
+                    <div class="bg-indigo-950/50 border-2 border-indigo-500 p-5 rounded-2xl shadow-lg">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl">📄</div>
+                            <div>
+                                <h4 class="font-bold text-indigo-200 text-base">匯入教師手冊 / 課本檔</h4>
+                                <p class="text-xs text-slate-300">可一次選多份 PDF，AI 讀完全部出三種難度題庫</p>
+                            </div>
+                        </div>
+                        <label class="mt-3 w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-center font-extrabold text-sm rounded-xl cursor-pointer block transition shadow-md">
+                            <i class="fa-solid fa-file-pdf mr-1.5"></i> 選擇教冊 PDF（可一次多選）
+                            <input type="file" id="pdfInputModal" accept=".pdf,.txt" multiple class="hidden" onchange="handleFileUpload(event)">
+                        </label>
+                    </div>
+
+                    <!-- 主題 -->
+                    <div class="bg-slate-700/50 border border-slate-600 p-4 rounded-xl">
+                        <label class="block text-xs font-bold text-amber-300 mb-2">✨ 或挑選預設主題出題：</label>
+                        <select id="topicSelectModal" onchange="generateQuestionsByTopic(this.value)" class="w-full bg-slate-800 border border-slate-600 p-2.5 rounded-lg text-xs font-bold cursor-pointer">
+                            <option value="" disabled selected>-- 點擊選擇主題 --</option>
+                            <option value="自然科學小常識">🌱 自然科學小常識</option>
+                            <option value="成語典故與成語活用">📚 成語典故與活用</option>
+                            <option value="台灣歷史與地理人文">🗺️ 台灣歷史與地理</option>
+                            <option value="日常生活常識與安全">💡 日常生活與安全常識</option>
+                            <option value="國小基礎英文單字與文法">🔤 基礎英文單字與語感</option>
+                            <option value="趣味數學邏輯推理">🔢 趣味數學與邏輯</option>
+                        </select>
+                    </div>
+
+                    <!-- 已有題庫 / 試玩 -->
+                    <div class="bg-slate-800/60 border border-slate-700 p-4 rounded-xl space-y-2">
+                        <div id="bankStatus" class="text-xs text-slate-300"></div>
+                        <button id="useBankBtn" onclick="startGame('fresh')" class="hidden w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 font-black">🚀 用目前題庫開始</button>
+                        <button onclick="useDemoBank()" class="w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">🎮 先用內建題目試玩（不需 API）</button>
+                    </div>
+                </div>
+            </div>
+            <p class="text-center text-[11px] font-bold text-slate-500 mt-6">🍎 秉亨老師 × Claude 協同製作</p>
+        </div>
+    </div>
+
+    <!-- ===================== 題目檢討 ===================== -->
+    <div id="reviewOverlay" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[65] flex flex-col">
+        <div class="shrink-0 bg-slate-800 border-b border-slate-700 px-4 py-3">
+            <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-xl font-black text-emerald-300">📋 題目檢討</h3>
+                <div class="flex items-center gap-2 text-xs font-bold">
+                    <button id="filterAll" onclick="setReviewFilter('all')" class="px-3 py-1.5 rounded-lg border">全部</button>
+                    <button id="filterMiss" onclick="setReviewFilter('miss')" class="px-3 py-1.5 rounded-lg border">只看有答錯的</button>
+                </div>
+            </div>
+        </div>
+        <div id="reviewList" class="flex-1 overflow-y-auto px-4 py-4"></div>
+        <div class="shrink-0 bg-slate-800 border-t border-slate-700 px-4 py-3">
+            <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button onclick="closeReview()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-bold">◀ 回結算</button>
+                <button onclick="closeReview(); startGame('replay')" class="py-2.5 bg-slate-600 hover:bg-slate-500 rounded-xl text-sm font-bold">🔁 原題重玩</button>
+                <button onclick="closeReview(); startGame('new')" class="py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 rounded-xl text-sm font-black">🆕 出新題再一局</button>
+                <button onclick="closeReview(); showSetup()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-bold">⚙️ 回設定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== AI 來源設定 =====
+        const PROVIDERS = {
+            gemini: {
+                name: 'Gemini',
+                // 第一個是 Google 官方「自動指向最新 Flash」的別名，舊模型下架也不用改程式
+                models: ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'],
+                placeholder: '請貼上您的 Gemini API Key（AIza 開頭）...',
+                keyHint: 'AIza 開頭'
+            },
+            openai: {
+                name: 'GPT',
+                // 便宜又快的 mini 等級，失敗時自動往下換
+                models: ['gpt-5.4-mini', 'gpt-mini-latest', 'gpt-5-mini'],
+                placeholder: '請貼上您的 OpenAI API Key（sk- 開頭）...',
+                keyHint: 'sk- 開頭',
+                base: 'https://api.openai.com/v1',
+                jsonMode: true
+            },
+            xai: {
+                name: 'Grok',
+                // 快速、便宜的非推理版優先；名稱都失效時會自動查詢帳號可用的模型
+                models: ['grok-4-1-fast-non-reasoning', 'grok-4-fast-non-reasoning', 'grok-4.7'],
+                placeholder: '請貼上您的 xAI API Key（xai- 開頭）...',
+                keyHint: 'xai- 開頭',
+                base: 'https://api.x.ai/v1',
+                jsonMode: false   // 靠提示詞要求 JSON，避免參數不相容
+            }
+        };
+
+        let provider = localStorage.getItem('ai_provider') || 'gemini';
+        if (!PROVIDERS[provider]) provider = 'gemini';
+        let apiKey = localStorage.getItem(`${provider}_api_key`) || '';
+        let workingModel = localStorage.getItem(`${provider}_working_model`) || '';
+
+        function switchProvider(p) {
+            saveApiKeyFromModal();
+            provider = p;
+            localStorage.setItem('ai_provider', p);
+            apiKey = localStorage.getItem(`${p}_api_key`) || '';
+            workingModel = localStorage.getItem(`${p}_working_model`) || '';
+            renderProviderUI();
+        }
+
+        function renderProviderUI() {
+            const on = 'bg-amber-500 border-amber-400 text-slate-900';
+            const off = 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700';
+            Object.keys(PROVIDERS).forEach(p => {
+                document.getElementById(`btn_${p}`).className = `py-2 rounded-lg text-xs font-bold transition border ${provider === p ? on : off}`;
+            });
+            document.getElementById('keyLabel').innerText = `${PROVIDERS[provider].name} API Key 設定：`;
+            const input = document.getElementById('apiKeyInputModal');
+            input.placeholder = PROVIDERS[provider].placeholder;
+            input.value = apiKey;
+            document.getElementById('connStatus').classList.add('hidden');
+        }
+
+        function saveApiKeyFromModal() {
+            // 去掉空白、換行、誤貼的引號
+            const inputVal = document.getElementById('apiKeyInputModal').value.replace(/[\s"'「」]/g, '');
+            document.getElementById('apiKeyInputModal').value = inputVal;
+            if (inputVal !== apiKey) {
+                workingModel = '';
+                localStorage.removeItem(`${provider}_working_model`);
+            }
+            apiKey = inputVal;
+            localStorage.setItem(`${provider}_api_key`, apiKey);
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('apiKeyInputModal');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function setConnStatus(text, ok) {
+            const el = document.getElementById('connStatus');
+            el.classList.remove('hidden', 'text-green-400', 'text-red-400', 'text-slate-300');
+            el.classList.add(ok === true ? 'text-green-400' : ok === false ? 'text-red-400' : 'text-slate-300');
+            el.innerText = text;
+        }
+
+        async function testConnection() {
+            saveApiKeyFromModal();
+            setConnStatus('連線測試中...', null);
+            try {
+                await callGeminiRaw('請只回覆 JSON：{"ok":true}', 1);
+                setConnStatus(`✅ 連線成功（使用模型：${workingModel}）`, true);
+            } catch (err) {
+                setConnStatus('❌ ' + err.message, false);
+            }
+        }
+
+        function withTimeout(promise, ms, label) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`${label}讀取逾時`)), ms))
+            ]);
+        }
+
+        // 太長時切成約 1000 字的小段，從頭到尾平均挑，確保每一章都會被看到
+        function sampleEvenly(pageTexts, limit) {
+            const text = pageTexts.map(t => t.replace(/[ \t　]+/g, ' ').trim()).filter(Boolean).join('\n');
+            if (text.length <= limit) return text;
+            const SZ = 1000, blocks = [];
+            for (let i = 0; i < text.length; i += SZ) blocks.push(text.slice(i, i + SZ));
+            const keep = Math.max(1, Math.floor(limit / SZ));
+            const out = [];
+            for (let k = 0; k < keep; k++) out.push(blocks[Math.floor(k * blocks.length / keep)]);
+            return out.join('\n…\n');
+        }
+
+        // 一次讀多份教材（PDF / txt），每份平均分配字數，合併成一份教材給 AI
+        const MAX_BOOK_FILES = 8;
+        async function readBookFiles(fileList) {
+            const all = Array.from(fileList || []);
+            const ok = all.filter(f => /\.(pdf|txt)$/i.test(f.name));
+            const files = ok.slice(0, MAX_BOOK_FILES);
+            if (!files.length) throw new Error('請選擇 PDF 或 .txt 檔。');
+            const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/';
+            const parts = [], bad = [];
+            for (let f = 0; f < files.length; f++) {
+                const file = files[f];
+                const tag = files.length > 1 ? `第 ${f + 1}/${files.length} 份「${file.name}」` : '教冊內文';
+                const pages = [];
+                try {
+                    if (/\.pdf$/i.test(file.name)) {
+                        const pdf = await withTimeout(pdfjsLib.getDocument({
+                            data: await file.arrayBuffer(), cMapUrl: PDFJS_BASE + 'cmaps/', cMapPacked: true,
+                            standardFontDataUrl: PDFJS_BASE + 'standard_fonts/'
+                        }).promise, 30000, '開啟 PDF');
+                        let skipped = 0;
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            showLoading(`正在讀取${tag} (${i}/${pdf.numPages} 頁)...`, skipped ? `已略過 ${skipped} 頁讀不出來的頁面` : '這可能需要幾秒鐘');
+                            try {
+                                const page = await withTimeout(pdf.getPage(i), 8000, `第 ${i} 頁`);
+                                const content = await withTimeout(page.getTextContent(), 8000, `第 ${i} 頁`);
+                                pages.push(content.items.map(item => item.str).join(' '));
+                                page.cleanup();
+                            } catch (e) { skipped++; }
+                        }
+                        pdf.destroy && pdf.destroy();
+                    } else {
+                        showLoading(`正在讀取${tag}...`, '');
+                        pages.push(await file.text());
+                    }
+                } catch (e) { console.warn('讀檔失敗', file.name, e); }
+                const len = pages.join('').replace(/\s/g, '').length;
+                if (len < 50) bad.push(file.name); else parts.push({ name: file.name, pages, len, order: f });
+            }
+            if (!parts.length) throw new Error('讀不到文字（可能是掃描成圖片的 PDF），請改用有文字層的 PDF 或 .txt。');
+            // 一份 30000 字，每多一份 +10000，最多 60000；短的檔案用不完的字數讓給長的
+            let remain = Math.min(60000, 30000 + 10000 * (parts.length - 1));
+            [...parts].sort((a, b) => a.len - b.len).forEach((p, i, arr) => {
+                p.text = sampleEvenly(p.pages, Math.floor(remain / (arr.length - i)));
+                remain -= p.text.length;
+            });
+            const text = parts.length > 1
+                ? parts.map(p => `【教材：${p.name}】\n${p.text}`).join('\n\n')
+                : parts[0].text;
+            const name = parts.length > 1 ? `${parts[0].name} 等 ${parts.length} 份` : parts[0].name;
+            const notes = [];
+            if (bad.length) notes.push(`略過讀不到文字的檔案：${bad.join('、')}`);
+            if (all.length > ok.length) notes.push(`只能讀 PDF 或 .txt，已略過：${all.filter(f => !ok.includes(f)).map(f => f.name).join('、')}`);
+            if (ok.length > files.length) notes.push(`一次最多 ${MAX_BOOK_FILES} 份，第 ${MAX_BOOK_FILES + 1} 份之後沒有讀`);
+            return { name, text, count: parts.length, notes };
+        }
+
+        // 單一模型呼叫：回傳 {ok, status, text, msg, reason}
+        async function requestModel(model, promptText) {
+            let url, options;
+            if (provider === 'gemini') {
+                url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+                options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                };
+            } else {
+                // OpenAI 與 Grok 都是相同的 chat/completions 格式
+                const P = PROVIDERS[provider];
+                url = `${P.base}/chat/completions`;
+                const body = {
+                    model,
+                    messages: [
+                        { role: 'system', content: '你是台灣國小教師的出題助手。只輸出 JSON，不要任何其他文字或 markdown。依使用者指定的格式輸出；若指定的是陣列，請包成 {"questions": 陣列}。' },
+                        { role: 'user', content: promptText }
+                    ]
+                };
+                if (P.jsonMode) body.response_format = { type: 'json_object' };
+                options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify(body)
+                };
+            }
+
+            // 最多等 60 秒，避免畫面永遠卡在「出題中」
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 60000);
+            options.signal = controller.signal;
+
+            let response;
+            try {
+                response = await fetch(url, options);
+            } catch (e) {
+                clearTimeout(timer);
+                if (e.name === 'AbortError') {
+                    return { ok: false, status: 408, msg: `${model} 超過 60 秒沒回應` };
+                }
+                return { ok: false, status: 0, msg: `網路連不到 ${PROVIDERS[provider].name}（可能被學校網路/防火牆擋住，或目前離線）` };
+            }
+            clearTimeout(timer);
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                const text = provider === 'gemini'
+                    ? (data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '')
+                    : (data.choices?.[0]?.message?.content || '');
+                return { ok: true, status: 200, text };
+            }
+            return {
+                ok: false,
+                status: response.status,
+                msg: data.error?.message || `HTTP ${response.status}`,
+                reason: JSON.stringify(data.error || {})
+            };
+        }
+
+        // 查詢這把 Key 能用的文字模型，快速／便宜的排前面
+        async function discoverModels(P) {
+            try {
+                const r = await fetch(`${P.base}/models`, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                if (!r.ok) return [];
+                const data = await r.json();
+                const ids = (data.data || data.models || []).map(m => m.id || m).filter(id => typeof id === 'string');
+                const textModels = ids.filter(id =>
+                    /^(gpt|grok)/i.test(id) &&
+                    !/image|vision|audio|realtime|tts|transcribe|embed|search|imagine|video|code/i.test(id));
+                const score = id => (/fast|mini/i.test(id) ? 0 : 1) + (/reasoning/i.test(id) && !/non-reasoning/i.test(id) ? 1 : 0);
+                return textModels.sort((a, b) => score(a) - score(b) || b.localeCompare(a));
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // 呼叫 API：自動找能用的模型，錯誤訊息翻成看得懂的中文
+        async function callGeminiRaw(promptText, retries = 3) {
+            const P = PROVIDERS[provider];
+            if (!apiKey) throw new Error(`請先在上方框框中輸入或貼上 ${P.name} API Key！`);
+
+            const queue = workingModel
+                ? [workingModel, ...P.models.filter(m => m !== workingModel)]
+                : [...P.models];
+            const tried = new Set();
+            let discovered = false;
+
+            let lastMsg = '';
+            while (true) {
+                let model = queue.shift();
+                // 預設名稱都失效：向 API 查詢這把 Key 可用的模型清單再試
+                if (!model && P.base && !discovered) {
+                    discovered = true;
+                    showLoadingIfOpen(`正在查詢 ${P.name} 可用的模型...`, '預設的模型名稱可能已經更新');
+                    queue.push(...(await discoverModels(P)).filter(m => !tried.has(m)).slice(0, 3));
+                    model = queue.shift();
+                }
+                if (!model) break;
+                if (tried.has(model)) continue;
+                tried.add(model);
+
+                for (let i = 0; i < retries; i++) {
+                    const res = await requestModel(model, promptText);
+
+                    if (res.ok) {
+                        workingModel = model;
+                        localStorage.setItem(`${provider}_working_model`, model);
+                        if (!res.text) throw new Error("AI 沒有回傳內容（可能被安全過濾擋下），請換個主題或教材再試。");
+                        return res.text;
+                    }
+
+                    lastMsg = res.msg;
+                    const detail = (res.reason || '') + res.msg;
+
+                    // Key 問題：不必重試、不必換模型
+                    if ((res.status === 400 && /API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) || res.status === 401) {
+                        throw new Error(`API Key 無效：請重新複製完整的 ${P.name} Key（${P.keyHint}）。`);
+                    }
+                    // Grok 帳戶沒有額度
+                    if (/credits|spending limit/i.test(detail)) {
+                        throw new Error(`${P.name} 帳戶沒有可用額度：請到 console.x.ai 確認儲值或額度後再試。`);
+                    }
+                    if (res.status === 403) {
+                        throw new Error("這把 API Key 沒有權限（可能被停用、限制了網域，或專案未開通）。原始訊息：" + res.msg);
+                    }
+                    if (res.status === 0) throw new Error(res.msg);
+
+                    // GPT 帳戶沒錢：重試也沒用
+                    if (res.status === 429 && /insufficient_quota|billing/i.test(detail)) {
+                        throw new Error("OpenAI 帳戶餘額不足：請到 platform.openai.com 的 Billing 儲值後再試。");
+                    }
+
+                    // 模型不存在 / 已下架 / 帳號等級還用不到：換下一個模型
+                    if (res.status === 404 || /model_not_found|model not found|invalid model|does not exist|do not have access/i.test(detail)) break;
+
+                    // 超時：不重試同一個模型，直接換下一個
+                    if (res.status === 408) {
+                        showLoadingIfOpen("這個模型太慢了，換一個試試...", `改用下一個模型`);
+                        break;
+                    }
+
+                    // 額度用完：等一下再試，最後一次就換模型
+                    if (res.status === 429) {
+                        if (i < retries - 1) {
+                            showLoadingIfOpen("免費額度暫時用完，等待中...", `自動重試 (${i + 1}/${retries - 1})`);
+                            await new Promise(r => setTimeout(r, 5000 * (i + 1)));
+                            continue;
+                        }
+                        break;
+                    }
+
+                    // 500/503 伺服器忙碌：重試
+                    if (i < retries - 1) {
+                        showLoadingIfOpen("伺服器忙碌中...", `自動重試 (${i + 1}/${retries - 1})`);
+                        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+                        continue;
+                    }
+                    break;
+                }
+            }
+            throw new Error("所有模型都連線失敗。最後的錯誤訊息：" + lastMsg);
+        }
+
+        // 容錯解析：去掉 ```json 包裝、支援 {questions:[...]} 外層
+        function parseJsonLoose(text) {
+            let t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+            try { return JSON.parse(t); } catch (e) {}
+            const start = t.indexOf('['), end = t.lastIndexOf(']');
+            if (start !== -1 && end > start) {
+                try { return JSON.parse(t.slice(start, end + 1)); } catch (e) {}
+            }
+            throw new Error("AI 回傳的格式無法解析，請再按一次試試。");
+        }
+
+        function normalizeQuestions(parsed) {
+            let arr = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.items || Object.values(parsed).find(Array.isArray));
+            if (!Array.isArray(arr)) throw new Error("AI 回傳的不是題目清單，請再試一次。");
+            arr = arr.filter(q =>
+                q && typeof q.q === 'string' &&
+                Array.isArray(q.options) && q.options.length === 4 &&
+                Number.isInteger(Number(q.answer)) && Number(q.answer) >= 0 && Number(q.answer) <= 3
+            ).map(q => ({ ...q, answer: Number(q.answer) }));
+            if (arr.length === 0) throw new Error("生成的題目格式都不完整，請再試一次。");
+            return arr;
+        }
+
+
+        // =====================================================================
+        //  共用小工具
+        // =====================================================================
+        const $ = id => document.getElementById(id);
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function shuffle(a) {
+            for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+            return a;
+        }
+        function showLoadingIfOpen(title, desc) {
+            if (!$('loadingPanel').classList.contains('hidden')) showLoading(title, desc);
+        }
+
+        // ===== 音效（WebAudio 合成，不需外部檔案）=====
+        let muted = localStorage.getItem('terr_muted') === '1';
+        let audioCtx = null;
+        function tone(freqs, dur = 0.12, type = 'sine', gap = 0.09, vol = 0.18) {
+            if (muted) return;
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                freqs.forEach((f, i) => {
+                    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                    o.type = type; o.frequency.value = f;
+                    const t0 = audioCtx.currentTime + i * gap;
+                    g.gain.setValueAtTime(vol, t0);
+                    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+                    o.connect(g); g.connect(audioCtx.destination);
+                    o.start(t0); o.stop(t0 + dur + 0.02);
+                });
+            } catch (e) {}
+        }
+        const SFX = {
+            correct: () => tone([660, 880, 1320], 0.16, 'triangle'),
+            wrong: () => tone([220, 160], 0.25, 'sawtooth', 0.15, 0.12),
+            steal: () => tone([880, 1100, 880, 1100], 0.08, 'square', 0.08, 0.08),
+            chest: () => tone([523, 659, 784, 1046, 1318], 0.14, 'triangle', 0.07),
+            tick: () => tone([1000], 0.04, 'square', 0, 0.05),
+            select: () => tone([520], 0.06, 'triangle', 0, 0.1),
+            win: () => tone([523, 659, 784, 1046, 784, 1046, 1318], 0.18, 'triangle', 0.12)
+        };
+        function toggleMute() {
+            muted = !muted;
+            localStorage.setItem('terr_muted', muted ? '1' : '0');
+            renderMute();
+        }
+        function renderMute() {
+            $('muteIcon').className = muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+        }
+
+        function toast(text, color = '#fbbf24') {
+            const el = $('toast');
+            el.innerText = text;
+            el.style.background = '#0f172a';
+            el.style.color = color;
+            el.style.borderColor = color;
+            el.classList.remove('hidden', 'toast');
+            void el.offsetWidth;
+            el.classList.add('toast');
+            clearTimeout(el._t);
+            el._t = setTimeout(() => el.classList.add('hidden'), 2600);
+        }
+
+        // =====================================================================
+        //  出題設定（年級、延伸、時間）— 與拔河遊戲共用儲存
+        // =====================================================================
+        const GRADE_NAMES = ['', '一', '二', '三', '四', '五', '六'];
+        let QUESTION_TIME = 15;
+        function clampTime(v) {
+            if (v === '' || v === null || v === undefined) return 15;
+            v = Math.round(Number(v));
+            if (!Number.isFinite(v)) return 15;
+            return Math.min(120, Math.max(5, v));
+        }
+        function getQuizSettings() {
+            return {
+                grade: Number(localStorage.getItem('quiz_grade') || 4),
+                extend: Number(localStorage.getItem('quiz_extend') ?? 3),
+                time: clampTime(localStorage.getItem('quiz_time') ?? 15)
+            };
+        }
+        function saveQuizSettings() {
+            localStorage.setItem('quiz_grade', $('gradeSelect').value);
+            localStorage.setItem('quiz_extend', $('extendSelect').value);
+            const t = clampTime($('timeInput').value);
+            $('timeInput').value = t;
+            localStorage.setItem('quiz_time', t);
+            QUESTION_TIME = t;
+            $('timeSummary').innerText = `${t} 秒`;
+        }
+        function toggleTimePanel(force) {
+            const open = force !== undefined ? force : $('timePanel').classList.contains('hidden');
+            $('timePanel').classList.toggle('hidden', !open);
+            $('timeChevron').classList.toggle('rotate-180', open);
+        }
+        function stepTime(d) {
+            $('timeInput').value = clampTime(Number($('timeInput').value) + d);
+            saveQuizSettings();
+        }
+        function renderQuizSettings() {
+            const s = getQuizSettings();
+            $('gradeSelect').value = String(s.grade);
+            $('extendSelect').value = String(s.extend);
+            $('timeInput').value = s.time;
+            QUESTION_TIME = s.time;
+            $('timeSummary').innerText = `${s.time} 秒`;
+        }
+        function timeFor(value) { return QUESTION_TIME + (value === 3 ? 5 : 0); }
+
+        // =====================================================================
+        //  分組設定
+        // =====================================================================
+        const TEAM_STYLES = [
+            { color: '#ef4444', dark: '#7f1d1d', emoji: '🦁', label: '第一組' },
+            { color: '#3b82f6', dark: '#1e3a8a', emoji: '🐳', label: '第二組' },
+            { color: '#22c55e', dark: '#14532d', emoji: '🐸', label: '第三組' },
+            { color: '#f59e0b', dark: '#78350f', emoji: '🐯', label: '第四組' },
+            { color: '#a855f7', dark: '#4c1d95', emoji: '🦄', label: '第五組' },
+            { color: '#ec4899', dark: '#831843', emoji: '🐙', label: '第六組' },
+            { color: '#06b6d4', dark: '#164e63', emoji: '🐧', label: '第七組' },
+            { color: '#65a30d', dark: '#365314', emoji: '🐨', label: '第八組' }
+        ];
+        let groupCount = Math.min(8, Math.max(2, Number(localStorage.getItem('terr_groups') || 4)));
+        let groupNames = (() => {
+            try { const a = JSON.parse(localStorage.getItem('terr_names') || '[]'); if (Array.isArray(a)) return a; } catch (e) {}
+            return [];
+        })();
+        // 比賽長度以「全班總題數」計算，每組回合數依組數自動換算，2 組和 6 組玩起來一樣久
+        let gameLength = Number(localStorage.getItem('terr_length') ?? 20);
+        function roundsFor(n) { return gameLength ? Math.max(2, Math.round(gameLength / n)) : 0; }
+
+        function teamName(i) { return (groupNames[i] && groupNames[i].trim()) || TEAM_STYLES[i].label; }
+        function teamTag(i, size = '') {
+            const s = TEAM_STYLES[i];
+            return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-black ${size}" style="background:${s.color};color:#fff">${s.emoji} ${escapeHtml(teamName(i))}</span>`;
+        }
+
+        function renderGroupSettings() {
+            $('groupCountBtns').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n =>
+                `<button onclick="setGroupCount(${n})" class="w-9 h-9 rounded-lg font-black text-sm border ${n === groupCount ? 'bg-sky-500 border-sky-300 text-slate-900' : 'bg-slate-800 border-slate-600 text-slate-300'}">${n}</button>`
+            ).join('');
+            $('groupNames').innerHTML = Array.from({ length: groupCount }, (_, i) => {
+                const s = TEAM_STYLES[i];
+                return `<label class="flex items-center gap-1.5 bg-slate-800 rounded-lg px-2 py-1.5 border-l-4" style="border-color:${s.color}">
+                    <span class="text-lg">${s.emoji}</span>
+                    <input data-i="${i}" value="${escapeHtml(groupNames[i] || '')}" placeholder="${s.label}" maxlength="8" onchange="saveGroupSettings()"
+                        class="w-full bg-transparent text-sm font-bold focus:outline-none placeholder-slate-500">
+                </label>`;
+            }).join('');
+            $('roundSelect').value = String(gameLength);
+            renderTimeEstimate();
+        }
+        // 每題含答題、搶答、講解約 40 秒
+        function renderTimeEstimate() {
+            const free = layoutFor(groupCount).size ** 2 - groupCount;
+            const r = roundsFor(groupCount);
+            const turns = r ? r * groupCount : free;
+            const min = Math.max(1, Math.round(turns * 40 / 60));
+            $('timeEstimate').innerText = r
+                ? `${groupCount} 組 × 每組 ${r} 回合 = ${turns} 題，預估 ${min} 分鐘左右`
+                : `約 ${turns} 題，預估 ${min} 分鐘左右`;
+        }
+        function setGroupCount(n) {
+            saveGroupSettings();
+            groupCount = n;
+            localStorage.setItem('terr_groups', n);
+            renderGroupSettings();
+        }
+        function saveGroupSettings() {
+            document.querySelectorAll('#groupNames input').forEach(inp => { groupNames[Number(inp.dataset.i)] = inp.value.trim(); });
+            localStorage.setItem('terr_names', JSON.stringify(groupNames));
+            gameLength = Number($('roundSelect').value);
+            localStorage.setItem('terr_length', gameLength);
+            renderTimeEstimate();
+        }
+
+        // =====================================================================
+        //  題庫：AI 依課本出三種難度
+        // =====================================================================
+        const TIERS = {
+            1: { n: 14, min: 8, name: '★ 基礎', desc: '課本直接寫到的重點、名詞、基本事實，認真上過課的學生一看就會。' },
+            2: { n: 12, min: 6, name: '★★ 理解', desc: '需要理解概念才答得出來，例如比較、分類、因果關係、為什麼會這樣。' },
+            3: { n: 10, min: 4, name: '★★★ 挑戰', desc: '把概念應用到生活情境、需要兩步推理，或判斷實驗設計，難度明顯較高但仍在該年級能力範圍內。' }
+        };
+        let bank = { 1: [], 2: [], 3: [] };      // 尚未使用的題目
+        let bankAll = { 1: [], 2: [], 3: [] };   // 這份題庫的全部題目（再玩一局用）
+        let lastSource = null;
+        let previousQs = [];
+        let isDemoBank = false;
+
+        const JSON_FORMAT = `請嚴格以 JSON 格式輸出陣列，answer 為正確選項的索引（0~3），正確答案的位置請平均分散；source 標示題目來源："課本" 或 "延伸"：
+[
+  { "q": "題目敘述", "options": ["選項0", "選項1", "選項2", "選項3"], "answer": 0, "explanation": "一句話解析", "source": "課本" }
+]`;
+
+        function tierExtendRule(tier, extend, gradeName) {
+            const rule = `延伸題必須和課本主題直接相關，只往外多走一小步（生活應用、常見例子、簡單原因），${gradeName}年級學生想一想答得出來；只能用教科書等級、公認正確的事實，不確定或會變動的內容（最新紀錄、精確統計數字）一律不要出；延伸題的 explanation 要說明和課本哪個概念有關。`;
+            if (!extend || tier === 1) return `\n- 全部只能根據上述內容出題，source 一律填 "課本"。`;
+            if (extend === 3) return tier === 3 ? `\n- 其中約一半可以是「微加深加廣」的延伸題（source 填 "延伸"），其餘根據課本。${rule}` : `\n- 全部根據課本內容，source 填 "課本"。`;
+            return tier === 3 ? `\n- 其中大部分可以是延伸題（source 填 "延伸"）。${rule}` : `\n- 其中約三分之一可以是延伸題（source 填 "延伸"），其餘根據課本。${rule}`;
+        }
+
+        function buildTierPrompt(src, tier, n) {
+            const { grade, extend } = getQuizSettings();
+            const gradeName = GRADE_NAMES[grade];
+            const audience = `台灣國小${gradeName}年級學生`;
+            const T = TIERS[tier];
+            const quality = `\n\n【品質要求】
+- 用繁體中文、台灣用語，用字符合${gradeName}年級程度，題目敘述簡短，適合投影在大螢幕上全班一起看。
+- 每題只有一個正確答案，三個錯誤選項要看起來合理但明確是錯的，不可以有兩個都算對的選項。
+- 避免「以上皆是」「以上皆非」與否定句考法。
+- 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。`;
+            const avoid = previousQs.length
+                ? `\n\n以下題目已經出過，請出不同的新題目：\n${previousQs.slice(-60).map(q => '- ' + q).join('\n')}`
+                : '';
+            const tierText = `\n\n【難度：${T.name}】${T.desc}`;
+            if (src.type === 'pdf') {
+                return `請根據以下教材內文，為${audience}出 ${n} 道四選一選擇題。\n\n【教材內文】\n${src.text}${tierText}\n【出題範圍】${tierExtendRule(tier, extend, gradeName)}${quality}${avoid}\n\n${JSON_FORMAT}`;
+            }
+            return `請針對主題「${src.topic}」，為${audience}設計 ${n} 道四選一單選題，可以生活化、有趣一點。source 一律填 "課本"。${tierText}${quality}${avoid}\n\n${JSON_FORMAT}`;
+        }
+
+        async function verifyQuestions(questions) {
+            const { grade } = getQuizSettings();
+            const list = questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
+            const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（依公認正確的知識判斷，不要猜出題者的意思），並檢查每題品質。
+對每一題回報：
+- best：你認為唯一正確的選項索引（0~3）
+- ok：true 代表事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級太多）就填 false
+
+題目：
+${JSON.stringify(list)}
+
+請嚴格以 JSON 格式輸出：{"results":[{"id":0,"best":1,"ok":true}]}`;
+            const raw = await callGeminiRaw(prompt);
+            const parsed = parseJsonLoose(raw);
+            const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
+                .filter(r => r && r.id !== undefined && r.best !== undefined);
+            if (results.length < questions.length / 2) throw new Error('審題結果格式不符');
+            const byId = new Map(results.map(r => [Number(r.id), r]));
+            const kept = questions.filter((q, i) => {
+                const r = byId.get(i);
+                return r && r.ok === true && Number(r.best) === q.answer;
+            });
+            return { kept, removed: questions.length - kept.length };
+        }
+
+        // 出一個難度：出題 → 審題（審題失敗就保留原題）
+        async function makeTier(src, tier, n, report) {
+            const raw = normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n))));
+            previousQs.push(...raw.map(q => q.q));
+            report(tier, '審題中');
+            try {
+                const { kept, removed } = await verifyQuestions(raw);
+                return { qs: kept, removed, checked: true };
+            } catch (e) {
+                console.warn('審題失敗，保留原題', e);
+                return { qs: raw, removed: 0, checked: false };
+            }
+        }
+
+        async function generateBank(src, isRegen) {
+            const label = src.type === 'pdf' ? `教冊「${src.name}」` : `主題「${src.topic}」`;
+            const status = { 1: '出題中', 2: '出題中', 3: '出題中' };
+            const t0 = Date.now();
+            const paint = () => showLoading(
+                isRegen ? `AI 正在用${label}重新出題庫...` : `AI 正在根據${label}出題庫...`,
+                `★ ${status[1]}　★★ ${status[2]}　★★★ ${status[3]}　（已等待 ${Math.round((Date.now() - t0) / 1000)} 秒）`
+            );
+            const report = (tier, s) => { status[tier] = s; paint(); };
+            paint();
+            const ticker = setInterval(paint, 1000);
+
+            try {
+                const result = { 1: [], 2: [], 3: [] };
+                let removedTotal = 0, unchecked = false;
+
+                // 三種難度同時出題，速度比較快
+                const firsts = await Promise.all([1, 2, 3].map(t =>
+                    makeTier(src, t, TIERS[t].n, report).then(r => { report(t, `完成 ${r.qs.length} 題`); return r; })
+                ));
+                firsts.forEach((r, i) => { result[i + 1].push(...r.qs); removedTotal += r.removed; if (!r.checked) unchecked = true; });
+
+                // 某個難度剔除太多就補出一輪
+                const lacking = [1, 2, 3].filter(t => result[t].length < TIERS[t].min);
+                if (lacking.length) {
+                    lacking.forEach(t => report(t, '補題中'));
+                    const extra = await Promise.all(lacking.map(t => makeTier(src, t, TIERS[t].n, report)));
+                    extra.forEach((r, i) => { const t = lacking[i]; result[t].push(...r.qs); removedTotal += r.removed; report(t, `完成 ${result[t].length} 題`); });
+                }
+
+                clearInterval(ticker);
+                const total = result[1].length + result[2].length + result[3].length;
+                if (total < 8) throw new Error('通過檢查的題目太少，請再出一次題。');
+
+                lastSource = src;
+                isDemoBank = false;
+                setBank(result);
+                const ext = [1, 2, 3].reduce((n, t) => n + result[t].filter(q => q.source === '延伸').length, 0);
+                showReady(
+                    `${label}題庫完成！`,
+                    `★ ${result[1].length} 題　★★ ${result[2].length} 題　★★★ ${result[3].length} 題${ext ? `（含 ${ext} 題延伸）` : ''}<br>` +
+                    (unchecked ? '<span class="text-amber-300">部分題目這次沒有完成答案檢查，建議先自己看過。</span>'
+                               : (removedTotal ? `已剔除 ${removedTotal} 題有疑慮的題目` : '全部通過答案檢查'))
+                );
+            } catch (err) {
+                clearInterval(ticker);
+                alert('出題失敗：' + err.message);
+                showSetup();
+            }
+        }
+
+        function setBank(result) {
+            bankAll = { 1: [...result[1]], 2: [...result[2]], 3: [...result[3]] };
+            refillBank();
+            renderBankStatus();
+        }
+        function refillBank() {
+            bank = { 1: shuffle([...bankAll[1]]), 2: shuffle([...bankAll[2]]), 3: shuffle([...bankAll[3]]) };
+        }
+        function bankSize() { return bankAll[1].length + bankAll[2].length + bankAll[3].length; }
+
+        // 原題重玩：把上一局出過的題目依難度排好，抽題時優先使用
+        let replayPool = null;
+        function setReplay(log) {
+            if (!log.length) { replayPool = null; return; }
+            replayPool = { 1: [], 2: [], 3: [] };
+            log.forEach(e => {
+                const t = e.tier || e.value || 1;
+                replayPool[t].push({ q: e.q, options: e.options, answer: e.answer, explanation: e.explanation, source: e.source });
+            });
+        }
+        function unusedCount() { return bank[1].length + bank[2].length + bank[3].length; }
+
+        // 依難度抽題；出過的題目不會再出現。該難度用完就向相鄰難度借
+        // 選項順序打亂（正解跟著換位置），避免 AI 或內建題庫的答案老是同一個號碼
+        function shuffleOpts(q) {
+            if (!q || !Array.isArray(q.options) || q.options.length !== 4) return q;
+            const idx = shuffle([0, 1, 2, 3]);
+            return { ...q, options: idx.map(i => q.options[i]), answer: idx.indexOf(q.answer) };
+        }
+        function drawQuestion(value) {
+            const order = value === 1 ? [1, 2, 3] : value === 2 ? [2, 1, 3] : [3, 2, 1];
+            if (replayPool) {
+                for (const t of order) if (replayPool[t].length) return shuffleOpts({ ...replayPool[t].shift(), tier: t });
+                replayPool = null;
+                toast('上一局的題目都出過了，接下來換新題目', '#38bdf8');
+            }
+            let picked = null;
+            for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; break; }
+            if (!picked) {
+                // 真的全部用完（內建題目，或 AI 補題失敗）才重複使用
+                refillBank();
+                toast('新題目還沒補好，這題先重複使用舊題', '#38bdf8');
+                for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; break; }
+            }
+            topUpBank();
+            return picked ? shuffleOpts(picked) : picked;
+        }
+
+        // 背景補題：剩下不到 12 題時，AI 依同一份教材再出一批新題（避開出過的題目），不打斷遊戲
+        let toppingUp = false;
+        async function topUpBank() {
+            if (toppingUp || !lastSource || isDemoBank || unusedCount() >= 12) return;
+            toppingUp = true;
+            const tiers = [1, 2, 3].sort((a, b) => bank[a].length - bank[b].length).slice(0, 2);
+            try {
+                const results = await Promise.all(tiers.map(t => makeTier(lastSource, t, 8, () => {}).catch(() => ({ qs: [] }))));
+                let added = 0;
+                results.forEach((r, i) => {
+                    const t = tiers[i];
+                    bank[t].unshift(...r.qs);
+                    bankAll[t].push(...r.qs);
+                    added += r.qs.length;
+                });
+                if (added && game && !game.over) toast(`📚 AI 補了 ${added} 題新題目`, '#34d399');
+            } finally {
+                toppingUp = false;
+            }
+        }
+
+        function regenerateBank() {
+            saveApiKeyFromModal();
+            if (!lastSource) { alert('目前是內建題目，請先上傳教材或選一個主題。'); showSetup(); return; }
+            generateBank(lastSource, true);
+        }
+
+        // ===== 讀取教冊 =====
+        async function handleFileUpload(event) {
+            saveApiKeyFromModal(); saveGroupSettings();
+            const fileList = event.target.files;
+            if (!fileList || !fileList.length) return;
+            showLoading('正在解析教冊檔案...', '準備開始提取內文文字');
+            let book;
+            try {
+                book = await readBookFiles(fileList);
+            } catch (err) {
+                alert('讀取檔案失敗：' + err.message);
+                event.target.value = '';
+                showSetup();
+                return;
+            }
+            event.target.value = '';
+            if (book.notes.length) alert(book.notes.join('\n'));
+            showLoading('教冊讀取完成！', `共 ${book.count} 份、約 ${book.text.replace(/\s/g, '').length} 字，準備交給 AI 出題`);
+            previousQs = [];
+            await generateBank({ type: 'pdf', name: book.name, text: book.text }, false);
+        }
+
+        async function generateQuestionsByTopic(topic) {
+            saveApiKeyFromModal(); saveGroupSettings();
+            if (!topic) return;
+            if (!lastSource || lastSource.type !== 'topic' || lastSource.topic !== topic) previousQs = [];
+            await generateBank({ type: 'topic', topic }, false);
+        }
+
+        // ===== 內建試玩題 =====
+        const DEMO_BANK = {
+            1: [
+                { q: '水在一般情況下，溫度降到幾度會開始結冰？', options: ['0℃', '10℃', '50℃', '100℃'], answer: 0, explanation: '水的凝固點是 0℃。' },
+                { q: '太陽每天從哪個方向升起？', options: ['東方', '西方', '南方', '北方'], answer: 0, explanation: '地球由西向東自轉，所以太陽從東方升起。' },
+                { q: '人體用來呼吸、交換氣體的器官是？', options: ['胃', '肺', '心臟', '腎臟'], answer: 1, explanation: '肺負責吸入氧氣、排出二氧化碳。' },
+                { q: '台灣最高的山是哪一座？', options: ['玉山', '雪山', '阿里山', '合歡山'], answer: 0, explanation: '玉山主峰約 3952 公尺，是台灣最高峰。' },
+                { q: '下列哪一種動物會飛？', options: ['企鵝', '鴕鳥', '老鷹', '烏龜'], answer: 2, explanation: '企鵝和鴕鳥是不會飛的鳥，老鷹會飛。' },
+                { q: '一年有幾個月？', options: ['10 個月', '11 個月', '12 個月', '13 個月'], answer: 2, explanation: '一年有 12 個月。' }
+            ],
+            2: [
+                { q: '為什麼濕衣服晾在太陽下比較快乾？', options: ['陽光讓水蒸發得比較快', '衣服會變輕', '風會停止', '水會變成冰'], answer: 0, explanation: '溫度越高，水蒸發得越快。' },
+                { q: '冰飲料的杯子外面出現小水珠，水珠是從哪裡來的？', options: ['杯子裡的水滲出來', '空氣中的水蒸氣遇冷凝結', '冰塊直接跑出來', '杯子自己產生的'], answer: 1, explanation: '空氣中的水蒸氣碰到冰冷的杯壁，凝結成小水珠。' },
+                { q: '下列哪一種材料最容易導電？', options: ['塑膠', '木頭', '銅', '橡皮'], answer: 2, explanation: '銅是金屬，容易導電；電線裡面就是銅線。' },
+                { q: '晚上看到月亮很亮，是因為？', options: ['月亮自己會燃燒', '月亮反射太陽的光', '月亮反射地球的燈光', '月亮上有很多燈'], answer: 1, explanation: '月亮本身不會發光，是反射太陽光。' },
+                { q: '植物的根主要的功能是？', options: ['吸收水分並固定植物', '製造種子', '開花', '吸引昆蟲'], answer: 0, explanation: '根能吸收水分和養分，也讓植物站穩。' },
+                { q: '指南針的指針，有一端會固定指向哪個方向？', options: ['北方', '西方', '正上方', '太陽的方向'], answer: 0, explanation: '指南針受地球磁場影響，指針會指向南北方向。' }
+            ],
+            3: [
+                { q: '同樣大小的木塊和鐵塊放進水裡，木塊浮起來、鐵塊沉下去，主要是因為？', options: ['同樣大小時木塊比較輕', '木塊的顏色比較淺', '鐵塊的形狀比較方', '水比較喜歡木頭'], answer: 0, explanation: '同樣體積下，木頭比水輕所以浮，鐵比水重所以沉。' },
+                { q: '地震發生時躲在堅固的桌子底下，最主要是為了？', options: ['保護頭部，避免被掉落物砸傷', '桌子下面比較涼', '比較容易被找到', '桌子可以讓地震停止'], answer: 0, explanation: '地震時最大的危險之一是掉落物，桌子能保護頭部。' },
+                { q: '把一盆植物放在完全沒有光的櫃子裡兩個星期，最可能發生什麼事？', options: ['長得更綠更壯', '葉子變黃、變得虛弱', '開出很多花', '完全沒有改變'], answer: 1, explanation: '植物需要光才能製造養分，長期沒光會變黃、虛弱。' },
+                { q: '冬天摸鐵欄杆比摸木頭椅子覺得更冰，主要原因是？', options: ['鐵欄杆的溫度一定比較低', '鐵比木頭更容易把手上的熱傳走', '木頭會自己發熱', '鐵欄杆上都有結冰'], answer: 1, explanation: '兩者溫度可能一樣，但金屬導熱快，手的熱被快速帶走，所以覺得冰。' },
+                { q: '雨後天空出現彩虹，是陽光經過什麼而分出不同顏色？', options: ['空氣中的小水滴', '雲的影子', '吹過的風', '樹葉'], answer: 0, explanation: '陽光穿過小水滴時會折射，分散成不同顏色。' },
+                { q: '想知道「植物生長需不需要水」，哪一種實驗設計最合適？', options: ['兩盆相同植物，一盆澆水、一盆不澆，其他條件都一樣', '兩盆不同植物，都澆水', '一盆放室內、一盆放室外，都不澆水', '只種一盆植物，每天多澆一點水'], answer: 0, explanation: '公平的實驗只改變一個條件（有沒有澆水），其他都要相同。' }
+            ]
+        };
+        function useDemoBank() {
+            saveGroupSettings();
+            isDemoBank = true;
+            lastSource = null;
+            setBank(DEMO_BANK);
+            showReady('內建試玩題目已準備好！', `共 ${bankSize()} 題（★、★★、★★★ 各 6 題）。題目用完會重新洗牌。<br>正式上課建議上傳教冊，讓 AI 依課本出題。`);
+        }
+
+        function renderBankStatus() {
+            const n = bankSize();
+            $('bankStatus').innerHTML = n
+                ? `📦 目前題庫：<b class="text-white">${isDemoBank ? '內建試玩題' : (lastSource?.type === 'pdf' ? escapeHtml(lastSource.name) : escapeHtml(lastSource?.topic || ''))}</b>，共 ${n} 題`
+                : '📦 目前還沒有題庫，請上傳教材或選一個主題。';
+            $('useBankBtn').classList.toggle('hidden', !n);
+        }
+
+        // =====================================================================
+        //  選單畫面切換
+        // =====================================================================
+        function menuParts(part) {
+            ['resultPanel', 'loadingPanel', 'readyPanel', 'setupPanel'].forEach(id => $(id).classList.toggle('hidden', id !== part));
+            $('menu').classList.remove('hidden');
+            $('menu').scrollTop = 0;
+        }
+        function showSetup() {
+            stopTimers();
+            $('menuTitle').innerText = 'AI 知識領土戰';
+            $('menuDesc').innerText = '分組搶地盤！AI 讀課本出題，答對就占領土地';
+            $('topicSelectModal').selectedIndex = 0;
+            $('pdfInputModal').value = '';
+            toggleTimePanel(false);
+            renderGroupSettings();
+            renderBankStatus();
+            menuParts('setupPanel');
+        }
+        function showLoading(title, desc) {
+            $('loadingTitle').innerText = title;
+            $('loadingDesc').innerText = desc;
+            $('menuTitle').innerText = 'AI 知識領土戰';
+            $('menuDesc').innerText = '';
+            menuParts('loadingPanel');
+        }
+        function showReady(title, descHtml) {
+            $('readyTitle').innerText = title;
+            $('readyDesc').innerHTML = descHtml;
+            $('menuDesc').innerText = '';
+            menuParts('readyPanel');
+        }
+        function openMenu() {
+            if (game && !game.over && !confirm('要暫停遊戲回到設定嗎？目前的地圖會保留，從設定按「用目前題庫開始」會重新開一局。')) return;
+            showSetup();
+        }
+
+        // =====================================================================
+        //  遊戲本體
+        // =====================================================================
+        let game = null;
+        let qState = null;
+        let timerInterval = null;
+        let stealTimeout = null;
+
+        // 各組數對應的地圖大小與基地位置（180° 對稱，盡量公平）
+        const LAYOUTS = {
+            2: { size: 5, homes: [[0, 0], [4, 4]] },
+            3: { size: 5, homes: [[0, 0], [0, 4], [4, 2]] },
+            4: { size: 5, homes: [[0, 0], [0, 4], [4, 4], [4, 0]] },
+            5: { size: 6, homes: [[0, 0], [0, 5], [5, 5], [5, 0], [3, 0]] },
+            6: { size: 6, homes: [[0, 0], [0, 5], [5, 5], [5, 0], [3, 0], [2, 5]] },
+            7: { size: 7, homes: [[0, 0], [0, 6], [6, 6], [6, 0], [3, 0], [3, 6], [0, 3]] },
+            8: { size: 7, homes: [[0, 0], [0, 6], [6, 6], [6, 0], [3, 0], [3, 6], [0, 3], [6, 3]] }
+        };
+
+        // 長局或不限時，2～4 組改用 6×6 大地圖，才夠占
+        const BIG_LAYOUTS = {
+            2: { size: 6, homes: [[0, 0], [5, 5]] },
+            3: { size: 6, homes: [[0, 0], [0, 5], [5, 2]] },
+            4: { size: 6, homes: [[0, 0], [0, 5], [5, 5], [5, 0]] }
+        };
+        function layoutFor(n) {
+            return (n <= 4 && (gameLength === 0 || gameLength >= 30)) ? BIG_LAYOUTS[n] : LAYOUTS[n];
+        }
+
+        function makeBoard() {
+            const { size, homes } = layoutFor(game.n);
+            const cells = [];
+            for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
+                cells.push({ r, c, value: 1, owner: null, home: false, chest: false, bomb: false, hidden: false, extra: 0, anim: false });
+            }
+            const at = (r, c) => cells[r * size + c];
+            homes.forEach(([r, c], i) => { const x = at(r, c); x.owner = i; x.home = true; x.value = 0; });
+
+            // 離所有基地的最短距離：越遠越可能是高分格
+            const dist = cell => Math.min(...homes.map(([r, c]) => Math.abs(r - cell.r) + Math.abs(c - cell.c)));
+            const free = cells.filter(x => !x.home);
+            free.forEach(x => {
+                const d = dist(x);
+                const roll = Math.random();
+                if (d <= 1) x.value = roll < 0.85 ? 1 : 2;
+                else if (d === 2) x.value = roll < 0.45 ? 1 : roll < 0.85 ? 2 : 3;
+                else x.value = roll < 0.25 ? 1 : roll < 0.65 ? 2 : 3;
+            });
+            // 寶箱：放在離基地 2 格以上的地方
+            const chestCount = size === 5 ? 2 : size === 6 ? 3 : 4;
+            shuffle(free.filter(x => dist(x) >= 2)).slice(0, chestCount).forEach(x => { x.chest = true; });
+            // 約一半的格子蓋起來（基地旁邊的格子保持可見，開局比較好選）
+            shuffle(free.filter(x => dist(x) >= 2)).slice(0, Math.round(free.length * 0.5)).forEach(x => { x.hidden = true; });
+            // 炸彈只藏在隱藏格裡，而且不和寶箱重疊
+            const bombCount = Math.max(1, chestCount - 1);
+            shuffle(free.filter(x => x.hidden && !x.chest)).slice(0, bombCount).forEach(x => { x.bomb = true; if (x.value === 1) x.value = 2; });
+            return { size, cells };
+        }
+
+        // mode：'replay' 原題重玩（上一局出過的題目再出一次）；'new' 出新題（接續還沒出過的題目）
+        function startGame(mode) {
+            saveApiKeyFromModal(); saveQuizSettings(); saveGroupSettings();
+            const prevLog = (game && game.log) ? game.log : [];
+            setReplay(mode === 'replay' ? prevLog : []);
+            const sameBank = mode === 'new';
+            if (!bankSize()) { alert('還沒有題庫，請先上傳教材、選主題，或用內建題目試玩。'); showSetup(); return; }
+            if (sameBank && isDemoBank && unusedCount() < 6) refillBank();
+            topUpBank();
+            game = {
+                n: groupCount,
+                teams: Array.from({ length: groupCount }, () => ({ bonus: 0, correct: 0, wrong: 0, steals: 0, wallUntil: -1 })),
+                teleportFor: null,   // 寶箱「傳送」
+                pointer: 0,          // 正常輪替順序
+                current: 0,
+                extraTurnFor: null,  // 寶箱「再行動一次」
+                turnsTaken: 0,
+                log: [],
+                over: false
+            };
+            Object.assign(game, makeBoard());
+            $('menu').classList.add('hidden');
+            $('gameScreen').classList.remove('hidden');
+            renderAll();
+            toast(`${TEAM_STYLES[0].emoji} ${teamName(0)} 先開始！`, TEAM_STYLES[0].color);
+        }
+
+        function cellAt(r, c) { return (r < 0 || c < 0 || r >= game.size || c >= game.size) ? null : game.cells[r * game.size + c]; }
+        function neighbors(cell) {
+            return [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dr, dc]) => cellAt(cell.r + dr, cell.c + dc)).filter(Boolean);
+        }
+        function teamScore(i) {
+            return game.cells.filter(x => x.owner === i && !x.home).reduce((s, x) => s + x.value + x.extra, 0) + game.teams[i].bonus;
+        }
+        function teamCells(i) { return game.cells.filter(x => x.owner === i).length; }
+
+        // 輪到的組可以點的格子：相鄰空地 + 相鄰別組格子（基地除外）；完全沒有相鄰空地時，任何空地都可以
+        function validTargets(team) {
+            const mine = game.cells.filter(x => x.owner === team);
+            const set = new Set();
+            mine.forEach(m => neighbors(m).forEach(nb => {
+                if (nb.owner === team || nb.home) return;
+                if (nb.owner !== null && hasWall(nb.owner)) return;   // 🧱 城牆保護中
+                set.add(nb);
+            }));
+            if (![...set].some(x => x.owner === null)) {
+                game.cells.filter(x => x.owner === null).forEach(x => set.add(x));
+            }
+            return set;
+        }
+
+        function hasWall(team) { return game.teams[team].wallUntil > game.turnsTaken; }
+
+        function roundNow() { return Math.floor(game.turnsTaken / game.n) + 1; }
+
+        function renderAll() {
+            renderBoard();
+            renderSide();
+        }
+
+        function renderBoard() {
+            const board = $('board');
+            const vh = window.innerHeight, vw = window.innerWidth;
+            const sideW = vw >= 1024 ? 400 : 0;
+            const gap = vw >= 768 ? 8 : 6;
+            const px = Math.max(280, Math.min(vh - 110, vw - sideW - 48, 860));
+            const cellPx = Math.floor((px - 28 - gap * (game.size - 1)) / game.size);
+            board.style.gridTemplateColumns = `repeat(${game.size}, ${cellPx}px)`;
+            const teleport = game.teleportFor !== null && !qState && !game.over;
+            const targets = game.over || qState ? new Set()
+                : teleport ? new Set(game.cells.filter(x => x.owner === null))
+                : validTargets(game.current);
+            const cur = TEAM_STYLES[teleport ? game.teleportFor : game.current];
+
+            board.innerHTML = '';
+            game.cells.forEach((x, idx) => {
+                const b = document.createElement('button');
+                b.className = 'cell relative rounded-xl flex flex-col items-center justify-center font-black border-2';
+                b.style.width = b.style.height = cellPx + 'px';
+                const fs = Math.max(12, Math.floor(cellPx / 4.2));
+                if (x.owner !== null) {
+                    const s = TEAM_STYLES[x.owner];
+                    b.style.background = x.home ? s.color : `linear-gradient(145deg, ${s.color}, ${s.dark})`;
+                    b.style.borderColor = x.home ? '#fff' : s.color;
+                    b.innerHTML = x.home
+                        ? `<span style="font-size:${fs * 1.5}px">${s.emoji}</span><span style="font-size:${fs * 0.6}px" class="text-white/90">🏠 基地</span>`
+                        : `<span style="font-size:${fs * 1.1}px">${s.emoji}</span><span style="font-size:${fs * 0.75}px" class="text-amber-200">${'★'.repeat(x.value)}${x.extra ? ' ×2' : ''}</span>`;
+                    if (!x.home && hasWall(x.owner)) b.insertAdjacentHTML('beforeend', `<span class="absolute bottom-0.5 left-1" style="font-size:${fs * 0.7}px">🧱</span>`);
+                } else if (x.hidden) {
+                    b.style.background = 'linear-gradient(145deg, #3b0764, #1e1b4b)';
+                    b.style.borderColor = '#7c3aed';
+                    b.innerHTML = `<span style="font-size:${fs * 1.5}px" class="text-violet-200">❓</span>`;
+                } else {
+                    b.style.background = x.value === 3 ? '#3b2a0b' : x.value === 2 ? '#1f2937' : '#172033';
+                    b.style.borderColor = x.value === 3 ? '#b45309' : '#334155';
+                    b.innerHTML = (x.chest ? `<span style="font-size:${fs * 1.2}px">🎁</span>` : x.bomb ? `<span style="font-size:${fs * 1.2}px">💣</span>` : '') +
+                        `<span style="font-size:${fs * (x.chest || x.bomb ? 0.75 : 1)}px" class="${x.value === 3 ? 'text-amber-300' : x.value === 2 ? 'text-sky-200' : 'text-slate-300'}">${'★'.repeat(x.value)}</span>`;
+                }
+                if (targets.has(x)) {
+                    b.classList.add('cell-target');
+                    b.style.setProperty('--gc', cur.color);
+                    if (x.owner !== null) b.insertAdjacentHTML('beforeend', `<span class="absolute top-0.5 right-1" style="font-size:${fs * 0.7}px">⚔️</span>`);
+                }
+                if (x.anim) { b.classList.add('cell-claim'); x.anim = false; }
+                b.onclick = () => onCellClick(idx);
+                board.appendChild(b);
+            });
+        }
+
+        function renderSide() {
+            const s = TEAM_STYLES[game.current];
+            const banner = $('turnBanner');
+            banner.style.borderColor = s.color;
+            banner.style.background = `linear-gradient(135deg, ${s.dark}, #0f172a)`;
+            banner.innerHTML = `<div class="text-sm font-bold text-slate-300">現在輪到</div>
+                <div class="text-4xl font-black my-1">${s.emoji} <span style="color:${s.color}">${escapeHtml(teamName(game.current))}</span></div>
+                <div class="text-sm font-bold text-amber-200">${game.teleportFor !== null
+                    ? `🌀 ${escapeHtml(teamName(game.teleportFor))} 傳送中：點任何一格空地直接空降！`
+                    : '👉 點一個發光的格子挑戰！'}${game.extraTurnBadge ? '<br><span class="text-emerald-300">🎁 寶箱獎勵：再行動一次</span>' : ''}</div>`;
+
+            const order = [...Array(game.n).keys()].sort((a, b) => teamScore(b) - teamScore(a));
+            $('scoreBoard').innerHTML = order.map((i, rank) => {
+                const st = TEAM_STYLES[i];
+                const t = game.teams[i];
+                return `<div class="flex items-center gap-3 rounded-xl px-3 py-2 border-2 ${i === game.current ? 'scale-[1.02]' : 'opacity-90'}" style="border-color:${i === game.current ? st.color : '#334155'};background:#1e293b">
+                    <span class="w-6 text-center font-black text-slate-400">${rank + 1}</span>
+                    <span class="text-2xl">${st.emoji}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-black truncate" style="color:${st.color}">${escapeHtml(teamName(i))}</div>
+                        <div class="text-[11px] text-slate-400">🗺️ ${teamCells(i)} 格　✔ ${t.correct}　✘ ${t.wrong}${t.steals ? `　⚡ ${t.steals}` : ''}${hasWall(i) ? '　🧱 城牆中' : ''}</div>
+                    </div>
+                    <span class="text-3xl font-black text-amber-300">${teamScore(i)}</span>
+                </div>`;
+            }).join('');
+
+            const roundLimit = roundsFor(game.n);
+            $('roundInfo').innerText = roundLimit
+                ? `第 ${Math.min(roundNow(), roundLimit)} / ${roundLimit} 回合`
+                : `第 ${roundNow()} 回合　剩 ${game.cells.filter(x => x.owner === null).length} 格空地`;
+        }
+
+        function onCellClick(idx) {
+            if (game.over || qState) return;
+            const cell = game.cells[idx];
+            if (game.teleportFor !== null) {
+                if (cell.owner !== null) { toast('🌀 傳送只能空降到空地', '#94a3b8'); return; }
+                const t = game.teleportFor;
+                game.teleportFor = null;
+                const wasBomb = cell.bomb;
+                Object.assign(cell, { owner: t, hidden: false, bomb: false, chest: false, anim: true });
+                SFX.chest();
+                toast(`🌀 ${teamName(t)} 空降成功！${wasBomb ? '順便拆掉了一顆 💣' : ''}`, TEAM_STYLES[t].color);
+                checkEnclosures();
+                nextTurn();
+                return;
+            }
+            if (!validTargets(game.current).has(cell)) {
+                if (cell.owner === game.current) toast('這格已經是你們的了！', '#94a3b8');
+                else if (cell.home) toast('🏠 基地不能攻打喔', '#94a3b8');
+                else toast('只能選和你們領土相鄰（發光）的格子', '#94a3b8');
+                return;
+            }
+            SFX.select();
+            openQuestion(cell);
+        }
+
+        // ===== 答題流程 =====
+        function openQuestion(cell) {
+            const q = drawQuestion(cell.value);
+            if (!q) { toast('題庫是空的，請回設定出題', '#f87171'); return; }
+            const wasHidden = cell.hidden;
+            cell.hidden = false;
+            if (wasHidden) {
+                if (cell.bomb) { SFX.wrong(); toast('💣 翻到炸彈了！答對才能拆掉', '#f87171'); }
+                else if (cell.chest) { SFX.chest(); toast('🎁 翻到寶箱！答對就能打開', '#fbbf24'); }
+                else toast(`❓ 翻開了！是 ${'★'.repeat(cell.value)} 格`, '#c4b5fd');
+            }
+            const attacker = game.current;
+            const defender = cell.owner;
+            qState = { cell, q, attacker, defender, phase: 'answer', answerer: attacker, out: new Set(), entry: {
+                q: q.q, options: q.options, answer: q.answer, explanation: q.explanation, source: q.source, value: cell.value, tier: q.tier,
+                attacker, defender, pick: null, steal: null
+            } };
+            const s = TEAM_STYLES[attacker];
+            $('qWho').innerHTML = `${teamTag(attacker, 'text-xl md:text-2xl')} <span class="text-slate-300 text-lg md:text-xl">${
+                defender !== null ? `攻打 ${teamTag(defender, 'text-base')} 的格子` : '挑戰空地'}${cell.chest ? ' 🎁' : ''}${cell.bomb ? ' <span class="text-red-400">💣 拆彈題</span>' : ''}</span>`;
+            $('qStars').innerText = '★'.repeat(cell.value);
+            $('qExt').classList.toggle('hidden', q.source !== '延伸');
+            $('qText').innerText = q.q;
+            $('stealArea').classList.add('hidden');
+            $('resultArea').classList.add('hidden');
+            $('chestBox').classList.add('hidden');
+            renderOptions(s.color);
+            $('qModal').classList.remove('hidden');
+            renderBoard();
+            startQTimer(timeFor(cell.value), () => answerTimeout());
+        }
+
+        function renderOptions(color) {
+            const wrap = $('qOptions');
+            wrap.innerHTML = '';
+            qState.q.options.forEach((o, i) => {
+                const b = document.createElement('button');
+                b.dataset.i = i;
+                b.className = 'opt w-full text-left px-5 py-5 md:py-6 rounded-2xl border-4 bg-slate-800 text-xl md:text-3xl font-black flex items-center gap-4 transition active:scale-[.98]';
+                b.style.borderColor = color;
+                b.innerHTML = `<span class="shrink-0 w-11 h-11 md:w-14 md:h-14 rounded-xl flex items-center justify-center text-slate-900" style="background:${color}">${i + 1}</span><span class="opt-text"></span>`;
+                b.querySelector('.opt-text').innerText = o;
+                if (qState.out.has(i)) { b.classList.add('opt-out'); b.disabled = true; }
+                b.onclick = () => pickOption(i);
+                wrap.appendChild(b);
+            });
+        }
+
+        function startQTimer(sec, onEnd) {
+            stopTimers();
+            const t0 = performance.now();
+            qState.t0 = t0;
+            qState.limit = sec;
+            let lastShown = sec;
+            $('qTimer').innerText = sec;
+            $('qBar').style.width = '100%';
+            $('qBar').style.background = '#fbbf24';
+            timerInterval = setInterval(() => {
+                const el = (performance.now() - t0) / 1000;
+                const left = Math.max(0, sec - el);
+                const shown = Math.ceil(left);
+                $('qTimer').innerText = shown;
+                $('qBar').style.width = (left / sec * 100) + '%';
+                $('qBar').style.background = left <= 5 ? '#ef4444' : '#fbbf24';
+                if (shown !== lastShown && shown <= 5 && shown > 0) SFX.tick();
+                lastShown = shown;
+                if (el >= sec) { stopTimers(); onEnd(); }
+            }, 100);
+        }
+        function stopTimers() {
+            clearInterval(timerInterval);
+            clearTimeout(stealTimeout);
+        }
+
+        function optBtn(i) { return document.querySelector(`#qOptions .opt[data-i="${i}"]`); }
+        function lockOptions() { document.querySelectorAll('#qOptions .opt').forEach(b => b.disabled = true); }
+
+        function pickOption(i) {
+            if (!qState || (qState.phase !== 'answer' && qState.phase !== 'stealAnswer')) return;
+            stopTimers();
+            lockOptions();
+            const ok = i === qState.q.answer;
+            const btn = optBtn(i);
+            const who = qState.answerer;
+            if (qState.phase === 'answer') qState.entry.pick = i; else qState.entry.steal.pick = i;
+
+            if (ok) {
+                btn.classList.add('opt-correct');
+                SFX.correct();
+                if (qState.phase === 'answer') {
+                    game.teams[who].correct++;
+                    settle(who, false);
+                } else {
+                    game.teams[who].correct++;
+                    game.teams[who].steals++;
+                    settle(who, true);
+                }
+            } else {
+                btn.classList.add('opt-wrong', 'shake');
+                SFX.wrong();
+                game.teams[who].wrong++;
+                qState.out.add(i);
+                if (qState.phase === 'answer') openSteal();
+                else {
+                    qState.entry.steal.ok = false;
+                    failReveal(`✘ ${teamName(who)} 搶答沒答對`);
+                }
+            }
+        }
+
+        function answerTimeout() {
+            if (!qState || qState.phase === 'done') return;
+            SFX.wrong();
+            lockOptions();
+            if (qState.phase === 'answer') {
+                game.teams[qState.attacker].wrong++;
+                qState.entry.pick = -1;
+                openSteal();
+            } else {
+                game.teams[qState.answerer].wrong++;
+                qState.entry.steal.pick = -1;
+                qState.entry.steal.ok = false;
+                failReveal(`⏰ ${teamName(qState.answerer)} 時間到`);
+            }
+        }
+
+        // 🎡 轉盤：從其他組隨機抽一組搶答，不用衝上台搶，也不會有人被針對
+        function openSteal() {
+            qState.phase = 'steal';
+            SFX.steal();
+            const others = [...Array(game.n).keys()].filter(i => i !== qState.attacker);
+            $('stealBtns').innerHTML = others.map(i => {
+                const s = TEAM_STYLES[i];
+                return `<div data-team="${i}" class="spin-chip px-5 py-3 md:px-6 md:py-4 rounded-2xl text-lg md:text-2xl font-black text-white border-4 border-transparent opacity-40 transition" style="background:${s.color}">${s.emoji} ${escapeHtml(teamName(i))}</div>`;
+            }).join('');
+            $('stealHint').innerText = '轉呀轉……抽到的組答對就拿走這一格，答錯不扣分';
+            $('stealArea').classList.remove('hidden');
+            $('qTimer').innerText = '🎡';
+            $('qBar').style.width = '0%';
+            const chips = [...document.querySelectorAll('#stealBtns .spin-chip')];
+            const target = Math.floor(Math.random() * chips.length);
+            const steps = chips.length * 3 + target;   // 轉三圈後停在目標
+            let k = 0;
+            const tick = () => {
+                if (!qState || qState.phase !== 'steal') return;
+                chips.forEach((c, j) => {
+                    const on = j === k % chips.length;
+                    c.style.opacity = on ? '1' : '0.4';
+                    c.style.borderColor = on ? '#fde047' : 'transparent';
+                    c.style.transform = on ? 'scale(1.12)' : 'scale(1)';
+                });
+                SFX.tick();
+                if (k >= steps) {
+                    const team = Number(chips[k % chips.length].dataset.team);
+                    $('stealHint').innerHTML = `🎯 抽中 <b style="color:${TEAM_STYLES[team].color}">${escapeHtml(teamName(team))}</b>！準備搶答`;
+                    SFX.correct();
+                    stealTimeout = setTimeout(() => takeSteal(team), 1200);
+                    return;
+                }
+                k++;
+                // 越轉越慢
+                stealTimeout = setTimeout(tick, 60 + Math.pow(k / steps, 3) * 380);
+            };
+            tick();
+        }
+
+        function takeSteal(i) {
+            if (!qState || qState.phase !== 'steal') return;
+            stopTimers();
+            SFX.select();
+            qState.phase = 'stealAnswer';
+            qState.answerer = i;
+            qState.entry.steal = { team: i, pick: null, ok: null };
+            $('stealArea').classList.add('hidden');
+            $('qWho').innerHTML = `${teamTag(i, 'text-xl md:text-2xl')} <span class="text-amber-300 text-lg md:text-xl">🎡 轉盤抽中，搶答中！</span>`;
+            renderOptions(TEAM_STYLES[i].color);
+            startQTimer(Math.max(5, Math.ceil(timeFor(qState.cell.value) / 2)), () => answerTimeout());
+        }
+
+        function noSteal() {
+            if (!qState || qState.phase !== 'steal') return;
+            stopTimers();
+            $('stealArea').classList.add('hidden');
+            failReveal('這一格沒有被拿下');
+        }
+
+        // 沒人答對：如果是炸彈格就爆炸，挑戰的組失去自己的一格
+        function failReveal(msg) {
+            const cell = qState.cell;
+            if (cell.bomb) {
+                cell.bomb = false;
+                const mine = game.cells.filter(x => x.owner === qState.attacker && !x.home);
+                if (mine.length) {
+                    const lost = mine[Math.floor(Math.random() * mine.length)];
+                    lost.owner = null; lost.extra = 0; lost.anim = true;
+                    msg += `　💥 炸彈爆炸！${teamName(qState.attacker)} 失去一格`;
+                } else msg += '　💥 炸彈爆炸了，幸好還沒有格子可以炸';
+                setTimeout(SFX.wrong, 300);
+            }
+            reveal(msg, '#94a3b8');
+        }
+
+        // 答對：占領格子
+        function settle(team, viaSteal) {
+            const cell = qState.cell;
+            qState.entry.winner = team;
+            if (viaSteal) qState.entry.steal.ok = true;
+            let msg;
+            if (viaSteal && cell.owner === team) {
+                game.teams[team].bonus += 1;
+                msg = `🛡️ ${teamName(team)} 守城成功！+1 分`;
+            } else {
+                const prev = cell.owner;
+                cell.owner = team;
+                cell.anim = true;
+                msg = viaSteal ? `⚡ ${teamName(team)} 搶答成功，拿下這一格！`
+                    : (prev !== null ? `⚔️ 攻打成功！${teamName(team)} 搶下 ${teamName(prev)} 的格子` : `✔ 答對！${teamName(team)} 占領這一格`);
+            }
+            // 💣 拆彈成功
+            if (cell.bomb) {
+                cell.bomb = false;
+                game.teams[team].bonus += 2;
+                msg += '　💣 拆彈成功 +2 分！';
+            }
+            // 寶箱
+            if (cell.chest && cell.owner === team) {
+                cell.chest = false;
+                qState.chest = openChest(team, cell);
+            }
+            reveal(msg, '#4ade80');
+        }
+
+        function openChest(team, cell) {
+            const hiddenLeft = game.cells.filter(x => x.hidden);
+            const effects = [
+                { icon: '💰', text: '加 3 分！', apply: () => { game.teams[team].bonus += 3; } },
+                { icon: '✖️2', text: '這一格分數翻倍！', apply: () => { cell.extra = cell.value; } },
+                { icon: '🔁', text: '再行動一次！', apply: () => { game.extraTurnFor = team; } },
+                { icon: '🌀', text: '傳送！按繼續後，點任何一格空地直接空降', apply: () => { game.teleportFor = team; }, ok: () => game.cells.some(x => x.owner === null && x !== cell) },
+                { icon: '🧱', text: '城牆！你們的格子一整回合不能被攻打', apply: () => { game.teams[team].wallUntil = game.turnsTaken + game.n + 1; } },
+                { icon: '🔍', text: '透視！翻開地圖上 3 格隱藏格', apply: () => { shuffle(hiddenLeft).slice(0, 3).forEach(x => { x.hidden = false; x.anim = true; }); }, ok: () => hiddenLeft.length > 0 }
+            ].filter(e => !e.ok || e.ok());
+            const e = effects[Math.floor(Math.random() * effects.length)];
+            e.apply();
+            return e;
+        }
+
+        function reveal(msg, color) {
+            qState.phase = 'done';
+            stopTimers();
+            const ans = qState.q.answer;
+            const btn = optBtn(ans);
+            if (btn && !btn.classList.contains('opt-correct')) { btn.classList.remove('opt-out'); btn.classList.add('opt-reveal'); }
+            $('resultMsg').innerText = msg;
+            $('resultMsg').style.color = color;
+            $('explainBox').innerHTML = `✅ 正解：${escapeHtml(qState.q.options[ans])}${qState.q.explanation ? '<br>💡 ' + escapeHtml(qState.q.explanation) : ''}`;
+            if (qState.chest) {
+                setTimeout(SFX.chest, 350);
+                $('chestBox').innerHTML = `<div class="inline-block chest-pop bg-amber-500/20 border-2 border-amber-400 rounded-2xl px-6 py-3">
+                    <span class="text-4xl">🎁</span> <span class="text-2xl font-black text-amber-300">寶箱：${qState.chest.icon} ${qState.chest.text}</span></div>`;
+                $('chestBox').classList.remove('hidden');
+            }
+            $('resultArea').classList.remove('hidden');
+            game.log.push(qState.entry);
+            renderSide();
+            setTimeout(() => $('continueBtn').focus(), 50);
+        }
+
+        function finishQuestion() {
+            if (!qState || qState.phase !== 'done') return;
+            qState = null;
+            $('qModal').classList.add('hidden');
+            checkEnclosures();
+            if (game.teleportFor !== null) {
+                if (game.cells.some(x => x.owner === null)) { renderAll(); return; }   // 等老師點空地
+                game.teleportFor = null;
+            }
+            nextTurn();
+        }
+
+        // 🏰 包圍：一塊空地（最多 4 格）只碰到同一組的格子，就自動歸那一組
+        function checkEnclosures() {
+            const seen = new Set();
+            for (const start of game.cells) {
+                if (start.owner !== null || seen.has(start)) continue;
+                const region = [], owners = new Set(), queue = [start];
+                seen.add(start);
+                while (queue.length) {
+                    const x = queue.shift();
+                    region.push(x);
+                    neighbors(x).forEach(nb => {
+                        if (nb.owner === null) { if (!seen.has(nb)) { seen.add(nb); queue.push(nb); } }
+                        else owners.add(nb.owner);
+                    });
+                }
+                if (owners.size === 1 && region.length <= 4) {
+                    const t = [...owners][0];
+                    region.forEach(x => { x.owner = t; x.anim = true; x.chest = false; });
+                    toast(`🏰 ${teamName(t)} 包圍成功，自動占領 ${region.length} 格！`, TEAM_STYLES[t].color);
+                    SFX.chest();
+                }
+            }
+        }
+
+        function nextTurn() {
+            game.extraTurnBadge = false;
+            if (game.extraTurnFor !== null) {
+                game.current = game.extraTurnFor;
+                game.extraTurnFor = null;
+                game.extraTurnBadge = true;
+            } else {
+                game.turnsTaken++;
+                game.pointer = (game.pointer + 1) % game.n;
+                game.current = game.pointer;
+            }
+            if (isGameOver()) { endGame(); return; }
+            renderAll();
+        }
+
+        function skipTurn() {
+            if (game.over || qState) return;
+            if (!confirm(`確定要跳過 ${teamName(game.current)} 這一回合嗎？`)) return;
+            game.teleportFor = null;
+            nextTurn();
+        }
+
+        function isGameOver() {
+            if (!game.cells.some(x => x.owner === null)) return true;
+            const roundLimit = roundsFor(game.n);
+            if (roundLimit && game.turnsTaken >= roundLimit * game.n) return true;
+            return false;
+        }
+
+        function confirmEnd() {
+            if (qState) { toast('先把這一題答完再結束喔', '#94a3b8'); return; }
+            if (confirm('確定要結束這一局，直接看結果嗎？')) endGame();
+        }
+
+        // ===== 結算 =====
+        function endGame() {
+            stopTimers();
+            game.over = true;
+            renderAll();
+            const order = [...Array(game.n).keys()].sort((a, b) => teamScore(b) - teamScore(a) || teamCells(b) - teamCells(a));
+            const top = teamScore(order[0]);
+            const winners = order.filter(i => teamScore(i) === top);
+            const medals = ['🥇', '🥈', '🥉'];
+            // 同分同名次
+            const rankOf = i => order.filter(j => teamScore(j) > teamScore(i)).length;
+            $('rankList').innerHTML = order.map((i, _) => {
+                const k = rankOf(i);
+                const s = TEAM_STYLES[i], t = game.teams[i];
+                const rate = (t.correct + t.wrong) ? Math.round(t.correct / (t.correct + t.wrong) * 100) : 0;
+                return `<div class="rounded-2xl p-4 border-4 text-left ${winners.includes(i) ? 'ring-4 ring-amber-400' : ''}" style="border-color:${s.color};background:linear-gradient(135deg, ${s.dark}, #0f172a)">
+                    <div class="flex items-center justify-between">
+                        <div class="text-2xl font-black">${medals[k] || `#${k + 1}`} ${s.emoji} ${escapeHtml(teamName(i))}</div>
+                        <div class="text-4xl font-black text-amber-300">${teamScore(i)}<span class="text-base text-slate-300"> 分</span></div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 mt-2 text-center text-sm font-bold">
+                        <div class="bg-slate-900/60 rounded-lg py-1.5">🗺️<br>${teamCells(i)} 格</div>
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-green-400">✔ 答對<br>${t.correct}</div>
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-red-400">✘ 答錯<br>${t.wrong}</div>
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-amber-300">答對率<br>${rate}%</div>
+                    </div>
+                </div>`;
+            }).join('');
+            $('menuTitle').innerText = '🏁 比賽結束！';
+            $('menuDesc').innerHTML = winners.length > 1
+                ? `<span class="text-xl font-black text-amber-300">🤝 ${winners.map(teamName).map(escapeHtml).join('、')} 同分並列第一！</span>`
+                : `<span class="text-xl font-black" style="color:${TEAM_STYLES[winners[0]].color}">🏆 恭喜 ${escapeHtml(teamName(winners[0]))} 稱霸地圖！</span>`;
+            menuParts('resultPanel');
+            SFX.win();
+        }
+
+        // ===== 題目檢討 =====
+        let reviewFilter = 'all';
+        function openReview() {
+            reviewFilter = 'all';
+            renderReview();
+            $('reviewOverlay').classList.remove('hidden');
+            $('reviewList').scrollTop = 0;
+        }
+        function closeReview() { $('reviewOverlay').classList.add('hidden'); }
+        function setReviewFilter(f) { reviewFilter = f; renderReview(); }
+
+        function renderReview() {
+            const on = 'bg-emerald-500 border-emerald-400 text-slate-900', off = 'bg-slate-800 border-slate-600 text-slate-300';
+            $('filterAll').className = `px-3 py-1.5 rounded-lg border ${reviewFilter === 'all' ? on : off}`;
+            $('filterMiss').className = `px-3 py-1.5 rounded-lg border ${reviewFilter === 'miss' ? on : off}`;
+            const log = game ? game.log : [];
+            const html = log.map((e, i) => {
+                const firstOk = e.pick === e.answer;
+                if (reviewFilter === 'miss' && firstOk) return '';
+                const chip = (team, label) => `<span class="ml-1 text-[11px] font-black px-1.5 py-0.5 rounded text-white" style="background:${TEAM_STYLES[team].color}">${escapeHtml(teamName(team))}${label || ''}</span>`;
+                const opts = e.options.map((o, k) => {
+                    const isAns = k === e.answer;
+                    const chips = (e.pick === k ? chip(e.attacker) : '') + (e.steal && e.steal.pick === k ? chip(e.steal.team, '⚡') : '');
+                    const picked = e.pick === k || (e.steal && e.steal.pick === k);
+                    return `<div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border-2 text-sm md:text-base font-bold ${
+                        isAns ? 'bg-green-900/50 border-green-500 text-green-100' : (picked ? 'bg-red-950/40 border-red-800' : 'bg-slate-800/60 border-slate-700 text-slate-300')}">
+                        <span><b class="text-amber-400 mr-2">${k + 1}.</b>${escapeHtml(o)}${isAns ? ' <span class="text-green-300">✔ 正解</span>' : ''}</span><span class="shrink-0">${chips}</span></div>`;
+                }).join('');
+                const first = e.pick === -1 ? '<span class="text-slate-400">⏰ 時間到</span>' : (firstOk ? '<span class="text-green-400">✔ 答對</span>' : '<span class="text-red-400">✘ 答錯</span>');
+                const steal = e.steal ? `　｜　⚡ ${escapeHtml(teamName(e.steal.team))} 搶答 ${e.steal.ok ? '<span class="text-green-400">✔</span>' : '<span class="text-red-400">✘</span>'}` : '';
+                return `<div class="max-w-4xl mx-auto mb-4 bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs font-bold">
+                        <span class="text-slate-400">第 ${i + 1} 題　<span class="text-amber-300">${'★'.repeat(e.value)}</span>${e.source === '延伸' ? ' <span class="text-emerald-300">🔭 延伸</span>' : ''}</span>
+                        <span>${teamTag(e.attacker, 'text-xs')} ${e.defender !== null ? '攻打' : '挑戰'} ${first}${steal}</span>
+                    </div>
+                    <div class="text-lg md:text-xl font-bold text-slate-100 mb-3">${escapeHtml(e.q)}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${opts}</div>
+                    ${e.explanation ? `<div class="mt-3 text-sm font-bold text-green-300 bg-green-950/50 border border-green-800 rounded-lg px-3 py-2">💡 ${escapeHtml(e.explanation)}</div>` : ''}
+                </div>`;
+            }).join('');
+            $('reviewList').innerHTML = html || `<div class="text-center py-16 text-xl font-black text-emerald-300">${log.length ? '🎉 每一題都第一次就答對，沒有需要檢討的！' : '這一局還沒有作答紀錄。'}</div>`;
+        }
+
+        // ===== 規則 =====
+        function openRules() { $('rulesModal').classList.remove('hidden'); }
+        function closeRules() { $('rulesModal').classList.add('hidden'); }
+
+        // ===== 鍵盤（老師用電腦操作時的快捷鍵）=====
+        document.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            if (!qState) return;
+            if (qState.phase === 'done' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); finishQuestion(); return; }
+            if ((qState.phase === 'answer' || qState.phase === 'stealAnswer') && /^[1-4]$/.test(e.key)) {
+                const i = Number(e.key) - 1;
+                if (!qState.out.has(i)) pickOption(i);
+            }
+        });
+
+        window.addEventListener('resize', () => { if (game && !$('gameScreen').classList.contains('hidden')) renderBoard(); });
+
+        window.onload = function () {
+            renderProviderUI();
+            renderQuizSettings();
+            renderGroupSettings();
+            renderMute();
+            showSetup();
+        };
+    </script>
+
+    <script>
+        // ===== 投影模式：全螢幕＋題目字體大小（記在這台電腦）=====
+        (function () {
+            const STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.45, 1.6];
+            let i = STEPS.indexOf(Number(localStorage.getItem('proj_scale') || 1));
+            if (i < 0) i = 2;
+            function apply() {
+                document.documentElement.style.setProperty('--proj', STEPS[i]);
+                const el = document.getElementById('projLabel');
+                if (el) el.innerText = Math.round(STEPS[i] * 100) + '%';
+            }
+            window.projZoom = function (d) {
+                i = Math.max(0, Math.min(STEPS.length - 1, i + d));
+                try { localStorage.setItem('proj_scale', STEPS[i]); } catch (e) {}
+                apply();
+            };
+            window.projFull = function () {
+                if (document.fullscreenElement) document.exitFullscreen();
+                else (document.documentElement.requestFullscreen || function () {}).call(document.documentElement)?.catch?.(() => {});
+            };
+            document.addEventListener('fullscreenchange', () => {
+                const ic = document.getElementById('projIcon');
+                if (ic) ic.className = document.fullscreenElement ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+            });
+            // 鍵盤：+ 放大、- 縮小（輸入框裡不作用）
+            document.addEventListener('keydown', e => {
+                if (/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '') || e.ctrlKey || e.metaKey || e.altKey) return;
+                if (e.key === '+' || e.key === '=') projZoom(1);
+                else if (e.key === '-' || e.key === '_') projZoom(-1);
+            });
+            document.addEventListener('DOMContentLoaded', apply);
+            apply();
+        })();
+    </script>
+</body>
+</html>
