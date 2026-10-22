@@ -332,6 +332,53 @@ header .hbtn { background: var(--panel2); border: 1px solid var(--line); border-
     .actbar { padding: 6px 8px 10px; gap: 6px; min-height: 0; }
 }
 
+/* ---------- 攻擊動畫 ---------- */
+#fxLayer { position: fixed; inset: 0; pointer-events: none; z-index: 38; overflow: hidden; }
+.fx { position: fixed; pointer-events: none; }
+.slash { width: 110px; height: 14px; transform: translate(-50%, -50%) rotate(var(--r)); background: linear-gradient(90deg, transparent, #fff 45%, var(--c) 60%, transparent); border-radius: 50%; box-shadow: 0 0 14px var(--c); animation: slashA .38s ease-out forwards; }
+@keyframes slashA { 0% { opacity: 0; clip-path: inset(0 100% 0 0); } 30% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { opacity: 0; clip-path: inset(0 0 0 70%); } }
+.impact { width: 30px; height: 30px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, #fff 0%, var(--c) 40%, transparent 70%); animation: impA .45s ease-out forwards; }
+.impact.big { width: 60px; height: 60px; }
+@keyframes impA { from { transform: translate(-50%, -50%) scale(.3); opacity: 1; } to { transform: translate(-50%, -50%) scale(3); opacity: 0; } }
+.spark { width: 7px; height: 7px; border-radius: 2px; background: var(--c); box-shadow: 0 0 6px var(--c); transform: translate(-50%, -50%); }
+.proj { transform: translate(-50%, -50%); }
+.p-fire { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 60% 50%, #fff7cc, #fb923c 45%, #dc2626 75%, transparent 80%); box-shadow: 0 0 18px #f97316; }
+.p-fire.meteor { width: 46px; height: 46px; box-shadow: 0 0 40px #f97316; }
+.p-holy { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle, #fff, #fde047 50%, transparent 72%); box-shadow: 0 0 18px #fde047; }
+.p-arcane { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #fff, #818cf8 50%, transparent 72%); box-shadow: 0 0 16px #6366f1; }
+.p-dark { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle, #e9d5ff, #7e22ce 50%, transparent 72%); box-shadow: 0 0 16px #a855f7; }
+.p-arrow { width: 34px; height: 4px; }
+.p-arrow i { position: absolute; inset: 0; background: linear-gradient(90deg, #a3e635 0 18%, #d6d3d1 18% 85%, #f8fafc 85%); border-radius: 2px; }
+.p-arrow i::after { content: ''; position: absolute; right: -6px; top: -3px; border-left: 8px solid #e5e7eb; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.trail { transform: translate(-50%, -50%) scale(.7); opacity: .5; animation: fadeout .26s forwards; }
+.boltwrap { inset: 0; }
+.boltwrap svg { position: absolute; left: 0; top: 0; filter: drop-shadow(0 0 6px #93c5fd); }
+.castglow { width: 90px; height: 90px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, var(--c) 0%, transparent 65%); opacity: .0; animation: castA .7s ease-out forwards; }
+@keyframes castA { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 30% { opacity: .8; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+.healglow { width: 100px; height: 110px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(ellipse, color-mix(in srgb, var(--c) 55%, transparent), transparent 65%); animation: castA .8s ease-out forwards; }
+.mote { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.mote::before, .mote::after { content: ''; position: absolute; left: 3px; top: -3px; width: 1px; height: 13px; background: var(--c); }
+.shieldfx { width: 96px; height: 110px; transform: translate(-50%, -50%); border-radius: 50%; border: 3px solid #7dd3fc; background: radial-gradient(ellipse, transparent 55%, #38bdf855); box-shadow: 0 0 18px #38bdf8; animation: shieldA .7s ease-out forwards; }
+@keyframes shieldA { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 30% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }
+.aura { width: 100px; height: 26px; transform: translate(-50%, -50%); border-radius: 50%; border: 3px solid var(--c); box-shadow: 0 0 14px var(--c); animation: auraUp .7s ease-out forwards; }
+.aura.down { animation-name: auraDown; }
+@keyframes auraUp { from { opacity: 1; transform: translate(-50%, 0) scale(.6); } to { opacity: 0; transform: translate(-50%, -70px) scale(1.1); } }
+@keyframes auraDown { from { opacity: 1; transform: translate(-50%, -70px) scale(1.1); } to { opacity: 0; transform: translate(-50%, 0) scale(.6); } }
+.wavefx { width: 40px; height: 40px; transform: translate(-50%, -50%); border-radius: 50%; border: 4px solid #a855f7; box-shadow: 0 0 20px #a855f7; animation: waveA .7s ease-out forwards; }
+@keyframes waveA { from { opacity: 1; transform: translate(-50%, -50%) scale(.5); } to { opacity: 0; transform: translate(-50%, -50%) scale(14); } }
+.puff { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle, #cbd5e1aa, #64748b55 60%, transparent 70%); }
+.darkfx { inset: 0; background: radial-gradient(circle at 70% 50%, #000c, #000a 60%); animation: castA .8s ease-out forwards; }
+.screenflash { inset: 0; opacity: .5; animation: fadeout .26s forwards; }
+.deathghost .bar, .deathghost .sts, .deathghost .rank, .deathghost .uname { opacity: 0; }
+.conttitle { font-size: 22px; color: #fde68a; }
+.contparty { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 10px 0 4px; }
+.contparty span { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 14px; }
+.contparty img { width: 56px; height: 56px; }
+.contparty em { font-style: normal; font-weight: 800; }
+.contparty small { color: var(--sub); }
+.contparty .dead { opacity: .45; filter: grayscale(1); }
+.panel.cont { padding: 22px 18px; gap: 6px; text-align: center; }
+
 </style>
 </head>
 <body>
@@ -746,6 +793,266 @@ const DIFF = {
 };
 
 // =====================================================================
+//  攻擊動畫：衝刺斬擊、飛行彈道、閃電、治療光、護盾、敵人死亡
+// =====================================================================
+const FX = (() => {
+    const layer = () => { let L = document.getElementById('fxLayer'); if (!L) { L = document.createElement('div'); L.id = 'fxLayer'; document.body.appendChild(L); } return L; };
+    const ctr = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * 0.42, w: r.width, h: r.height }; };
+    const sprOf = el => el && (el.querySelector('.spr') || el);
+    function node(cls, x, y, html = '') {
+        const d = document.createElement('div');
+        d.className = 'fx ' + cls; d.style.left = x + 'px'; d.style.top = y + 'px'; d.innerHTML = html;
+        layer().appendChild(d); return d;
+    }
+    const kill = (d, ms) => setTimeout(() => d.remove(), ms);
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // 攻擊者衝到目標前面再退回
+    async function dash(el, toEl, frac = 0.62) {
+        if (FAST || !el || !toEl) return;
+        const s = sprOf(el), a = ctr(el), b = ctr(toEl);
+        const dx = (b.x - a.x) * frac, dy = (b.y - a.y) * 0.3;
+        el.style.zIndex = 30;
+        const an = s.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx * 0.15}px,-6px) scale(1.05)`, offset: 0.25 },
+            { transform: `translate(${dx}px,${dy}px) scale(1.12)`, offset: 0.55 }, { transform: `translate(${dx}px,${dy}px) scale(1.12)`, offset: 0.7 },
+            { transform: 'translate(0,0)' }], { duration: 520, easing: 'ease-in-out' });
+        await sleep(290);
+        an.finished.then(() => { el.style.zIndex = ''; }).catch(() => {});
+    }
+    // 原地蓄力（施法）
+    async function cast(el, color) {
+        if (FAST || !el) return;
+        const c = ctr(el);
+        const g = node('castglow', c.x, c.y); g.style.setProperty('--c', color);
+        kill(g, 700);
+        sprOf(el).animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-8px) scale(1.06)' }, { transform: 'translateY(0)' }], { duration: 420, easing: 'ease-out' });
+        await sleep(240);
+    }
+    // 斬擊痕
+    function slash(toEl, color = '#fff', n = 1, angle) {
+        if (FAST || !toEl) return;
+        const c = ctr(toEl);
+        for (let i = 0; i < n; i++) {
+            setTimeout(() => {
+                const d = node('slash', c.x + (Math.random() * 16 - 8), c.y + (Math.random() * 16 - 8));
+                d.style.setProperty('--c', color);
+                d.style.setProperty('--r', (angle ?? (-35 + Math.random() * 70)) + (i % 2 ? 70 : 0) + 'deg');
+                kill(d, 420);
+            }, i * 90);
+        }
+    }
+    // 打擊星芒
+    function impact(toEl, color = '#fde047', big) {
+        if (FAST || !toEl) return;
+        const c = ctr(toEl);
+        const d = node('impact' + (big ? ' big' : ''), c.x, c.y); d.style.setProperty('--c', color); kill(d, 450);
+        for (let i = 0; i < (big ? 12 : 7); i++) {
+            const p = node('spark', c.x, c.y); p.style.setProperty('--c', color);
+            const ang = Math.random() * Math.PI * 2, dist = 24 + Math.random() * (big ? 60 : 34);
+            p.animate([{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px), calc(-50% + ${Math.sin(ang) * dist}px)) scale(.2)`, opacity: 0 }], { duration: 380 + Math.random() * 200, easing: 'ease-out' });
+            kill(p, 600);
+        }
+        sprOf(toEl).animate([{ transform: 'translateX(0)' }, { transform: `translateX(${toEl.classList.contains('enemy') ? 10 : -10}px)` }, { transform: 'translateX(0)' }], { duration: 200 });
+    }
+    // 飛行彈道：arrow 箭、fire 火球、holy 聖光、arcane 法球、dark 暗球
+    async function shoot(fromEl, toEl, kind) {
+        if (FAST || !fromEl || !toEl) return;
+        const a = ctr(fromEl), b = ctr(toEl);
+        const d = node('proj p-' + kind, a.x, a.y, kind === 'arrow' ? '<i></i>' : '');
+        const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+        const dur = kind === 'arrow' ? 230 : 330;
+        const lift = kind === 'arrow' ? -26 : -14;
+        d.animate([{ transform: `translate(-50%,-50%) rotate(${ang}deg)` },
+            { transform: `translate(calc(-50% + ${(b.x - a.x) / 2}px), calc(-50% + ${(b.y - a.y) / 2 + lift}px)) rotate(${ang}deg) scale(1.15)` },
+            { transform: `translate(calc(-50% + ${b.x - a.x}px), calc(-50% + ${b.y - a.y}px)) rotate(${ang}deg)` }], { duration: dur, easing: 'linear' });
+        // 拖尾
+        if (kind !== 'arrow') { const iv = setInterval(() => { const r = d.getBoundingClientRect(); const t = node('trail p-' + kind, r.left + r.width / 2, r.top + r.height / 2); kill(t, 260); }, 40); setTimeout(() => clearInterval(iv), dur); }
+        await sleep(dur);
+        d.remove();
+    }
+    // 閃電
+    function bolt(fromEl, toEls, color = '#93c5fd') {
+        if (FAST || !fromEl) return;
+        const pts = [ctr(fromEl), ...toEls.filter(Boolean).map(ctr)];
+        const W = innerWidth, H = innerHeight;
+        let path = '';
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p = pts[i], q = pts[i + 1];
+            path += `M${p.x},${p.y} `;
+            for (let k = 1; k <= 6; k++) { const t = k / 6; path += `L${p.x + (q.x - p.x) * t + (k < 6 ? Math.random() * 18 - 9 : 0)},${p.y + (q.y - p.y) * t + (k < 6 ? Math.random() * 22 - 11 : 0)} `; }
+        }
+        const d = document.createElement('div'); d.className = 'fx boltwrap';
+        d.innerHTML = `<svg width="${W}" height="${H}"><path d="${path}" stroke="${color}" stroke-width="7" opacity=".35" fill="none"/><path d="${path}" stroke="#fff" stroke-width="2.5" fill="none"/></svg>`;
+        layer().appendChild(d); kill(d, 330);
+    }
+    // 箭雨／聖光雨：從上面落下
+    function rain(toEls, kind) {
+        if (FAST) return;
+        toEls.filter(Boolean).forEach((el, j) => {
+            const c = ctr(el);
+            for (let i = 0; i < 4; i++) setTimeout(() => {
+                const x = c.x + Math.random() * 40 - 20;
+                const d = node('proj p-' + kind + ' fall', x, c.y - 140, kind === 'arrow' ? '<i></i>' : '');
+                d.animate([{ transform: 'translate(-50%,-50%) rotate(90deg)', opacity: 0 }, { transform: 'translate(-50%,-50%) rotate(90deg)', opacity: 1, offset: .2 }, { transform: 'translate(-50%, calc(-50% + 140px)) rotate(90deg)', opacity: 1 }], { duration: 260, easing: 'ease-in' });
+                kill(d, 270);
+            }, i * 70 + j * 40);
+        });
+    }
+    // 治療：綠色光點往上飄
+    function heal(el, color = '#4ade80') {
+        if (FAST || !el) return;
+        const c = ctr(el);
+        const g = node('healglow', c.x, c.y + c.h * 0.1); g.style.setProperty('--c', color); kill(g, 800);
+        for (let i = 0; i < 9; i++) {
+            const p = node('mote', c.x + Math.random() * 50 - 25, c.y + c.h * 0.25); p.style.setProperty('--c', color);
+            p.animate([{ transform: 'translate(-50%,0) scale(.6)', opacity: 0 }, { opacity: 1, offset: .2 }, { transform: `translate(-50%,-${50 + Math.random() * 40}px) scale(1)`, opacity: 0 }], { duration: 700 + Math.random() * 300, delay: i * 40, easing: 'ease-out' });
+            kill(p, 1200);
+        }
+    }
+    // 護盾泡泡
+    function shield(el) {
+        if (FAST || !el) return;
+        const c = ctr(el); const d = node('shieldfx', c.x, c.y + 6); kill(d, 700);
+    }
+    // 光環（增益、降壓力、減益）
+    function aura(el, color, down) {
+        if (FAST || !el) return;
+        const c = ctr(el); const d = node('aura' + (down ? ' down' : ''), c.x, c.y + c.h * 0.2); d.style.setProperty('--c', color); kill(d, 700);
+    }
+    // 壓力波：紫色波紋掃過
+    function wave(fromEl, toEls) {
+        if (FAST) return;
+        if (fromEl) { const c = ctr(fromEl); const d = node('wavefx', c.x, c.y); kill(d, 700); }
+        toEls.filter(Boolean).forEach((el, i) => setTimeout(() => aura(el, '#a855f7', true), 150 + i * 60));
+    }
+    // 召喚煙霧
+    function smoke(el) {
+        if (FAST || !el) return;
+        const c = ctr(el);
+        for (let i = 0; i < 8; i++) {
+            const p = node('puff', c.x + Math.random() * 60 - 30, c.y + Math.random() * 30);
+            p.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: .9 }, { transform: `translate(-50%,-50%) translate(${Math.random() * 40 - 20}px,-30px) scale(1.6)`, opacity: 0 }], { duration: 700, delay: i * 30 });
+            kill(p, 900);
+        }
+    }
+    // 黑暗吞噬：畫面暗一下
+    function darken() {
+        if (FAST) return;
+        const d = node('darkfx', 0, 0); kill(d, 800);
+    }
+    function shake(power = 6) {
+        if (FAST) return;
+        const a = document.getElementById('arena'); if (!a) return;
+        a.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${power}px,${-power / 2}px)` }, { transform: `translate(${-power}px,${power / 2}px)` }, { transform: `translate(${power / 2}px,0)` }, { transform: 'translate(0,0)' }], { duration: 260 });
+    }
+    function flashScreen(color = '#fff') {
+        if (FAST) return;
+        const d = node('screenflash', 0, 0); d.style.background = color; kill(d, 260);
+    }
+    // 死亡：倒下淡出（先複製一份放在原位，畫面重畫也看得到）
+    function death(el, isEnemy) {
+        if (FAST || !el) return;
+        const r = el.getBoundingClientRect();
+        const ghost = el.cloneNode(true);
+        ghost.className += ' deathghost';
+        ghost.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;margin:0;z-index:35;pointer-events:none`;
+        ghost.querySelectorAll('.intent').forEach(x => x.remove());
+        layer().appendChild(ghost);
+        ghost.animate([{ opacity: 1, filter: 'brightness(3)', transform: 'translateY(0) rotate(0)' }, { opacity: .9, filter: 'brightness(1) grayscale(1)', offset: .3 },
+            { opacity: 0, filter: 'grayscale(1) brightness(.4)', transform: `translateY(24px) rotate(${isEnemy ? 12 : -12}deg) scale(.9)` }], { duration: 750, easing: 'ease-in' });
+        kill(ghost, 760);
+        const c = ctr(el);
+        for (let i = 0; i < 10; i++) {
+            const p = node('spark', c.x, c.y + 10); p.style.setProperty('--c', isEnemy ? '#94a3b8' : '#f43f5e');
+            const ang = -Math.PI * Math.random(), dist = 20 + Math.random() * 40;
+            p.animate([{ transform: 'translate(-50%,-50%)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px), calc(-50% + ${Math.sin(ang) * dist}px))`, opacity: 0 }], { duration: 600 });
+            kill(p, 650);
+        }
+    }
+    return { dash, cast, slash, impact, shoot, bolt, rain, heal, shield, aura, wave, smoke, darken, shake, flashScreen, death, sleep };
+})();
+
+// 每一招用什麼動畫
+const SKILL_FX = {
+    warrior: { slash: ['melee', '#fca5a5'], cleave: ['sweep', '#fca5a5'], sunder: ['melee', '#fbbf24', 'heavy'], charge: ['charge', '#fca5a5'], drain: ['melee', '#f43f5e'], warcry: ['buff', '#ef4444'] },
+    knight: { bash: ['melee', '#93c5fd', 'heavy'], holy: ['melee', '#fde047'], guard: ['support'], taunt: ['buff', '#60a5fa'], wall: ['support'], riposte: ['buff', '#60a5fa'] },
+    rogue: { stab: ['melee', '#e5e7eb', 'multi'], poison: ['melee', '#4ade80', 'multi'], smoke: ['smokebomb'], lunge: ['charge', '#e5e7eb'], execute: ['melee', '#f43f5e', 'heavy'], steal: ['melee', '#fbbf24'] },
+    archer: { aim: ['shot', 'arrow'], volley: ['rain', 'arrow'], mark: ['shot', 'arcane'], retreat: ['shot', 'arrow'], pierce: ['shot', 'arrow'], flare: ['shot', 'fire'] },
+    mage: { fireball: ['shot', 'fire'], chain: ['bolt'], hex: ['shot', 'dark'], icewall: ['support'], meteor: ['meteor'], blast: ['shot', 'arcane'] },
+    healer: { heal: ['support'], mass: ['support'], smite: ['shot', 'holy'], bless: ['support'], purify: ['support'], judge: ['rain', 'holy'] }
+};
+// 隊員出招前的動畫（傷害數字在動畫打中之後才跳）
+async function animHero(h, k, targets) {
+    if (FAST) return;
+    const [kind, a, b] = SKILL_FX[h.cls][k] || ['support'];
+    const me = unitEl(h), T = targets.filter(Boolean).map(unitEl).filter(Boolean), t0 = T[0];
+    if (kind === 'melee' || kind === 'charge') {
+        await FX.dash(me, t0, kind === 'charge' ? 0.8 : 0.62);
+        FX.slash(t0, a, b === 'multi' ? 3 : 1); FX.impact(t0, a, b === 'heavy');
+        if (b === 'heavy') FX.shake(5);
+    } else if (kind === 'sweep') {
+        await FX.dash(me, t0, 0.5);
+        T.forEach((el, i) => setTimeout(() => { FX.slash(el, a, 1, -10); FX.impact(el, a); }, i * 60));
+        FX.shake(4);
+    } else if (kind === 'shot') {
+        await FX.cast(me, a === 'fire' ? '#f97316' : a === 'holy' ? '#fde047' : a === 'dark' ? '#a855f7' : a === 'arcane' ? '#818cf8' : '#a3e635');
+        await FX.shoot(me, t0, a);
+        FX.impact(t0, a === 'fire' ? '#fb923c' : a === 'holy' ? '#fde047' : a === 'dark' ? '#c084fc' : a === 'arcane' ? '#a5b4fc' : '#e5e7eb');
+    } else if (kind === 'rain') {
+        await FX.cast(me, a === 'holy' ? '#fde047' : '#a3e635');
+        FX.rain(T, a);
+        await FX.sleep(300);
+        T.forEach(el => FX.impact(el, a === 'holy' ? '#fde047' : '#e5e7eb'));
+    } else if (kind === 'bolt') {
+        await FX.cast(me, '#93c5fd');
+        FX.bolt(me, T); FX.flashScreen('#bfdbfe');
+        T.forEach(el => FX.impact(el, '#93c5fd'));
+        await FX.sleep(120);
+    } else if (kind === 'meteor') {
+        await FX.cast(me, '#f97316');
+        const c = t0 && t0.getBoundingClientRect();
+        if (c) {
+            const d = document.createElement('div'); d.className = 'fx proj p-fire meteor';
+            d.style.left = (c.left + c.width / 2 + 160) + 'px'; d.style.top = (c.top - 160) + 'px';
+            document.getElementById('fxLayer').appendChild(d);
+            d.animate([{ transform: 'translate(-50%,-50%) scale(.6)' }, { transform: 'translate(calc(-50% - 160px), calc(-50% + 200px)) scale(1.6)' }], { duration: 420, easing: 'ease-in' });
+            await FX.sleep(420); d.remove();
+        }
+        FX.impact(t0, '#f97316', true); FX.shake(12); FX.flashScreen('#fed7aa');
+    } else if (kind === 'smokebomb') {
+        await FX.cast(me, '#94a3b8');
+        T.forEach(el => FX.smoke(el));
+        await FX.sleep(200);
+    } else if (kind === 'buff') {
+        await FX.cast(me, a);
+        FX.aura(me, a);
+    } else {
+        await FX.cast(me, h.cls === 'healer' ? '#4ade80' : '#7dd3fc');
+    }
+}
+// 敵人出招前的動畫
+async function animEnemy(e, it, targets) {
+    if (FAST) return;
+    const me = unitEl(e), T = targets.map(unitEl).filter(Boolean);
+    if (it.a != null) {
+        if (it.targets === 'all') {
+            await FX.cast(me, '#ef4444');
+            FX.shake(7);
+            T.forEach((el, i) => setTimeout(() => { FX.slash(el, '#f87171', 1); FX.impact(el, '#f87171'); }, i * 50));
+            await FX.sleep(150);
+        } else {
+            await FX.dash(me, T[0], 0.6);
+            FX.slash(T[0], '#f87171', (it.hits || 1) > 1 ? 2 : 1, 45); FX.impact(T[0], '#f87171', it.a >= 12);
+            if (it.a >= 12) FX.shake(6);
+        }
+    } else if (it.s) {
+        await FX.cast(me, '#a855f7');
+        FX.wave(me, T);
+        await FX.sleep(200);
+    }
+}
+
+// =====================================================================
 //  共用工具
 // =====================================================================
 const $ = id => document.getElementById(id);
@@ -957,6 +1264,7 @@ function addStress(h, v) {
     if (v > 0 && has('cross')) v = Math.round(v * 0.75);
     const old = h.stress;
     h.stress = clamp(h.stress + v, 0, 200);
+    if (v <= -5 && B) FX.aura(unitEl(h), '#a5b4fc');
     if (v !== 0 && B) fxText(unitEl(h), v > 0 ? `😨+${v}` : `😌${v}`, v > 0 ? '#c084fc' : '#a5b4fc', 22);
     if (old < 100 && h.stress >= 100 && !h.virtue && !h.aff) {
         if (Math.random() < D().virtue) {
@@ -1232,12 +1540,12 @@ async function useSkill(h, k, target, forced) {
     B.busy = true; B.mode = null;
     renderBattle();
     showSkillName(h, sk.n);
-    if (sk.m) await lunge(unitEl(h), 1);
-    else await wait(250);
+    const targets = sk.tg === 'enemies' ? skillTargets(h, k) : sk.tg === 'allies' ? alive() : sk.tg === 'self' ? [h] : [target];
+    await animHero(h, k, targets);
+    if (FAST) await wait(0);
     // 位移
     if (sk.move) moveUnit(h, -sk.move);
     // 傷害
-    const targets = sk.tg === 'enemies' ? skillTargets(h, k) : sk.tg === 'allies' ? alive() : sk.tg === 'self' ? [h] : [target];
     let crit = false;
     if (sk.m) {
         const C = CLASSES[h.cls];
@@ -1254,7 +1562,7 @@ async function useSkill(h, k, target, forced) {
             if (e.st.mark) d *= 1.3;
             damageEnemy(e, Math.max(1, Math.floor(d)), crit ? '💥' : '');
         }
-        if (crit) { SFX.crit(); toast(`💥 ${h.name} 爆擊！全隊壓力 −3`, '#fde047'); alive().forEach(o => addStress(o, -3)); }
+        if (crit) { FX.shake(9); FX.flashScreen('#fef08a'); SFX.crit(); toast(`💥 ${h.name} 爆擊！全隊壓力 −3`, '#fde047'); alive().forEach(o => addStress(o, -3)); }
     }
     for (const t of targets) {
         if (!t) continue;
@@ -1294,9 +1602,10 @@ async function useSkill(h, k, target, forced) {
 function applySt(u, k, n) {
     if (!u) return;
     u.st[k] = (u.st[k] || 0) + n;
+    FX.aura(unitEl(u), ['weak', 'vuln', 'mark', 'bleed', 'stun'].includes(k) ? '#c084fc' : '#fbbf24', ['weak', 'vuln', 'mark', 'bleed', 'stun'].includes(k));
     fxText(unitEl(u), ST_ICON[k] + ST_NAME[k] + (n > 1 ? ' ' + n : ''), '#fbbf24', 20);
 }
-function giveBlock(u, n) { if (!u || u.dead) return; u.block += n; fxText(unitEl(u), `🛡️+${n}`, '#7dd3fc', 24); SFX.block(); }
+function giveBlock(u, n) { if (!u || u.dead) return; FX.shield(unitEl(u)); u.block += n; fxText(unitEl(u), `🛡️+${n}`, '#7dd3fc', 24); SFX.block(); }
 // 往後（+）或往前（−）移動 n 格
 function moveUnit(u, n) {
     const L = isHero(u) ? alive() : liveEnemies();
@@ -1315,6 +1624,7 @@ function damageEnemy(e, dmg, tag = '') {
     fxText(el, dmg ? `${tag}−${dmg}` : '🛡️', dmg ? (tag === '💥' ? '#fde047' : '#f87171') : '#7dd3fc', tag === '💥' ? 40 : 34);
     SFX.hit();
     if (e.hp <= 0) {
+        FX.death(el, true);
         RUN.kills++;
         if (e.elite || e.boss) alive().forEach(h => addStress(h, -10));
         else alive().forEach(h => addStress(h, -2));
@@ -1323,6 +1633,7 @@ function damageEnemy(e, dmg, tag = '') {
 function healHero(h, n) {
     if (!h || h.dead) return;
     if (has('medkit')) n += 2;
+    FX.heal(unitEl(h));
     const before = h.hp;
     h.hp = Math.min(h.maxHp, h.hp + n);
     if (h.hp > 0 && h.door) { h.door = false; toast(`💚 ${h.name} 脫離瀕死了！`, '#4ade80'); }
@@ -1351,7 +1662,7 @@ function damageHero(h, dmg, noBlock, tag = '') {
     h.hp -= dmg;
     if (h.hp <= 0) {
         h.hp = 0; h.door = true;
-        SFX.door();
+        SFX.door(); FX.flashScreen('#450a0a'); FX.shake(8);
         toast(`💀 ${h.name} 倒在瀕死邊緣！快治療他，再被打可能會死`, '#f43f5e');
         alive().forEach(o => addStress(o, o === h ? 12 : 6));
     }
@@ -1363,6 +1674,7 @@ function killHero(h) {
         toast(`🪶 鳳凰之羽燃燒了！${h.name} 撐了下來`, '#fde047');
         return;
     }
+    FX.death(unitEl(h), false); FX.flashScreen('#7f1d1d');
     h.dead = true; h.door = false; h.hp = 0;
     toast(`⚰️ ${h.name} 陣亡了……`, '#f43f5e');
     SFX.bad();
@@ -1422,13 +1734,15 @@ async function enemyTurn(e) {
 async function enemyAct(e, it) {
     const el = unitEl(e);
     showSkillName(e, it.n);
-    if (it.b) { const b = Math.round(it.b * D().ehp); e.block += b; fxText(el, `🛡️+${b}`, '#7dd3fc', 26); SFX.block(); }
-    if (it.str) { e.st.str = (e.st.str || 0) + it.str; fxText(el, `💪+${it.str}`, '#fbbf24', 24); }
+    if (it.b) { FX.shield(el); const b = Math.round(it.b * D().ehp); e.block += b; fxText(el, `🛡️+${b}`, '#7dd3fc', 26); SFX.block(); }
+    if (it.str) { FX.aura(el, '#ef4444'); e.st.str = (e.st.str || 0) + it.str; fxText(el, `💪+${it.str}`, '#fbbf24', 24); }
     if (it.summon && liveEnemies().length < 4) {
+        FX.smoke(el); await wait(250);
         const n = mkEnemy(it.summon, 0.7); n.rank = 9; B.enemies.push(n); reRank(); rollIntent(n);
+        renderBattle(); FX.smoke(unitEl(n));
         toast(`${e.n} 召喚了 ${n.n}！`, '#f87171');
     }
-    if (it.light) { RUN.light = clamp(RUN.light + it.light, 0, 100); toast(`🌑 ${e.n} 吞噬了火光（${it.light}）`, '#94a3b8'); }
+    if (it.light) { FX.darken(); RUN.light = clamp(RUN.light + it.light, 0, 100); toast(`🌑 ${e.n} 吞噬了火光（${it.light}）`, '#94a3b8'); }
     if (it.a != null || it.s != null) {
         let targets;
         if (it.targets === 'all') targets = alive();
@@ -1437,7 +1751,7 @@ async function enemyAct(e, it) {
             t = realTarget(t);
             targets = t ? [t] : [];
         }
-        if (it.a != null) await lunge(el, -1);
+        await animEnemy(e, it, targets);
         for (let k = 0; k < (it.hits || 1); k++) {
             for (const t of targets) {
                 if (t.dead) continue;
@@ -1700,9 +2014,13 @@ function renderTitle() {
     $('scr-title').innerHTML = `
     <div class="title-wrap">
         <div class="logo"><div class="flame"></div><h1>燭火深塔</h1><p>帶著四位冒險者，守住火光，爬上永夜之塔</p></div>
-        ${saved ? `<div class="panel cont"><b>有一趟冒險還沒結束</b><span>${DIFF[saved.diff].n}・${ACTS[saved.act].name}・走了 ${saved.floor} 格</span>
-            <div class="btns"><button class="btn gold" onclick="continueRun()">▶ 繼續冒險</button><button class="btn gray" onclick="abandonRun()">放棄這趟</button></div></div>` : ''}
-        <div class="panel">
+        ${saved ? `<div class="panel cont">
+            <b class="conttitle">有一趟冒險還沒結束</b>
+            <span>${DIFF[saved.diff].n}・${ACTS[saved.act].name}・走了 ${saved.floor} 格</span>
+            <div class="contparty">${saved.party.slice().sort((a, b) => (a.dead - b.dead) || a.rank - b.rank).map(h => `<span class="${h.dead ? 'dead' : ''}"><img src="${PIXEL.hero(h.cls)}" alt=""><em style="color:${CLASSES[h.cls].color}">${h.name}</em><small>${h.dead ? '⚰️ 陣亡' : `❤️ ${h.hp}/${h.maxHp}`}</small></span>`).join('')}</div>
+            <div class="btns"><button class="btn gold big" onclick="continueRun()">▶ 繼續冒險</button><button class="btn gray big" onclick="abandonRun()">🔄 重新開始</button></div>
+            <span class="sub">重新開始會放棄這一趟（算成全隊覆滅，一樣拿得到餘燼），再重新選難度和隊員。</span></div>` : ''}
+        ${saved ? '' : `<div class="panel">
             <h3>① 難度</h3>
             <div class="diffs">${Object.entries(DIFF).map(([k, d]) => `<button class="diff ${k === pickDiff ? 'on' : ''}" onclick="setDiff('${k}')"><b>${d.n}</b><span>${diffDesc(k)}</span></button>`).join('')}</div>
             <h3>② 選四位隊員 <small>（已選 ${pickCls.length}/4，出發後可以在「👥 隊伍」調整站位）</small></h3>
@@ -1710,7 +2028,7 @@ function renderTitle() {
                 <img src="${PIXEL.hero(k)}" alt=""><b>${C.name}</b><span>❤️ ${C.hp}・⚡${C.spd}・適合第 ${C.home} 排</span><small>${C.desc}</small></button>`; }).join('')}</div>
             <div class="lineup">${order.map((k, i) => `<span><em>${i + 1}</em>${CLASSES[k].name}</span>`).join('<i>→</i>')}<span class="sub">（第 1 排最前面）</span></div>
             <div class="btns"><button class="btn gold big" onclick="startNew()" ${pickCls.length === 4 ? '' : 'disabled'}>🔥 點燃火把，出發！</button></div>
-        </div>
+        </div>`}
         <div class="panel row3">
             <button class="btn gray" onclick="showHelp()">📖 怎麼玩</button>
             <button class="btn gray" onclick="showAltar()">🕯️ 餘燼祭壇 <b class="gold">${META.embers}</b></button>
@@ -1755,7 +2073,7 @@ function continueRun() {
     showMap();
 }
 function abandonRun() {
-    if (!confirmBox('放棄這趟冒險？（會算成全隊覆滅）')) return;
+    if (!confirmBox('確定要放棄這趟冒險、重新開始嗎？')) return;
     RUN = loadRun();
     if (RUN) endRun(false);
 }
