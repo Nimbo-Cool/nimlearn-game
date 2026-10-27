@@ -103,9 +103,10 @@
             <h3 class="text-2xl font-black text-amber-300">📖 遊戲規則</h3>
             <p>1️⃣ 1～4 位勇者組隊挑戰魔王，<b class="text-amber-300">依照上方的行動順序輪流作答</b>，每個人答的是自己的題目。</p>
             <p>2️⃣ 輪到你時，在<b>自己的框</b>先選招式，再回答題目：<b>★ 招式比較弱、題目簡單；★★★ 招式比較強、題目比較難</b>。答對招式才會成功，越快答對傷害 +1 ⚡。</p>
-            <p>3️⃣ <b>站位</b>：畫面左邊排成一列，越靠近魔王是第 1 排（前排）。戰士、騎士適合前排；法師、治療師適合後排。有些招式要站對位置才能用，輪到你時可以免費「往前進／往後退」一格。</p>
+            <p>3️⃣ <b>站位</b>：畫面左邊排成一列，越靠近魔王是第 1 排（前排）。戰士、騎士適合前排；法師、治療師、弓箭手適合後排。有些招式要站對位置才能用，輪到你時可以免費「往前進／往後退」一格。</p>
             <p>4️⃣ <b class="text-violet-300">😨 恐懼值</b>：答錯、被魔王打會變高。滿 100 時 30% <b class="text-amber-300">✨ 勇氣覺醒</b>（攻擊 +2），70% <b class="text-violet-300">😱 嚇壞了</b>（接下來 2 題只剩 2 個選項，但效果減半）。</p>
             <p>5️⃣ 沒輪到的人可以按 <b class="text-sky-300">📣 打氣</b>（每人 2 次）：輪到的人恐懼 −15，答題時按還能讓傷害 +1。</p>
+            <p>🎲 <b class="text-amber-300">爆擊與連擊</b>：每個職業的攻擊都有機會 💥 爆擊（傷害約 +30%），弓箭手最容易爆擊；法師的火球、雷擊有 35% 🔁 連擊再打一次。戰士被打會累積 🔥 怒氣，退到後排再「衝鋒」，衝越遠、怒氣越多越痛，還能把魔王撞暈。</p>
             <p>6️⃣ 能量集滿 100，<b>大招</b>會出現在自己的框裡，按下去<b>不用答題</b>直接發動。</p>
             <p>7️⃣ 魔王會揮爪打前排、用魔法打後排、咆哮讓大家恐懼、把人撞到後面、用 👁 盯上某人，每 4 次行動還會 ⚡ 蓄力攻擊全隊。騎士的「守護」能幫隊友擋，法師的「冰封」能打斷魔王。</p>
             <p>8️⃣ 血量歸零會 💤 倒地，輪到他時答對一題就能站起來；治療師也能救人。全隊都倒下就戰敗。</p>
@@ -305,6 +306,91 @@
         </div>
     </div>
 
+    <script>
+    // =====================================================================
+    //  共用題庫（四款 AI 遊戲共用，存在這台電腦的瀏覽器裡）
+    //  ‧任何一款出好題庫，其他遊戲打開就直接用，不用再花一次 AI
+    //  ‧背景補題也會存回共用題庫
+    //  ‧今天在別的遊戲出過的題目，盡量不再出現
+    //  ‧檢討時按「🚩 題目有錯」，這題以後四款都不會再出
+    // =====================================================================
+    const NLB = (() => {
+        const KEY = 'nl_shared_bank_v1', BAD = 'nl_bad_qs_v1', ASKED = 'nl_asked_v1';
+        const norm = s => String(s || '').replace(/[\s，。、？！?!.,：:；;「」『』（）()\-—_"'“”]/g, '').toLowerCase();
+        const grams = s => { const t = norm(s), g = new Set(); for (let i = 0; i < t.length - 1; i++) g.add(t.slice(i, i + 2)); return g; };
+        const sim = (a, b) => { const A = grams(a), B = grams(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach(x => { if (B.has(x)) n++; }); return n / Math.min(A.size, B.size); };
+        const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+        const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+        const today = () => new Date().toISOString().slice(0, 10);
+        const bad = () => new Set(read(BAD, []));
+        const asked = () => { const a = read(ASKED, {}); return a.day === today() ? new Set(a.list || []) : new Set(); };
+        // 題目「換句話說」也算重複：同一個知識點只留一題
+        const ans = q => norm(q.options && q.options[q.answer]);
+        const sameAns = (a, b) => { const x = ans(a), y = ans(b); return x && y && (x === y || (x.length >= 1 && y.length >= 1 && (x.includes(y) || y.includes(x)) && Math.min(x.length, y.length) / Math.max(x.length, y.length) >= .5)); };
+        const same = (a, b) => norm(a.q) === norm(b.q) || (sameAns(a, b) && sim(a.q, b.q) > 0.3) || sim(a.q, b.q) > 0.72 && sim(a.options.join(''), b.options.join('')) > 0.5 || (a.point && b.point && norm(a.point) === norm(b.point) && sim(a.q, b.q) > 0.45);
+        // 出題的切入角度：每批隨機抽幾個，讓題目長得不一樣
+        const ANGLES = ['生活中的例子', '比較兩件事的不同', '原因和結果', '判斷對錯的情境', '順序或步驟', '分類', '數字、單位或時間', '人物、地點或名稱', '看現象推原因', '實驗或觀察怎麼做', '常見的誤解', '應用到新情境', '找出例外', '圖表或資料的意思（用文字描述）'];
+        return {
+            sim,
+            // 出題提示：避開已出過的題目、指定切入角度
+            avoid(prev) {
+                const s = read(KEY, null), all = s ? [1, 2, 3].flatMap(t => (s.all[t] || []).map(q => q.q)) : [];
+                const list = [...new Set([...all, ...(prev || [])])];
+                return list.slice(-90).map(q => '- ' + q).join('\n');
+            },
+            angles() {
+                const a = [...ANGLES].sort(() => Math.random() - .5).slice(0, 5);
+                return `\n- 這一批請盡量用這些切入角度出題（每題換一種）：${a.join('、')}。\n- 每一題考「不同的知識點」，同一個名詞或概念最多出現在一題的正確答案裡；在每題加一個 "point" 欄位，用 8 個字以內寫出這題考的知識點。\n- 題目句型要有變化，不要每題都是「下列哪一個……」。`;
+            },
+            // 把新題目裡重複的（跟自己、跟題庫裡已有的）拿掉
+            dedupe(qs, bankAll) {
+                const have = bankAll ? [1, 2, 3].flatMap(t => bankAll[t] || []) : [];
+                const s = read(KEY, null); if (s) have.push(...[1, 2, 3].flatMap(t => s.all[t] || []));
+                const B = bad(), out = [];
+                qs.forEach(q => { if (B.has(norm(q.q))) return; if (have.some(h => same(h, q)) || out.some(h => same(h, q))) return; out.push(q); });
+                return out;
+            },
+            save(src, bankAll) {
+                if (!src) return;
+                const all = { 1: [], 2: [], 3: [] };
+                [1, 2, 3].forEach(t => { all[t] = (bankAll[t] || []).map(q => ({ q: q.q, options: q.options, answer: q.answer, explanation: q.explanation, source: q.source, point: q.point })); });
+                const keepSrc = src.type === 'pdf' ? { type: 'pdf', name: src.name, text: src.text } : { type: 'topic', topic: src.topic };
+                const settings = typeof getQuizSettings === 'function' ? getQuizSettings() : {};
+                if (!write(KEY, { src: keepSrc, all, grade: settings.grade, extend: settings.extend, at: Date.now() })) {
+                    keepSrc.text = (keepSrc.text || '').slice(0, 20000); write(KEY, { src: keepSrc, all, grade: settings.grade, extend: settings.extend, at: Date.now() });
+                }
+            },
+            load() {
+                const s = read(KEY, null); if (!s || !s.src || !s.all) return null;
+                const B = bad(); [1, 2, 3].forEach(t => { s.all[t] = (s.all[t] || []).filter(q => !B.has(norm(q.q))); });
+                const n = [1, 2, 3].reduce((a, t) => a + s.all[t].length, 0);
+                if (n < 8) return null;
+                s.label = s.src.type === 'pdf' ? s.src.name : s.src.topic; s.n = n;
+                return s;
+            },
+            // 抽題用：今天別的遊戲出過、或被標記有錯的題目排到最後
+            fresh(arr) {
+                const A = asked(), B = bad();
+                const ok = arr.filter(q => !B.has(norm(q.q)));
+                return [...ok.filter(q => A.has(norm(q.q))), ...ok.filter(q => !A.has(norm(q.q)))];   // pop() 從尾巴拿，沒出過的在尾巴
+            },
+            mark(q) { if (!q) return; const a = read(ASKED, {}); const list = a.day === today() ? a.list || [] : []; list.push(norm(q.q)); write(ASKED, { day: today(), list: list.slice(-600) }); },
+            flagBtn(q) { return q && q.q ? `<button type="button" class="nlb-flag" data-q="${encodeURIComponent(q.q)}" onclick="NLB.flag(this)">🚩 題目有錯</button>` : ''; },
+            flag(btn) {
+                const text = decodeURIComponent(btn.dataset.q), k = norm(text), list = read(BAD, []);
+                if (list.includes(k)) return;
+                if (!confirm('確定這題有錯嗎？標記後四款遊戲都不會再出這題。\n\n' + text)) return;
+                list.push(k); write(BAD, list.slice(-500));
+                const s = read(KEY, null);
+                if (s) { [1, 2, 3].forEach(t => { s.all[t] = (s.all[t] || []).filter(q => norm(q.q) !== k); }); write(KEY, s); }
+                try { [1, 2, 3].forEach(t => { if (typeof bank !== 'undefined') bank[t] = bank[t].filter(q => norm(q.q) !== k); if (typeof bankAll !== 'undefined') bankAll[t] = bankAll[t].filter(q => norm(q.q) !== k); }); } catch (e) {}
+                btn.textContent = '✔ 已標記，不會再出'; btn.disabled = true; btn.classList.add('done');
+            },
+            isBad(q) { return q && bad().has(norm(q.q)); }
+        };
+    })();
+    (() => { const st = document.createElement('style'); st.textContent = '.nlb-flag{margin-left:8px;font-size:12px;font-weight:900;padding:2px 8px;border-radius:8px;border:1px solid #f87171;color:#fca5a5;background:rgba(127,29,29,.35);cursor:pointer}.nlb-flag:hover{background:rgba(185,28,28,.6)}.nlb-flag.done{border-color:#64748b;color:#94a3b8;background:transparent;cursor:default}'; document.head.appendChild(st); })();
+    </script>
     <script>
         // ===== AI 來源設定 =====
         const PROVIDERS = {
@@ -816,11 +902,15 @@
             { color: '#f59e0b', dark: '#78350f', emoji: '⚔️', label: '勇者四' }
         ];
         const CLASSES = {
-            warrior: { icon: '⚔️', sprite: '🧑‍🦰', name: '戰士', hp: 16, spd: 4, home: 'front', desc: '前排輸出最高，後排可以衝鋒' },
-            mage:    { icon: '🔮', sprite: '🧙', name: '法師', hp: 11, spd: 6, home: 'back', desc: '後排施法，35% 爆擊、能冰封魔王' },
+            warrior: { icon: '⚔️', sprite: '🧑‍🦰', name: '戰士', hp: 16, spd: 4, home: 'front', desc: '前排輸出最高；被打會累積怒氣，退到後排再衝鋒，越遠越痛還能震暈魔王' },
+            mage:    { icon: '🔮', sprite: '🧙', name: '法師', hp: 11, spd: 6, home: 'back', desc: '後排施法，35% 機率連擊兩次、能冰封魔王' },
             knight:  { icon: '🛡️', sprite: '🤺', name: '騎士', hp: 20, spd: 3, home: 'front', desc: '血最厚，能守護隊友、降低恐懼' },
-            healer:  { icon: '💚', sprite: '🧝', name: '治療師', hp: 13, spd: 5, home: 'back', desc: '補血、救起倒地隊友、安撫恐懼' }
+            healer:  { icon: '💚', sprite: '🧝', name: '治療師', hp: 13, spd: 5, home: 'back', desc: '補血、救起倒地隊友、安撫恐懼' },
+            archer:  { icon: '🏹', sprite: '🧝', name: '弓箭手', hp: 12, spd: 5, home: 'back', desc: '後排遠攻，爆擊率最高，箭雨一次連射三箭' }
         };
+        // 一般攻擊的爆擊率（每個職業都有），爆擊傷害約 +30%
+        const CRIT = { warrior: 0.2, mage: 0.12, knight: 0.12, healer: 0.1, archer: 0.3 };
+        const critDmg = d => Math.max(d + 1, Math.round(d * 1.3));
         const CLASS_KEYS = Object.keys(CLASSES);
         // per：每位勇者大約要答幾題；atk：魔王每次攻擊的基本傷害
         const DIFFICULTY = {
@@ -859,7 +949,7 @@
                 return `<div class="bg-slate-800 rounded-lg p-2 border-l-4" style="border-color:${s.color}">
                     <input data-i="${i}" value="${escapeHtml(groupNames[i] || '')}" placeholder="${s.label}（可輸入名字）" maxlength="8" onchange="saveGroupSettings()"
                         class="w-full bg-transparent text-sm font-bold focus:outline-none placeholder-slate-500 mb-1.5">
-                    <div class="grid grid-cols-4 gap-1.5">${CLASS_KEYS.map(k => `
+                    <div class="grid grid-cols-5 gap-1">${CLASS_KEYS.map(k => `
                         <button onclick="setClass(${i}, '${k}')" title="${CLASSES[k].desc}" class="rounded-lg py-1.5 text-xs font-black border ${k === cls ? 'border-white text-white' : 'border-slate-600 text-slate-400 bg-slate-900'}" style="${k === cls ? `background:${s.color}` : ''}">
                             <img src="${PIXEL.hero(k)}" alt="" class="w-9 h-9 mx-auto" style="image-rendering:pixelated">${CLASSES[k].name}</button>`).join('')}
                     </div>
@@ -876,7 +966,7 @@
             renderGroupSettings();
         }
         // 每位勇者每答一題平均造成的傷害（模擬測出來的，含大招、爆擊、答錯）
-        const CLASS_DPS = { warrior: 7.8, mage: 8, knight: 3.4, healer: 2.6 };
+        const CLASS_DPS = { warrior: 7.8, mage: 8, knight: 3.4, healer: 2.6, archer: 7.8 };   // 魔王血量照舊，招式傷害調高後打得比較快
         function totalTurns(n, diff) { return n === 1 ? DIFFICULTY[diff].solo : DIFFICULTY[diff].per * n; }
         function bossMaxHp(n, diff, mult = 1) {
             let d = 0;
@@ -942,9 +1032,9 @@
 - 不要考${gradeName}年級還沒學過的概念或專有名詞（教材內文有寫到的除外）；題目和選項不要用比${gradeName}年級更難的字詞。
 - 每題只有一個正確答案，三個錯誤選項要看起來合理但明確是錯的，不可以有兩個都算對的選項。
 - 避免「以上皆是」「以上皆非」與否定句考法。
-- 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。`;
+- 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。${NLB.angles()}`;
             const avoid = previousQs.length
-                ? `\n\n以下題目已經出過，請出不同的新題目：\n${previousQs.slice(-60).map(q => '- ' + q).join('\n')}`
+                ? `\n\n以下題目已經出過，請出不同的新題目：\n${NLB.avoid(previousQs)}`
                 : '';
             const tierText = `\n\n【難度：${T.name}】${T.desc}`;
             if (src.type === 'pdf') {
@@ -958,7 +1048,8 @@
             const { grade } = getQuizSettings();
             const list = questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
             const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（依公認正確的知識判斷，不要猜出題者的意思），並檢查每題品質。
-對每一題回報：
+對每一題回報（請先想清楚再回答）：
+- why：用一句話寫出你的解題理由（30 字內）
 - best：你認為唯一正確的選項索引（0~3）
 - ok：true 代表事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級程度、用字太難）就填 false
 - 年級程度參考：${GRADE_GUIDE[grade]}
@@ -966,7 +1057,7 @@
 題目：
 ${JSON.stringify(list)}
 
-請嚴格以 JSON 格式輸出：{"results":[{"id":0,"best":1,"ok":true}]}`;
+請嚴格以 JSON 格式輸出：{"results":[{"id":0,"why":"……","best":1,"ok":true}]}`;
             const raw = await callGeminiRaw(prompt);
             const parsed = parseJsonLoose(raw);
             const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
@@ -982,7 +1073,8 @@ ${JSON.stringify(list)}
 
         // 出一個難度：出題 → 審題（審題失敗就保留原題）
         async function makeTier(src, tier, n, report) {
-            const raw = normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n))));
+            const raw = NLB.dedupe(normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n)))), typeof bankAll !== 'undefined' ? bankAll : null);
+            if (!raw.length) return { qs: [], removed: 0, checked: true };
             previousQs.push(...raw.map(q => q.q));
             report(tier, '審題中');
             try {
@@ -1046,12 +1138,13 @@ ${JSON.stringify(list)}
         }
 
         function setBank(result) {
+            if (lastSource && !isDemoBank) NLB.save(lastSource, result);
             bankAll = { 1: [...result[1]], 2: [...result[2]], 3: [...result[3]] };
             refillBank();
             renderBankStatus();
         }
         function refillBank() {
-            bank = { 1: shuffle([...bankAll[1]]), 2: shuffle([...bankAll[2]]), 3: shuffle([...bankAll[3]]) };
+            bank = { 1: NLB.fresh(shuffle([...bankAll[1]])), 2: NLB.fresh(shuffle([...bankAll[2]])), 3: NLB.fresh(shuffle([...bankAll[3]])) };
         }
         function bankSize() { return bankAll[1].length + bankAll[2].length + bankAll[3].length; }
 
@@ -1072,12 +1165,12 @@ ${JSON.stringify(list)}
         function drawQuestion(value) {
             const order = value === 1 ? [1, 2, 3] : value === 2 ? [2, 1, 3] : [3, 2, 1];
             let picked = null;
-            for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; break; }
+            for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; NLB.mark(picked); break; }
             if (!picked) {
                 // 真的全部用完（內建題目，或 AI 補題失敗）才重複使用
                 refillBank();
                 toast('新題目還沒補好，這題先重複使用舊題', '#38bdf8');
-                for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; break; }
+                for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; NLB.mark(picked); break; }
             }
             topUpBank();
             return picked ? shuffleOpts(picked) : picked;
@@ -1098,6 +1191,7 @@ ${JSON.stringify(list)}
                     bankAll[t].push(...r.qs);
                     added += r.qs.length;
                 });
+                NLB.save(lastSource, bankAll);
                 if (added && game && !game.over) toast(`📚 AI 補了 ${added} 題新題目`, '#34d399');
             } finally {
                 toppingUp = false;
@@ -1286,6 +1380,15 @@ ${JSON.stringify(list)}
                     R(5, 15, 2, 1, BOOT); R(8, 15, 2, 1, BOOT);
                 }
             };
+            HERO.archer = (R) => {
+                R(2, 6, 2, 7, '#8b5a2b'); R(2, 4, 1, 2, '#e8e2d0'); R(3, 5, 1, 1, '#f87171');
+                R(4, 1, 8, 3, '#2f7a2a'); R(3, 3, 2, 5, '#2f7a2a'); R(5, 0, 5, 1, '#3f9a3a');
+                R(5, 4, 6, 4, SK); R(4, 4, 1, 3, '#245c22'); R(9, 5, 1, 1, EYE); R(10, 7, 1, 1, SK2);
+                R(4, 8, 7, 4, '#3f8f3a'); R(5, 8, 5, 1, '#6abe30'); R(4, 11, 7, 1, '#6b3d1e'); R(7, 11, 1, 1, '#ffd23a');
+                R(14, 3, 1, 9, '#a0682e'); R(13, 2, 1, 1, '#a0682e'); R(13, 12, 1, 1, '#a0682e'); R(12, 3, 1, 9, '#e8e2d0');
+                R(11, 8, 2, 2, SK);
+                R(5, 12, 2, 3, PANTS); R(8, 12, 2, 3, PANTS); R(4, 15, 3, 1, BOOT); R(8, 15, 3, 1, BOOT);
+            };
             const BOSS = {
                 slime(R, C) {
                     C(16, 22, 14.5, 9.5, '#16a34a'); C(16, 20, 12.5, 8, '#4ade80'); R(7, 16, 3, 2, '#d9f99d'); R(6, 18, 2, 1, '#d9f99d');
@@ -1402,30 +1505,36 @@ ${JSON.stringify(list)}
         // 技能：tier = 題目難度；req = 要站的位置（front 前排、back 後排、any 都可以）
         const SKILLS = {
             warrior: [
-                { id: 'slash', icon: '🗡️', name: '揮砍', tier: 1, req: 'front', dmg: 4, desc: '4 傷害' },
-                { id: 'smash', icon: '🔨', name: '重擊', tier: 2, req: 'front', dmg: 7, desc: '7 傷害' },
-                { id: 'rush', icon: '💨', name: '衝鋒', tier: 2, req: 'back', dmg: 4, move: true, desc: '衝到最前排，4 傷害' }
+                { id: 'slash', icon: '🗡️', name: '揮砍', tier: 1, req: 'front', dmg: 5, desc: '5 傷害' },
+                { id: 'smash', icon: '🔨', name: '重擊', tier: 2, req: 'front', dmg: 9, desc: '9 傷害' },
+                { id: 'rush', icon: '💨', name: '衝鋒', tier: 2, req: 'back', dmg: 5, move: true, rush: true, critBonus: 0.2, desc: '衝到最前排：5 傷害，每衝 1 排 +2、每點怒氣 +2，魔王下一擊減半' }
             ],
             knight: [
-                { id: 'bash', icon: '🛡️', name: '盾擊', tier: 1, req: 'front', dmg: 3, desc: '3 傷害' },
+                { id: 'bash', icon: '🛡️', name: '盾擊', tier: 1, req: 'front', dmg: 5, desc: '5 傷害' },
                 { id: 'guard', icon: '🏰', name: '守護', tier: 1, req: 'any', guard: true, desc: '魔王的單體攻擊改打騎士，騎士只受一半傷害' },
-                { id: 'holy', icon: '✨', name: '聖光打擊', tier: 2, req: 'front', dmg: 5, teamStress: -10, desc: '5 傷害，全隊恐懼 −10' }
+                { id: 'holy', icon: '✨', name: '聖光打擊', tier: 2, req: 'front', dmg: 6, teamStress: -10, desc: '6 傷害，全隊恐懼 −10' }
             ],
             mage: [
-                { id: 'fire', icon: '🔥', name: '火球', tier: 1, req: 'back', dmg: 3, crit: true, fx: '🔥', desc: '3 傷害，35% 爆擊 ×2' },
-                { id: 'bolt', icon: '⚡', name: '雷擊', tier: 2, req: 'any', dmg: 5, crit: true, fx: '⚡', desc: '5 傷害，35% 爆擊 ×2' },
-                { id: 'ice', icon: '❄️', name: '冰封', tier: 3, req: 'back', dmg: 4, freeze: true, fx: '❄️', desc: '4 傷害，魔王下次不能行動' }
+                { id: 'fire', icon: '🔥', name: '火球', tier: 1, req: 'back', dmg: 4, combo: true, fx: '🔥', desc: '4 傷害，35% 連擊再打一次' },
+                { id: 'bolt', icon: '⚡', name: '雷擊', tier: 2, req: 'any', dmg: 6, combo: true, fx: '⚡', desc: '6 傷害，35% 連擊再打一次' },
+                { id: 'ice', icon: '❄️', name: '冰封', tier: 3, req: 'back', dmg: 6, freeze: true, fx: '❄️', desc: '6 傷害，魔王下次不能行動' }
             ],
             healer: [
                 { id: 'heal', icon: '💚', name: '治療', tier: 1, req: 'any', heal: 7, desc: '血最少的隊友 +7，可以救起倒地的人' },
                 { id: 'pray', icon: '🙏', name: '祈禱', tier: 2, req: 'back', healAll: 3, teamStress: -15, desc: '全隊 +3 血、恐懼 −15' },
-                { id: 'smite', icon: '🌟', name: '聖光彈', tier: 1, req: 'any', dmg: 2, fx: '🌟', desc: '2 傷害' }
+                { id: 'smite', icon: '🌟', name: '聖光彈', tier: 1, req: 'any', dmg: 4, fx: '🌟', desc: '4 傷害' }
+            ],
+            archer: [
+                { id: 'shot', icon: '🏹', name: '射擊', tier: 1, req: 'back', dmg: 5, fx: '➹', desc: '5 傷害，爆擊率 30%' },
+                { id: 'pierce', icon: '🎯', name: '穿心箭', tier: 2, req: 'any', dmg: 6, pierce: true, critBonus: 0.2, fx: '➹', desc: '6 傷害，無視鐵甲與閃避，爆擊率 50%' },
+                { id: 'rain', icon: '🌧️', name: '箭雨', tier: 3, req: 'back', dmg: 4, hits: 3, fx: '➹', desc: '連射 3 箭，每箭 4 傷害、各自可能爆擊' }
             ]
         };
         const RISE = { id: 'rise', icon: '💪', name: '掙扎起身', tier: 1, req: 'any', desc: '答對就站起來，回 40% 血' };
         const ULTS = {
-            warrior: { name: '破天斬', icon: '⚔️', color: '#f87171', desc: '一刀 14 傷害，無視鐵甲與閃避' },
-            mage:    { name: '流星雨', icon: '☄️', color: '#c084fc', desc: '三顆流星，共 9～18 傷害' },
+            warrior: { name: '破天斬', icon: '⚔️', color: '#f87171', desc: '一刀 16 傷害，無視鐵甲與閃避' },
+            mage:    { name: '流星雨', icon: '☄️', color: '#c084fc', desc: '三顆流星，共 12～21 傷害' },
+            archer:  { name: '萬箭齊發', icon: '🌠', color: '#86efac', desc: '連射 5 箭，每箭 3 傷害、必定爆擊' },
             knight:  { name: '聖光壁壘', icon: '🛡️', color: '#7dd3fc', desc: '全隊護盾 +6，並守護全隊' },
             healer:  { name: '生命之泉', icon: '⛲', color: '#4ade80', desc: '全隊回 8 血、救起倒地的人、恐懼 −30' }
         };
@@ -1682,20 +1791,39 @@ ${JSON.stringify(list)}
                 renderAll(); fxHeal(spr(i), `+${h.hp}`); SFX.heal();
                 await wait(800);
             }
-            if (sk.move) { moveHero(i, 1); game.say = `💨 ${name} 衝到最前排！`; renderAll(); await wait(450); }
-            if (sk.dmg) {
-                let d = sk.dmg + bonus, crit = false;
-                if (sk.crit && Math.random() < 0.35) { d *= 2; crit = true; h.crits++; }
-                if (half) d = Math.ceil(d / 2);
-                const dodge = hasT('ghost') && Math.random() < 0.2;
-                d = modDmg(d);
-                game.say = dodge ? `👻 ${escapeHtml(bossName())} 閃開了 ${name} 的 ${sk.name}！`
-                    : `${sk.icon} ${name} 的 ${sk.name}！造成 <b class="text-rose-300">${d}</b> 傷害${c.fast ? ' ⚡快攻' : ''}${crit ? ' 💥爆擊！' : ''}${c.cheer ? ' 📣' : ''}${half ? '（嚇壞了，減半）' : ''}`;
-                renderAll();
-                await animAttack(i, sk, d, crit, dodge);
-                if (!dodge) { hitBoss(d); h.dmg += d; }
-                renderAll();
+            let base = sk.dmg ? sk.dmg + bonus : 0, rushNote = '';
+            if (sk.rush) {
+                const dist = rankOf(i) - 1, rage = h.rage || 0;
+                base += dist * 2 + rage * 2; h.rage = 0;
+                rushNote = `（衝 ${dist} 排${rage ? `・怒氣 ${rage}` : ''}）`;
             }
+            if (sk.move) { moveHero(i, 1); game.say = `💨 ${name} 衝到最前排！${rushNote}`; renderAll(); await wait(450); }
+            if (sk.dmg) {
+                // 幾下：箭雨固定 3 箭；法師 35% 連擊多打一下
+                const hits = sk.hits || (sk.combo && Math.random() < 0.35 ? 2 : 1);
+                let total = 0, crits = 0, miss = 0;
+                for (let k = 0; k < hits; k++) {
+                    let d = base, crit = false;
+                    if (Math.random() < (CRIT[h.cls] || 0) + (sk.critBonus || 0)) { d = critDmg(d); crit = true; crits++; h.crits++; }
+                    if (half) d = Math.ceil(d / 2);
+                    const dodge = hasT('ghost') && !sk.pierce && Math.random() < 0.2;
+                    d = modDmg(d, sk.pierce);
+                    const tags = `${c.fast && !k ? ' ⚡快攻' : ''}${crit ? ' 💥爆擊！' : ''}${hits > 1 ? ` 🔁第 ${k + 1} 擊` : ''}${c.cheer && !k ? ' 📣' : ''}${half ? '（嚇壞了，減半）' : ''}`;
+                    game.say = dodge ? `👻 ${escapeHtml(bossName())} 閃開了 ${name} 的 ${sk.name}！`
+                        : `${sk.icon} ${name} 的 ${sk.name}！造成 <b class="text-rose-300">${d}</b> 傷害${tags}`;
+                    renderAll();
+                    if (k === 0) await animAttack(i, sk, d, crit, dodge); else await animArrow(i, d, crit, false, sk.fx, dodge);
+                    if (!dodge) { hitBoss(d); h.dmg += d; total += d; } else miss++;
+                    renderAll();
+                    if (game.bossHp <= 0) break;
+                }
+                if (hits > 1) {
+                    if (sk.combo) h.combos = (h.combos || 0) + 1;
+                    game.say = `${sk.icon} ${name} 的 ${sk.name}${sk.combo ? ' 🔁連擊！' : ''}共 ${hits} 擊，造成 <b class="text-rose-300">${total}</b> 傷害${crits ? `（💥爆擊 ${crits} 次）` : ''}`;
+                    renderAll(); await wait(300);
+                }
+            }
+            if (sk.rush && game.bossHp > 0) { game.dazed = true; game.say += '　💫 魔王被撞暈，下一擊減半！'; renderAll(); fxOn(bossEl(), '💫', '#fde047', 54); }
             if (sk.guard) {
                 h.guard = true;
                 game.say = `🏰 ${name} 舉起盾牌守護全隊！魔王的單體攻擊會打騎士`;
@@ -1777,18 +1905,28 @@ ${JSON.stringify(list)}
             showUltText(`${u.icon}<br>${escapeHtml(name)}<br>${u.name}！`, u.color);
             await wait(900);
             if (h.cls === 'warrior') {
-                const d = modDmg(14, true);
+                const d = modDmg(16, true);
                 await animUltWarrior(i, d);
                 hitBoss(d); h.dmg += d;
             } else if (h.cls === 'mage') {
                 let total = 0;
                 for (let k = 0; k < 3; k++) {
-                    const d = modDmg(3 + Math.floor(Math.random() * 4));
+                    const d = modDmg(4 + Math.floor(Math.random() * 4));
                     await animMeteor(d);
                     hitBoss(d); total += d; renderScene();
                 }
                 h.dmg += total;
                 game.say = `☄️ 流星雨共造成 <b class="text-rose-300">${total}</b> 傷害！`;
+            } else if (h.cls === 'archer') {
+                let total = 0;
+                for (let k = 0; k < 5; k++) {
+                    const d = modDmg(critDmg(3), true);
+                    await animArrow(i, d, true, k < 4);
+                    hitBoss(d); total += d; h.crits++; renderScene();
+                    if (game.bossHp <= 0) break;
+                }
+                h.dmg += total;
+                game.say = `🌠 萬箭齊發共造成 <b class="text-rose-300">${total}</b> 傷害！`;
             } else if (h.cls === 'knight') {
                 game.heroes.forEach((o, k) => { if (!o.down) { o.shield = Math.min(12, o.shield + 6); fxShield(spr(k)); } });
                 h.guard = true; h.shields += 6 * alive().length;
@@ -1882,7 +2020,8 @@ ${JSON.stringify(list)}
                 return endBossTurn();
             }
             game.bossActs++;
-            const atk = bossAtk();
+            let atk = bossAtk();
+            if (game.dazed) { game.dazed = false; atk = Math.max(1, Math.ceil(atk / 2)); toast('💫 魔王還在暈，這一擊減半', '#fde047'); }
             const live = alive();
             const front = live.filter(k => isFront(rankOf(k)));
             const back = live.filter(k => isBack(rankOf(k)));
@@ -1982,6 +2121,7 @@ ${JSON.stringify(list)}
             h.shield -= absorbed; dmg -= absorbed;
             h.hp -= dmg;
             h.energy = Math.min(100, h.energy + 10);
+            if (dmg && h.cls === 'warrior') h.rage = Math.min(3, (h.rage || 0) + 1);
             fxHit(spr(target), dmg ? `${label ? label + ' ' : ''}−${dmg}` : '🛡️擋下', dmg ? '#f87171' : '#7dd3fc');
             if (dmg) SFX.wrong(); else SFX.block();
             if (!quiet && dmg) addStress(target, 10);
@@ -2163,7 +2303,7 @@ ${JSON.stringify(list)}
             const ph = game.phase;
             const head = `<div class="flex items-center justify-between gap-1 mb-1.5">
                 <div class="font-black text-sm md:text-lg truncate" style="color:${active ? '#fde047' : s.color}">${cls.icon} ${escapeHtml(teamName(i))}</div>
-                <div class="shrink-0 text-[11px] md:text-xs font-bold text-slate-300">第 ${rankOf(i)} 排</div></div>`;
+                <div class="shrink-0 text-[11px] md:text-xs font-bold text-slate-300">${h.rage ? `<span class="text-orange-300" title="怒氣：衝鋒時每點 +2 傷害">🔥×${h.rage}</span> ` : ''}第 ${rankOf(i)} 排</div></div>`;
             const energy = `<div class="flex items-center gap-1"><span class="text-[10px]">💥</span><div class="flex-1">${bar(h.energy / 100, h.energy >= 100 ? '#fde047' : s.color, 'h-2')}</div></div>`;
             let body = '';
             if (active && ph === 'choose') {
@@ -2297,6 +2437,19 @@ ${JSON.stringify(list)}
             fxOn(b, `${crit ? '💥' : ''}−${d}`, crit ? '#fde047' : '#f87171', crit ? 64 : 52);
             crit ? (SFX.chest(), bigShake()) : SFX.hit();
             await wait(450);
+        }
+        // 第二擊之後：快速再飛一發（箭、火球、雷）
+        async function animArrow(i, d, crit, quick, icon = '➹', dodge = false) {
+            if (FAST()) return;
+            const el = spr(i), b = bossEl(), hp = centerOf(el), bp = centerOf(b);
+            const proj = fxNode(icon, hp.x + 30, hp.y - 10, '', `font-size:44px;filter:drop-shadow(0 0 10px ${crit ? '#fde047' : '#86efac'})`);
+            await anim(proj, [{ left: hp.x + 30 + 'px', top: hp.y - 10 + 'px', transform: 'translate(-50%,-50%) scale(.8)' }, { left: bp.x + 'px', top: bp.y + 'px', transform: 'translate(-50%,-50%) scale(1.2)' }], { duration: quick ? 200 : 300, easing: 'ease-in' });
+            proj.remove();
+            if (dodge) { fxOn(b, '👻 MISS', '#94a3b8', 40); return; }
+            bossHitFlash();
+            fxOn(b, `${crit ? '💥' : ''}−${d}`, crit ? '#fde047' : '#f87171', crit ? 58 : 46);
+            crit ? (SFX.chest(), shake('bossSpr')) : SFX.hit();
+            await wait(quick ? 160 : 300);
         }
         async function animFail(i) {
             if (FAST()) return;
@@ -2444,7 +2597,7 @@ ${JSON.stringify(list)}
                         <div class="bg-slate-900/60 rounded-lg py-1.5 text-green-400">✔ 答對<br>${h.correct}</div>
                         <div class="bg-slate-900/60 rounded-lg py-1.5 text-red-400">✘ 答錯<br>${h.wrong}</div>
                         <div class="bg-slate-900/60 rounded-lg py-1.5 text-amber-300">答對率<br>${rate}%</div>
-                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-sky-300">${h.cls === 'healer' ? `💚 治療<br>${h.heals}` : h.cls === 'knight' ? `🛡️ 護盾<br>${h.shields}` : h.cls === 'mage' ? `💥 爆擊<br>${h.crits}` : `💤 倒地<br>${h.downs}`}<div class="text-xs text-slate-400">📣 打氣 ${h.cheered}${h.ults ? `・大招 ${h.ults}` : ''}</div></div>
+                        <div class="bg-slate-900/60 rounded-lg py-1.5 text-sky-300">${h.cls === 'healer' ? `💚 治療<br>${h.heals}` : h.cls === 'knight' ? `🛡️ 護盾<br>${h.shields}` : h.cls === 'mage' ? `🔁 連擊<br>${h.combos || 0}` : `💥 爆擊<br>${h.crits}`}<div class="text-xs text-slate-400">📣 打氣 ${h.cheered}${h.ults ? `・大招 ${h.ults}` : ''}</div></div>
                     </div>
                 </div>`;
             }).join('');
@@ -2495,7 +2648,7 @@ ${JSON.stringify(list)}
                 }).join('');
                 return `<div class="max-w-4xl mx-auto mb-4 bg-slate-800/80 border ${e.ok ? 'border-slate-700' : 'border-red-800'} rounded-2xl p-4">
                     <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs font-bold">
-                        <span class="text-slate-400">第 ${idx + 1} 題　<span class="text-amber-300">${'★'.repeat(e.tier)}</span>${e.source === '延伸' ? ' <span class="text-emerald-300">🔭 延伸</span>' : ''}　<span style="color:${s.color}">${escapeHtml(teamName(e.hero))}</span>・${escapeHtml(e.skill)}</span>
+                        <span class="text-slate-400">第 ${idx + 1} 題 ${NLB.flagBtn(e)}　<span class="text-amber-300">${'★'.repeat(e.tier)}</span>${e.source === '延伸' ? ' <span class="text-emerald-300">🔭 延伸</span>' : ''}　<span style="color:${s.color}">${escapeHtml(teamName(e.hero))}</span>・${escapeHtml(e.skill)}</span>
                         <span class="${e.ok ? 'text-green-400' : 'text-red-400'}">${e.ok ? `✔ 答對・${e.sec} 秒` : (e.pick < 0 ? '⏰ 時間到' : '✘ 答錯')}</span>
                     </div>
                     <div class="text-lg md:text-xl font-bold text-slate-100 mb-3">${escapeHtml(e.q)}</div>
@@ -2571,6 +2724,15 @@ ${JSON.stringify(list)}
             const hb = document.getElementById('homeBtn'); if (hb) { hb.classList.remove('hidden'); hb.classList.add('flex'); }
             const hl = document.getElementById('homeLink'); if (hl) hl.classList.remove('hidden');
         }
+    
+        // 打開時：如果別的遊戲已經出好題庫，直接拿來用
+        window.addEventListener('load', () => setTimeout(() => {
+            if (bankSize()) return;
+            const s = NLB.load(); if (!s) return;
+            lastSource = s.src; isDemoBank = false;
+            setBank(s.all);
+            toast(`📦 已載入共用題庫「${s.label}」${s.n} 題，不用再出題`, '#34d399');
+        }, 300));
     </script>
 </body>
 </html>

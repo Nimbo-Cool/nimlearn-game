@@ -35,7 +35,7 @@
         @media (max-height: 860px) {
             main { padding-top: .5rem !important; padding-bottom: .5rem !important; }
             main > div:first-child { padding: .6rem 1rem !important; margin-bottom: .5rem !important; }
-            main > div:first-child .h-20 { height: 3.75rem !important; }
+            main > div:first-child .h-24 { height: 4.5rem !important; }
             main > div:nth-child(2) { padding: .9rem 1.2rem !important; min-height: 100px !important; margin: .25rem 0 !important; }
             #leftPanel, #rightPanel { padding: .6rem .8rem !important; }
             #leftOptions button, #rightOptions button { padding-top: .5rem !important; padding-bottom: .5rem !important; }
@@ -91,12 +91,12 @@
             </div>
 
             <!-- 拔河賽道 -->
-            <div class="relative h-20 bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center">
-                <div class="absolute inset-y-0 w-1 bg-amber-400 z-10 left-1/2 -translate-x-1/2 opacity-70"></div>
+            <div class="relative h-24 bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center">
+                <div id="tugStage" class="absolute inset-0"></div>
                 <div class="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] text-amber-400 font-mono z-10">勝負中線</div>
 
                 <!-- 繩子與人物容器 -->
-                <div id="ropeContainer" class="absolute w-full flex items-center justify-center rope-transition" style="transform: translateX(0px);">
+                <div id="ropeContainer" class="absolute w-full flex items-center justify-center rope-transition" style="transform: translateX(0px);display:none">
                     <div class="flex items-center gap-1 mr-[-10px]">
                         <span class="text-4xl transform -scale-x-100">🤼</span>
                         <span class="text-3xl transform -scale-x-100">🧒</span>
@@ -326,6 +326,91 @@
     </div>
 
     <script>
+    // =====================================================================
+    //  共用題庫（四款 AI 遊戲共用，存在這台電腦的瀏覽器裡）
+    //  ‧任何一款出好題庫，其他遊戲打開就直接用，不用再花一次 AI
+    //  ‧背景補題也會存回共用題庫
+    //  ‧今天在別的遊戲出過的題目，盡量不再出現
+    //  ‧檢討時按「🚩 題目有錯」，這題以後四款都不會再出
+    // =====================================================================
+    const NLB = (() => {
+        const KEY = 'nl_shared_bank_v1', BAD = 'nl_bad_qs_v1', ASKED = 'nl_asked_v1';
+        const norm = s => String(s || '').replace(/[\s，。、？！?!.,：:；;「」『』（）()\-—_"'“”]/g, '').toLowerCase();
+        const grams = s => { const t = norm(s), g = new Set(); for (let i = 0; i < t.length - 1; i++) g.add(t.slice(i, i + 2)); return g; };
+        const sim = (a, b) => { const A = grams(a), B = grams(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach(x => { if (B.has(x)) n++; }); return n / Math.min(A.size, B.size); };
+        const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+        const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+        const today = () => new Date().toISOString().slice(0, 10);
+        const bad = () => new Set(read(BAD, []));
+        const asked = () => { const a = read(ASKED, {}); return a.day === today() ? new Set(a.list || []) : new Set(); };
+        // 題目「換句話說」也算重複：同一個知識點只留一題
+        const ans = q => norm(q.options && q.options[q.answer]);
+        const sameAns = (a, b) => { const x = ans(a), y = ans(b); return x && y && (x === y || (x.length >= 1 && y.length >= 1 && (x.includes(y) || y.includes(x)) && Math.min(x.length, y.length) / Math.max(x.length, y.length) >= .5)); };
+        const same = (a, b) => norm(a.q) === norm(b.q) || (sameAns(a, b) && sim(a.q, b.q) > 0.3) || sim(a.q, b.q) > 0.72 && sim(a.options.join(''), b.options.join('')) > 0.5 || (a.point && b.point && norm(a.point) === norm(b.point) && sim(a.q, b.q) > 0.45);
+        // 出題的切入角度：每批隨機抽幾個，讓題目長得不一樣
+        const ANGLES = ['生活中的例子', '比較兩件事的不同', '原因和結果', '判斷對錯的情境', '順序或步驟', '分類', '數字、單位或時間', '人物、地點或名稱', '看現象推原因', '實驗或觀察怎麼做', '常見的誤解', '應用到新情境', '找出例外', '圖表或資料的意思（用文字描述）'];
+        return {
+            sim,
+            // 出題提示：避開已出過的題目、指定切入角度
+            avoid(prev) {
+                const s = read(KEY, null), all = s ? [1, 2, 3].flatMap(t => (s.all[t] || []).map(q => q.q)) : [];
+                const list = [...new Set([...all, ...(prev || [])])];
+                return list.slice(-90).map(q => '- ' + q).join('\n');
+            },
+            angles() {
+                const a = [...ANGLES].sort(() => Math.random() - .5).slice(0, 5);
+                return `\n- 這一批請盡量用這些切入角度出題（每題換一種）：${a.join('、')}。\n- 每一題考「不同的知識點」，同一個名詞或概念最多出現在一題的正確答案裡；在每題加一個 "point" 欄位，用 8 個字以內寫出這題考的知識點。\n- 題目句型要有變化，不要每題都是「下列哪一個……」。`;
+            },
+            // 把新題目裡重複的（跟自己、跟題庫裡已有的）拿掉
+            dedupe(qs, bankAll) {
+                const have = bankAll ? [1, 2, 3].flatMap(t => bankAll[t] || []) : [];
+                const s = read(KEY, null); if (s) have.push(...[1, 2, 3].flatMap(t => s.all[t] || []));
+                const B = bad(), out = [];
+                qs.forEach(q => { if (B.has(norm(q.q))) return; if (have.some(h => same(h, q)) || out.some(h => same(h, q))) return; out.push(q); });
+                return out;
+            },
+            save(src, bankAll) {
+                if (!src) return;
+                const all = { 1: [], 2: [], 3: [] };
+                [1, 2, 3].forEach(t => { all[t] = (bankAll[t] || []).map(q => ({ q: q.q, options: q.options, answer: q.answer, explanation: q.explanation, source: q.source, point: q.point })); });
+                const keepSrc = src.type === 'pdf' ? { type: 'pdf', name: src.name, text: src.text } : { type: 'topic', topic: src.topic };
+                const settings = typeof getQuizSettings === 'function' ? getQuizSettings() : {};
+                if (!write(KEY, { src: keepSrc, all, grade: settings.grade, extend: settings.extend, at: Date.now() })) {
+                    keepSrc.text = (keepSrc.text || '').slice(0, 20000); write(KEY, { src: keepSrc, all, grade: settings.grade, extend: settings.extend, at: Date.now() });
+                }
+            },
+            load() {
+                const s = read(KEY, null); if (!s || !s.src || !s.all) return null;
+                const B = bad(); [1, 2, 3].forEach(t => { s.all[t] = (s.all[t] || []).filter(q => !B.has(norm(q.q))); });
+                const n = [1, 2, 3].reduce((a, t) => a + s.all[t].length, 0);
+                if (n < 8) return null;
+                s.label = s.src.type === 'pdf' ? s.src.name : s.src.topic; s.n = n;
+                return s;
+            },
+            // 抽題用：今天別的遊戲出過、或被標記有錯的題目排到最後
+            fresh(arr) {
+                const A = asked(), B = bad();
+                const ok = arr.filter(q => !B.has(norm(q.q)));
+                return [...ok.filter(q => A.has(norm(q.q))), ...ok.filter(q => !A.has(norm(q.q)))];   // pop() 從尾巴拿，沒出過的在尾巴
+            },
+            mark(q) { if (!q) return; const a = read(ASKED, {}); const list = a.day === today() ? a.list || [] : []; list.push(norm(q.q)); write(ASKED, { day: today(), list: list.slice(-600) }); },
+            flagBtn(q) { return q && q.q ? `<button type="button" class="nlb-flag" data-q="${encodeURIComponent(q.q)}" onclick="NLB.flag(this)">🚩 題目有錯</button>` : ''; },
+            flag(btn) {
+                const text = decodeURIComponent(btn.dataset.q), k = norm(text), list = read(BAD, []);
+                if (list.includes(k)) return;
+                if (!confirm('確定這題有錯嗎？標記後四款遊戲都不會再出這題。\n\n' + text)) return;
+                list.push(k); write(BAD, list.slice(-500));
+                const s = read(KEY, null);
+                if (s) { [1, 2, 3].forEach(t => { s.all[t] = (s.all[t] || []).filter(q => norm(q.q) !== k); }); write(KEY, s); }
+                try { [1, 2, 3].forEach(t => { if (typeof bank !== 'undefined') bank[t] = bank[t].filter(q => norm(q.q) !== k); if (typeof bankAll !== 'undefined') bankAll[t] = bankAll[t].filter(q => norm(q.q) !== k); }); } catch (e) {}
+                btn.textContent = '✔ 已標記，不會再出'; btn.disabled = true; btn.classList.add('done');
+            },
+            isBad(q) { return q && bad().has(norm(q.q)); }
+        };
+    })();
+    (() => { const st = document.createElement('style'); st.textContent = '.nlb-flag{margin-left:8px;font-size:12px;font-weight:900;padding:2px 8px;border-radius:8px;border:1px solid #f87171;color:#fca5a5;background:rgba(127,29,29,.35);cursor:pointer}.nlb-flag:hover{background:rgba(185,28,28,.6)}.nlb-flag.done{border-color:#64748b;color:#94a3b8;background:transparent;cursor:default}'; document.head.appendChild(st); })();
+    </script>
+    <script>
         // ===== AI 來源設定 =====
         const PROVIDERS = {
             gemini: {
@@ -518,9 +603,9 @@ source 標示題目來源："課本" 或 "延伸"：
 - 不要考${gradeName}年級還沒學過的概念或專有名詞（教材內文有寫到的除外）；題目和選項不要用比${gradeName}年級更難的字詞。
 - 每題只有一個正確答案，三個錯誤選項要看起來合理但明確是錯的，不可以有兩個都算對的選項。
 - 避免「以上皆是」「以上皆非」與否定句考法。
-- 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。`;
+- 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。${NLB.angles()}`;
             const avoid = previousQs.length
-                ? `\n\n以下題目已經出過，請出不同的新題目：\n${previousQs.slice(-60).map(q => '- ' + q).join('\n')}`
+                ? `\n\n以下題目已經出過，請出不同的新題目：\n${NLB.avoid(previousQs)}`
                 : '';
             const tierText = `\n\n【難度：${T.name}】${T.desc}`;
             if (src.type === 'pdf') {
@@ -535,7 +620,8 @@ source 標示題目來源："課本" 或 "延伸"：
             const { grade } = getQuizSettings();
             const list = questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
             const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（不要猜出題者的意思，依照公認正確的知識判斷），並檢查每題品質。
-對每一題回報：
+對每一題回報（請先想清楚再回答）：
+- why：用一句話寫出你的解題理由（30 字內）
 - best：你認為唯一正確的選項索引（0~3）
 - ok：true 代表這題事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級程度、用字太難）就填 false
 - 年級程度參考：${GRADE_GUIDE[grade]}
@@ -543,7 +629,7 @@ source 標示題目來源："課本" 或 "延伸"：
 題目：
 ${JSON.stringify(list)}
 
-請嚴格以 JSON 格式輸出：{"results":[{"id":0,"best":1,"ok":true}]}`;
+請嚴格以 JSON 格式輸出：{"results":[{"id":0,"why":"……","best":1,"ok":true}]}`;
             const raw = await callGeminiRaw(prompt);
             const parsed = parseJsonLoose(raw);
             const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
@@ -565,7 +651,8 @@ ${JSON.stringify(list)}
 
         // 出一個難度：出題 → 審題（審題失敗就保留原題）
         async function makeTier(src, tier, n, report) {
-            const raw = normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n))));
+            const raw = NLB.dedupe(normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n)))), typeof bankAll !== 'undefined' ? bankAll : null);
+            if (!raw.length) return { qs: [], removed: 0, checked: true };
             previousQs.push(...raw.map(q => q.q));
             report(tier, '審題中');
             try {
@@ -609,7 +696,8 @@ ${JSON.stringify(list)}
 
                 lastSource = src;
                 bankAll = { 1: [...result[1]], 2: [...result[2]], 3: [...result[3]] };
-                bank = { 1: shuffleArr([...result[1]]), 2: shuffleArr([...result[2]]), 3: shuffleArr([...result[3]]) };
+                bank = { 1: NLB.fresh(shuffleArr([...result[1]])), 2: NLB.fresh(shuffleArr([...result[2]])), 3: NLB.fresh(shuffleArr([...result[3]])) };
+                NLB.save(src, bankAll);
                 currentQuestions = drawRound().qs;
                 document.getElementById('topicTag').innerText = src.type === 'pdf' ? `來源教冊：${src.name}` : `主題：${src.topic}`;
                 const ext = [1, 2, 3].reduce((n, t) => n + result[t].filter(q => q.source === '延伸').length, 0);
@@ -643,7 +731,7 @@ ${JSON.stringify(list)}
                     let q = pick(t);
                     if (!q && bankTotal()) {
                         repeated = true;
-                        bank = { 1: shuffleArr([...bankAll[1]]), 2: shuffleArr([...bankAll[2]]), 3: shuffleArr([...bankAll[3]]) };
+                        bank = { 1: NLB.fresh(shuffleArr([...bankAll[1]])), 2: NLB.fresh(shuffleArr([...bankAll[2]])), 3: NLB.fresh(shuffleArr([...bankAll[3]])) };
                         qs.forEach(x => { bank[x.tier] = bank[x.tier].filter(y => y.q !== x.q); });
                         q = pick(t);
                     }
@@ -651,6 +739,7 @@ ${JSON.stringify(list)}
                 }
             }
             qs.sort((a, b) => a.tier - b.tier);
+            qs.forEach(q => NLB.mark(q));
             topUpBank();
             return { qs, repeated };
         }
@@ -670,6 +759,7 @@ ${JSON.stringify(list)}
                     bankAll[t].push(...r.qs);
                     added += r.qs.length;
                 });
+                NLB.save(lastSource, bankAll);
                 if (added) toast(`📚 AI 在背景補了 ${added} 題新題目`, '#34d399');
             } finally {
                 toppingUp = false;
@@ -1120,6 +1210,7 @@ ${JSON.stringify(list)}
             hideOverlay();
             currentQuestionIdx = 0;
             ropePosition = 0;
+            TUGFX.reset();
             resetStats();
             updateRopeUI();
             loadQuestion(0);
@@ -1291,6 +1382,7 @@ ${JSON.stringify(list)}
                 picked.querySelector('.mark').innerText = '✔ 答對';
                 panel.classList.add('panel-flash-ok');
                 showPop(team, `✔ +${pull}`, '#4ade80');
+                TUGFX.pull(team, pull);
                 SFX.correct();
             } else {
                 stats[team].wrong++;
@@ -1298,6 +1390,7 @@ ${JSON.stringify(list)}
                 picked.querySelector('.mark').innerText = '✘ 答錯';
                 panel.classList.add('panel-flash-bad');
                 showPop(team, '✘ 不動', '#f87171');
+                TUGFX.slip(team);
                 SFX.wrong();
             }
             // 其他選項變暗，讓選到的更明顯
@@ -1356,6 +1449,7 @@ ${JSON.stringify(list)}
         function updateRopeUI() {
             ropePosition = Math.max(-ROPE_LIMIT, Math.min(ROPE_LIMIT, ropePosition));
             document.getElementById('ropeContainer').style.transform = `translateX(${ropePosition}px)`;
+            TUGFX.setPos(ropePosition);
         }
 
         function nextQuestion() {
@@ -1392,6 +1486,7 @@ ${JSON.stringify(list)}
             if (stats.left.pull > stats.right.pull) { winner = 'left'; winnerText = "🔴 恭喜【紅隊】獲得最終勝利！"; }
             else if (stats.right.pull > stats.left.pull) { winner = 'right'; winnerText = "🔵 恭喜【藍隊】獲得最終勝利！"; }
 
+            TUGFX.win(winner || 'none');
             document.getElementById('resultArea').innerHTML =
                 teamCard('紅隊', stats.left, 'red', total, winner === 'left') +
                 teamCard('藍隊', stats.right, 'blue', total, winner === 'right');
@@ -1409,7 +1504,8 @@ ${JSON.stringify(list)}
                 ? `🆕 下一局：換 10 題新題目（題庫還有 ${unusedCount()} 題沒出過）`
                 : "🆕 出新題（請先上傳教材或選主題）";
             document.getElementById('regenBtn').classList.remove('hidden');
-            document.getElementById('overlay').classList.remove('hidden');
+            // 先讓大家看 1.8 秒：贏的一隊跳起來歡呼、輸的跌倒，再跳出結算
+            setTimeout(() => document.getElementById('overlay').classList.remove('hidden'), 1800);
         }
 
         // ===== 題目檢討 =====
@@ -1469,7 +1565,7 @@ ${JSON.stringify(list)}
 
                 return `<div class="max-w-4xl mx-auto mb-4 bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
                     <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                        <span class="text-xs font-black text-slate-400">第 ${i + 1} 題 ${q.source === '延伸' ? '<span class="ml-1 text-emerald-300">🔭 延伸</span>' : ''}</span>
+                        <span class="text-xs font-black text-slate-400">第 ${i + 1} 題 ${NLB.flagBtn(q)} ${q.source === '延伸' ? '<span class="ml-1 text-emerald-300">🔭 延伸</span>' : ''}</span>
                         <span class="text-xs font-bold">
                             <span class="text-red-300">紅隊</span> <span class="${L.cls}">${L.tag}</span>
                             <span class="mx-2 text-slate-600">｜</span>
@@ -1577,6 +1673,129 @@ ${JSON.stringify(list)}
             const hb = document.getElementById('homeBtn'); if (hb) { hb.classList.remove('hidden'); hb.classList.add('flex'); }
             const hl = document.getElementById('homeLink'); if (hl) hl.classList.remove('hidden');
         }
+    
+        // 打開時：如果別的遊戲已經出好題庫，直接拿來用
+        window.addEventListener('load', () => setTimeout(() => {
+            if (lastSource) return;
+            const s = NLB.load(); if (!s) return;
+            lastSource = s.src;
+            bankAll = { 1: [...s.all[1]], 2: [...s.all[2]], 3: [...s.all[3]] };
+            bank = { 1: NLB.fresh(shuffleArr([...s.all[1]])), 2: NLB.fresh(shuffleArr([...s.all[2]])), 3: NLB.fresh(shuffleArr([...s.all[3]])) };
+            currentQuestions = drawRound().qs;
+            const tag = document.getElementById('topicTag'); if (tag) tag.innerText = s.src.type === 'pdf' ? `來源教冊：${s.src.name}` : `主題：${s.src.topic}`;
+            regenMode = 'next';
+            toast(`📦 已載入共用題庫「${s.label}」${s.n} 題，不用再出題`, '#34d399');
+        }, 300));
     </script>
+    <script>
+    // =====================================================================
+    //  拔河動畫：像素小朋友真的在拉繩子（畫在賽道上的 canvas）
+    //  ‧答對：那一隊用力往後拉、腳下揚起沙塵、繩子抖動，對面被拖著往前踉蹌
+    //  ‧答錯：那一隊手滑一下
+    //  ‧結束：贏的一隊跳起來歡呼，輸的一隊跌倒
+    // =====================================================================
+    const TUGFX = (() => {
+        let cv = null, g = null, W = 0, H = 0, u = 3, pos = 0, show = 0, vel = 0, t0 = performance.now();
+        const team = { left: { act: 'idle', t: 0 }, right: { act: 'idle', t: 0 } };
+        let winner = null, dust = [], shake = 0, flagWave = 0;
+        const COL = { left: ['#ef4444', '#991b1b'], right: ['#3b82f6', '#1e3a8a'] };
+        const SK = '#f4c9a0', HAIR = ['#6b3d1e', '#2b1a10', '#c47a2c'], PANTS = '#334155', SHOE = '#1f2937';
+        function fit() {
+            if (!cv) return;
+            const r = cv.parentElement.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+            W = r.width; H = r.height; cv.width = Math.round(W * d); cv.height = Math.round(H * d);
+            cv.style.width = W + 'px'; cv.style.height = H + 'px';
+            g.setTransform(d, 0, 0, d, 0, 0); g.imageSmoothingEnabled = false;
+            u = Math.max(2, Math.floor(H / 17));
+        }
+        // 一個小朋友：腳在 (x, y)，lean 是往後仰的角度（正的往左倒），dir=1 面向右
+        function kid(x, y, lean, dir, col, hair, pose, bob) {
+            g.save(); g.translate(Math.round(x), Math.round(y)); g.rotate(lean); g.scale(dir, 1);
+            const P = (px, py, w, h, c) => { g.fillStyle = c; g.fillRect(px * u, py * u, w * u, h * u); };
+            const k = pose === 'pull' ? 1 : 0, by = bob;
+            // 外框（深色底，往外 1 像素）
+            g.fillStyle = '#0b0716';
+            if (pose === 'fall') g.fillRect(-2 * u - 1, -4 * u - 1, 9 * u + 2, 4 * u + 2);
+            else { g.fillRect(-3 * u - 1, (-15 + by) * u - 1, 7 * u + 2, 5 * u + 2); g.fillRect(-2 * u - 1, (-10 + by) * u - 1, 5 * u + 2, 6 * u + 2); }
+            // 腳
+            if (pose === 'cheer') { P(-2, -4, 1, 4, PANTS); P(1, -4, 1, 4, PANTS); }
+            else if (pose === 'fall') { P(-2, -2, 5, 2, PANTS); }
+            else { P(-2 - k, -4, 1, 4, PANTS); P(1 + k, -4, 1, 4, PANTS); P(-3 - k, -1, 2, 1, SHOE); P(1 + k, -1, 2, 1, SHOE); }
+            // 身體、頭
+            if (pose !== 'fall') {
+                P(-2, -10 + by, 5, 6, col[0]); P(-2, -5 + by, 5, 1, col[1]);
+                P(-2, -15 + by, 5, 5, SK); P(-2, -15 + by, 5, 2, hair); P(-3, -14 + by, 1, 3, hair);
+                P(1, -13 + by, 1, 1, '#1a1020');
+                if (pose === 'cheer') { P(-3, -14 + by, 1, 4, col[0]); P(3, -14 + by, 1, 4, col[0]); P(-3, -15 + by, 1, 1, SK); P(3, -15 + by, 1, 1, SK); }
+                else { P(2, -8 + by, 3, 1, col[0]); P(5, -8 + by, 1, 1, SK); }   // 手往前抓繩子
+            } else { P(-2, -4, 6, 2, col[0]); P(4, -4, 3, 2, SK); P(4, -4, 3, 1, hair); }
+            g.restore();
+        }
+        function draw(now) {
+            requestAnimationFrame(draw);
+            if (!cv || !cv.isConnected) return;
+            const dt = Math.min(.05, (now - t0) / 1000); t0 = now;
+            if (cv.parentElement.getBoundingClientRect().width !== W) fit();
+            // 繩子位置：彈簧追上目標，會有一點點彈回來
+            vel += ((pos - show) * 60 - vel * 11) * dt; show += vel * dt;
+            const cx = W / 2 + show * (W / 900), gy = H - 6;
+            g.save(); g.clearRect(0, 0, W, H);
+            if (shake > 0) { shake -= dt; g.translate((Math.random() - .5) * 6 * shake * 4, 0); }
+            // 地面、中線、勝利線
+            g.fillStyle = '#1e293b'; g.fillRect(0, gy - 2, W, H - gy + 2);
+            g.fillStyle = '#334155'; for (let x = (now / 40) % 16; x < W; x += 16) g.fillRect(x, gy + 1, 6, 2);
+            g.fillStyle = 'rgba(251,191,36,.75)'; g.fillRect(W / 2 - 2, 4, 4, H - 8);
+            g.fillStyle = 'rgba(239,68,68,.35)'; g.fillRect(W / 2 - 220 * (W / 900) - 1, 4, 3, H - 8);
+            g.fillStyle = 'rgba(59,130,246,.35)'; g.fillRect(W / 2 + 220 * (W / 900) - 1, 4, 3, H - 8);
+            // 繩子：有張力時會抖
+            const ry = gy - 8 * u, ten = Math.min(1, Math.abs(vel) / 120), span = W * .36;
+            g.fillStyle = '#7c4a1e';
+            for (let x = cx - span; x < cx + span; x += 4) {
+                const wob = Math.sin(x / 14 + now / 60) * ten * 3;
+                g.fillRect(x, ry + wob, 4, Math.max(3, u));
+                if (((x - cx + 9999) / 8 | 0) % 2) { g.fillStyle = '#a0682e'; g.fillRect(x, ry + wob, 4, 1); g.fillStyle = '#7c4a1e'; }
+            }
+            // 中間的紅布條
+            flagWave += dt * (6 + ten * 20);
+            g.fillStyle = '#0b0716'; g.fillRect(cx - 4, ry - 3, 8, 3 * u + 6);
+            g.fillStyle = '#ef4444'; g.fillRect(cx - 3, ry - 2, 6, 3 * u + 4);
+            g.fillStyle = '#fde047'; g.fillRect(cx - 3 + Math.sin(flagWave) * 2, ry + 3 * u + 2, 6, u);
+            // 兩隊各 3 人
+            ['left', 'right'].forEach(side => {
+                const T = team[side], dir = side === 'left' ? 1 : -1;
+                T.t = Math.max(0, T.t - dt);
+                const act = winner && winner !== 'none' ? (winner === side ? 'cheer' : 'fall') : T.t > 0 ? T.act : 'idle';
+                for (let k = 0; k < 3; k++) {
+                    const x = cx - dir * (span * (.35 + k * .22));
+                    let lean = dir * -0.18, pose = 'idle', bob = Math.round(Math.sin(now / 260 + k) * .6);
+                    if (act === 'pull') { lean = dir * -(0.42 + Math.sin(now / 50 + k) * .05); pose = 'pull'; bob = 0;
+                        if (Math.random() < .25) dust.push({ x: x - dir * 6, y: gy - 2, vx: -dir * (20 + Math.random() * 40), vy: -Math.random() * 30, life: .5 }); }
+                    else if (act === 'stumble') { lean = dir * (0.28 + Math.sin(now / 40) * .08); }
+                    else if (act === 'slip') { lean = dir * (0.12 + Math.sin(now / 30) * .15); }
+                    else if (act === 'cheer') { lean = 0; pose = 'cheer'; bob = -Math.abs(Math.round(Math.sin(now / 160 + k * 1.3) * 4)); }
+                    else if (act === 'fall') { lean = 0; pose = 'fall'; }
+                    kid(x, gy + (pose === 'cheer' ? Math.max(-1, bob) * u : 0), lean, dir, COL[side], HAIR[k], pose, pose === 'cheer' ? 0 : bob);
+                }
+            });
+            // 沙塵
+            for (let i = dust.length - 1; i >= 0; i--) { const p = dust[i]; p.life -= dt; if (p.life <= 0) { dust.splice(i, 1); continue; }
+                p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; g.globalAlpha = p.life * 2; g.fillStyle = '#94a3b8'; g.fillRect(p.x, p.y, u + 1, u + 1); }
+            g.globalAlpha = 1; g.restore();
+        }
+        return {
+            mount(el) {
+                if (cv) return;
+                cv = document.createElement('canvas'); cv.style.position = 'absolute'; cv.style.inset = '0'; cv.style.imageRendering = 'pixelated';
+                el.appendChild(cv); g = cv.getContext('2d'); fit(); addEventListener('resize', fit); requestAnimationFrame(draw);
+            },
+            setPos(p) { pos = p; },
+            pull(side, n) { const o = side === 'left' ? 'right' : 'left'; team[side] = { act: 'pull', t: .9 }; team[o] = { act: 'stumble', t: .8 }; shake = .25; vel += (side === 'left' ? -1 : 1) * (60 + n * 4); },
+            slip(side) { if (team[side].t <= 0 || team[side].act !== 'pull') team[side] = { act: 'slip', t: .6 }; },
+            win(side) { winner = side; },
+            reset() { winner = null; team.left = { act: 'idle', t: 0 }; team.right = { act: 'idle', t: 0 }; dust = []; }
+        };
+    })();
+    </script>
+    <script>TUGFX.mount(document.getElementById('tugStage'));</script>
 </body>
 </html>
