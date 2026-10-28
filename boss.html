@@ -568,7 +568,7 @@
         }
 
         // 單一模型呼叫：回傳 {ok, status, text, msg, reason}
-        const noReasoningParam = new Set();   // 不支援 reasoning_effort 的模型
+        const noReasoningParam = new Set(), noThinkParam = new Set();   // 不支援 reasoning_effort 的模型
         async function requestModel(model, promptText) {
             let url, options;
             if (provider === 'gemini') {
@@ -578,7 +578,7 @@
                     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: promptText }] }],
-                        generationConfig: { responseMimeType: "application/json" }
+                        generationConfig: Object.assign({ responseMimeType: "application/json" }, noThinkParam.has(model) ? {} : { thinkingConfig: { thinkingBudget: 512 } })
                     })
                 };
             } else {
@@ -651,7 +651,8 @@
         }
 
         // 呼叫 API：自動找能用的模型，錯誤訊息翻成看得懂的中文
-        async function callGeminiRaw(promptText, retries = 3) {
+        async function callGeminiRaw(promptText, retries = 3, quiet = false) {
+            const showLoadingIfOpen = quiet ? () => {} : window.showLoadingIfOpen;
             const P = PROVIDERS[provider];
             if (!apiKey) throw new Error(`請先在上方框框中輸入或貼上 ${P.name} API Key！`);
 
@@ -692,6 +693,7 @@
                     if (res.status === 400 && /reasoning_effort|reasoning\.effort|Unsupported parameter|unsupported_parameter|Unsupported value/i.test(detail) && !noReasoningParam.has(model)) {
                         noReasoningParam.add(model); i--; continue;
                     }
+                    if (res.status === 400 && /thinking/i.test(detail) && !noThinkParam.has(model)) { noThinkParam.add(model); i--; continue; }
                     // 其他 400（格式不合）：重試也一樣，直接換下一個模型
                     if (res.status === 400 && !/API_KEY_INVALID|API key not valid|Incorrect API key|invalid api key/i.test(detail)) break;
 
@@ -752,6 +754,13 @@
             if (start !== -1 && end > start) {
                 try { return JSON.parse(t.slice(start, end + 1)); } catch (e) {}
             }
+            // 回應太長被截斷：只留下完整的題目
+            if (start !== -1) {
+                let body = t.slice(start);
+                for (let k = body.lastIndexOf('}'); k > 0; k = body.lastIndexOf('}', k - 1)) {
+                    try { const arr = JSON.parse(body.slice(0, k + 1) + ']'); if (Array.isArray(arr) && arr.length) return arr; } catch (e) {}
+                }
+            }
             throw new Error("AI 回傳的格式無法解析，請再按一次試試。");
         }
 
@@ -779,6 +788,7 @@
             for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
             return a;
         }
+        window.showLoadingIfOpen = showLoadingIfOpen;
         function showLoadingIfOpen(title, desc) {
             if (!$('loadingPanel').classList.contains('hidden')) showLoading(title, desc);
         }
@@ -1044,7 +1054,7 @@
             return `請針對主題「${src.topic}」，為${audience}設計 ${n} 道四選一單選題，可以生活化、有趣一點。source 一律填 "課本"。${extend >= 7 ? '可以多出一些課本以外、和這個主題相關的有趣知識（仍要公認正確）。' : ''}${tierText}${quality}${avoid}\n\n${JSON_FORMAT}`;
         }
 
-        async function verifyQuestions(questions) {
+        async function verifyQuestions(questions, quiet) {
             const { grade } = getQuizSettings();
             const list = questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
             const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（依公認正確的知識判斷，不要猜出題者的意思），並檢查每題品質。
@@ -1058,7 +1068,7 @@
 ${JSON.stringify(list)}
 
 請嚴格以 JSON 格式輸出：{"results":[{"id":0,"why":"……","best":1,"ok":true}]}`;
-            const raw = await callGeminiRaw(prompt);
+            const raw = await callGeminiRaw(prompt, 3, quiet);
             const parsed = parseJsonLoose(raw);
             const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
                 .filter(r => r && r.id !== undefined && r.best !== undefined);
@@ -1072,13 +1082,13 @@ ${JSON.stringify(list)}
         }
 
         // 出一個難度：出題 → 審題（審題失敗就保留原題）
-        async function makeTier(src, tier, n, report) {
-            const raw = NLB.dedupe(normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n)))), typeof bankAll !== 'undefined' ? bankAll : null);
+        async function makeTier(src, tier, n, report, quiet) {
+            const raw = NLB.dedupe(normalizeQuestions(parseJsonLoose(await callGeminiRaw(buildTierPrompt(src, tier, n), 3, quiet))), typeof bankAll !== 'undefined' ? bankAll : null);
             if (!raw.length) return { qs: [], removed: 0, checked: true };
             previousQs.push(...raw.map(q => q.q));
             report(tier, '審題中');
             try {
-                const { kept, removed } = await verifyQuestions(raw);
+                const { kept, removed } = await verifyQuestions(raw, quiet);
                 return { qs: kept, removed, checked: true };
             } catch (e) {
                 console.warn('審題失敗，保留原題', e);
@@ -1103,22 +1113,27 @@ ${JSON.stringify(list)}
                 let removedTotal = 0, unchecked = false;
 
                 // 三種難度同時出題，速度比較快
+                let lastErr = null;
                 const firsts = await Promise.all([1, 2, 3].map(t =>
-                    makeTier(src, t, TIERS[t].n, report).then(r => { report(t, `完成 ${r.qs.length} 題`); return r; })
+                    new Promise(r => setTimeout(r, (t - 1) * 900))
+                        .then(() => makeTier(src, t, TIERS[t].n, report))
+                        .then(r => { report(t, `完成 ${r.qs.length} 題`); return r; })
+                        .catch(e => { lastErr = e; report(t, '這次失敗，等一下補題'); return { qs: [], removed: 0, checked: true }; })
                 ));
+                if (lastErr && /API Key|額度|權限|網路連不到/.test(lastErr.message)) throw lastErr;
                 firsts.forEach((r, i) => { result[i + 1].push(...r.qs); removedTotal += r.removed; if (!r.checked) unchecked = true; });
 
                 // 某個難度剔除太多就補出一輪
                 const lacking = [1, 2, 3].filter(t => result[t].length < TIERS[t].min);
                 if (lacking.length) {
                     lacking.forEach(t => report(t, '補題中'));
-                    const extra = await Promise.all(lacking.map(t => makeTier(src, t, TIERS[t].n, report)));
+                    const extra = await Promise.all(lacking.map(t => makeTier(src, t, TIERS[t].n, report).catch(e => { lastErr = e; return { qs: [], removed: 0 }; })));
                     extra.forEach((r, i) => { const t = lacking[i]; result[t].push(...r.qs); removedTotal += r.removed; report(t, `完成 ${result[t].length} 題`); });
                 }
 
                 clearInterval(ticker);
                 const total = result[1].length + result[2].length + result[3].length;
-                if (total < 8) throw new Error('通過檢查的題目太少，請再出一次題。');
+                if (total < 8) throw new Error(lastErr && total === 0 ? lastErr.message : '通過答案檢查的題目太少，請再出一次題。');
 
                 lastSource = src;
                 isDemoBank = false;
@@ -1183,7 +1198,7 @@ ${JSON.stringify(list)}
             toppingUp = true;
             const tiers = [1, 2, 3].sort((a, b) => bank[a].length - bank[b].length).slice(0, 2);
             try {
-                const results = await Promise.all(tiers.map(t => makeTier(lastSource, t, 8, () => {}).catch(() => ({ qs: [] }))));
+                const results = await Promise.all(tiers.map(t => makeTier(lastSource, t, 8, () => {}, true).catch(() => ({ qs: [] }))));
                 let added = 0;
                 results.forEach((r, i) => {
                     const t = tiers[i];
