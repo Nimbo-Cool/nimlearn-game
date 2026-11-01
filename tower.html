@@ -229,7 +229,7 @@ header .hbtn { background: var(--panel2); border: 1px solid var(--line); border-
     .hand { order: 3; flex-basis: 100%; }
 }
 
-/* ---------- 黑暗地牢式戰鬥 ---------- */
+/* ---------- 回合制隊伍戰鬥 ---------- */
 .orderbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #0008; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .olabel { color: var(--sub); font-size: 13px; white-space: nowrap; margin-right: 4px; }
 .ochip { width: 38px; height: 38px; border-radius: 10px; border: 2px solid; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #17141f; }
@@ -748,7 +748,7 @@ const RELICS = {
 };
 const RELIC_KEYS = Object.keys(RELICS);
 
-// 道具（黑暗地牢的補給品）：戰鬥中輪到任何隊員都可以用，不算行動
+// 道具（補給品）：戰鬥中輪到任何隊員都可以用，不算行動
 const ITEMS = {
     torch:   { n: '火把', i: '🔥', tg: 'none', d: '火光 +25', price: 25 },
     bandage: { n: '繃帶', i: '🩹', tg: 'ally', d: '回 6 血、止血', price: 25 },
@@ -1089,7 +1089,7 @@ const SFX = {
     stress: () => tone([300, 240, 200], 0.14, 'sawtooth', 0.08, 0.06),
     win: () => tone([523, 659, 784, 1046], 0.16, 'triangle', 0.1),
     bad: () => tone([220, 160], 0.25, 'sawtooth', 0.15, 0.1),
-    coin: () => tone([988, 1319], 0.07, 'square', 0.06, 0.06),
+    coin: () => tone([880, 1175, 1760], 0.05, 'square', 0.05, 0.05),
     door: () => tone([110, 98, 87], 0.3, 'sawtooth', 0.18, 0.12),
     fire: () => tone([200, 260, 330], 0.2, 'triangle', 0.1, 0.08),
     turn: () => tone([660], 0.08, 'triangle', 0.05, 0.06)
@@ -1148,7 +1148,7 @@ function newRun(diff, classes) {
 }
 
 // =====================================================================
-//  路線地圖（殺戮尖塔式）
+//  路線地圖（分岔路線）
 // =====================================================================
 const MAP_ROWS = 11, MAP_COLS = 5;
 const NODE_INFO = {
@@ -1257,7 +1257,7 @@ function upgradeRandom(R) { const o = upgradeOptions(R); if (!o.length) { R.soul
 function learnRandom(R) { const o = learnOptions(R); if (!o.length) return upgradeRandom(R); const x = pick(o); return doLearn(x.h, x.k); }
 
 // =====================================================================
-//  壓力（黑暗地牢）
+//  壓力
 // =====================================================================
 function addStress(h, v) {
     if (!h || h.dead) return;
@@ -1287,7 +1287,7 @@ function addStress(h, v) {
 }
 
 // =====================================================================
-//  戰鬥（黑暗地牢）：依速度輪流行動，每位隊員輪到時選一招
+//  戰鬥：依速度輪流行動，每位隊員輪到時選一招
 // =====================================================================
 let B = null;
 function alive() { return RUN.party.filter(h => !h.dead).sort((a, b) => a.rank - b.rank); }

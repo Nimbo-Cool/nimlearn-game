@@ -110,10 +110,10 @@
             <h3 class="text-2xl font-black text-amber-300">📖 遊戲規則</h3>
             <p>🎮 <b>操作</b>：← → 移動、<b>空白鍵／↑</b> 跳（按越久跳越高）、<b>Shift</b> 加速。觸控螢幕可以按畫面上的 ◀ ▶ 跳 加速。</p>
             <p>👾 <b class="text-amber-300">從上面踩怪物，就要回答一題</b>：答對才能打倒牠；答錯會被彈開，再踩一次換新題目。從旁邊撞到怪物會受傷。</p>
-            <p>🟦 <b>知識磚</b>：從下面頂藍色的問號磚要答題，答對會跑出 🍊 能量果，吃了變大，被打到只會變小。黃色問號磚有金幣，100 枚換一條命。</p>
-            <p>🚩 三關：<b>知識草原 → 地下水道 → 魔龍城堡</b>。前兩關跳上旗竿過關，跳越高分數越多；第三關要打倒混亂魔龍：踩牠答對 3 題，或碰到斧頭連續答對 3 題斬斷吊橋。</p>
-            <p>👾 怪物有好幾種：墨點怪、盔甲蟲（答對變成龜殼可以踢）、🐸 跳跳蛙會跳、🐝 嗡嗡蜂在空中飛，都可以踩；紅色的 🦔 <b>刺刺球不能踩</b>，要跳過去或用龜殼撞牠。</p>
-            <p>🟩 有些水管站上去按 <b>↓</b>（或畫面上的 ▼）可以鑽下去，上面會出現黃色箭頭，裡面藏很多金幣！有 🌺 食人花的水管，要等花縮回去再過。</p>
+            <p>🟦 <b>知識磚</b>：從下面頂畫著書本的藍色磚要答題，答對會跑出 🍊 能量果，吃了變大，被打到只會變小。畫著金幣的黃色磚有金幣，100 枚換一條命。</p>
+            <p>🌀 三關：<b>晨光森林 → 水晶礦坑 → 魔龍城堡</b>。前兩關走進終點的傳送門就過關，剩下的時間會換成分數；第三關要打倒混亂魔龍：踩牠答對 3 題，或碰到後面的 💎 封印水晶連續答對 3 題，把魔龍封印起來。</p>
+            <p>👾 怪物有好幾種：墨點怪、盔甲蟲（答對會縮成盔甲球，可以踢）、🐸 跳跳蛙會跳、🐝 嗡嗡蜂在空中飛，都可以踩；紅色的 🦔 <b>刺刺球不能踩</b>，要跳過去或用盔甲球撞牠。</p>
+            <p>🪵 有些樹洞站上去按 <b>↓</b>（或畫面上的 ▼）可以鑽下去，上面會出現黃色箭頭，裡面藏很多金幣！有 🐛 洞洞蟲的樹洞，要等牠縮回去再過。</p>
             <p>⚠️ 掉進洞裡、碰到岩漿、時間用完都會少一條命，但會<b>在附近原地復活</b>，不用整關重來。答完題會短暫無敵（勇者閃爍）。</p>
             <div class="text-right"><button onclick="closeRules()" class="px-6 py-2.5 rounded-xl bg-emerald-500 text-slate-900 font-black">知道了</button></div>
         </div>
@@ -125,7 +125,7 @@
             <div class="text-center mb-6">
                 <div class="text-5xl mb-1">🏰</div>
                 <h2 id="menuTitle" class="text-3xl font-black text-amber-300">AI 知識城堡戰</h2>
-                <p id="menuDesc" class="text-slate-300 text-sm mt-1">踩怪物答題、跳上旗竿，一路闖進魔龍城堡！</p>
+                <p id="menuDesc" class="text-slate-300 text-sm mt-1">踩怪物答題、穿過傳送門，一路闖進魔龍城堡！</p>
             </div>
 
             <!-- 結算 -->
@@ -242,8 +242,8 @@
                         <div class="flex items-center justify-between gap-3">
                             <label class="text-xs font-bold text-sky-300">🚩 從哪一關開始</label>
                             <select id="startSelect" onchange="saveGroupSettings()" class="bg-slate-800 border border-slate-600 p-2 rounded-lg text-xs font-bold">
-                                <option value="1">第 1 關・知識草原</option>
-                                <option value="2">第 2 關・地下水道</option>
+                                <option value="1">第 1 關・晨光森林</option>
+                                <option value="2">第 2 關・水晶礦坑</option>
                                 <option value="3">第 3 關・魔龍城堡</option>
                             </select>
                         </div>
@@ -1231,7 +1231,7 @@ ${JSON.stringify(list)}
         function showSetup() {
             stopTimers();
             $('menuTitle').innerText = 'AI 知識城堡戰';
-            $('menuDesc').innerText = '踩怪物答題、跳上旗竿，一路闖進魔龍城堡！';
+            $('menuDesc').innerText = '踩怪物答題、穿過傳送門，一路闖進魔龍城堡！';
             $('topicSelectModal').selectedIndex = 0;
             $('pdfInputModal').value = '';
             toggleTimePanel(false);
@@ -1256,119 +1256,114 @@ ${JSON.stringify(list)}
         //  遊戲本體：知識城堡闖關（橫向跳躍）
         // =====================================================================
         const T = 16, VW = 400, VH = 224, ROWS = 14;
-        // 1 地面 2 磚塊 3 金幣問號磚 4 知識磚 5 用過的磚 6 硬磚 7-10 水管 11 城堡磚 12 吊橋 13 岩漿 14/15 橫向水管口
+        // 1 地面 2 木箱 3 金幣磚 4 知識磚 5 用過的磚 6 石磚 7-10 樹洞 11 城堡磚 12 木橋 13 岩漿 14/15 橫向樹洞口
         const SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15]);
         const ENEMY_NAME = { blob: '墨點怪', beetle: '盔甲蟲', hopper: '跳跳蛙', flyer: '嗡嗡蜂', spiky: '刺刺球', boss: '混亂魔龍' };
         const WALKERS = ['blob', 'beetle', 'hopper', 'spiky'];
 
         const THEMES = {
-            over:   { sky: '#7cc4ff', g1: '#c8733a', g2: '#7a3e17', g3: '#f0a868', b1: '#c0582c', b2: '#5a2410', h1: '#b0703c', h2: '#e8a870', h3: '#5a3014', grass: true },
-            under:  { sky: '#070a16', g1: '#3a6fae', g2: '#16305a', g3: '#86b6ee', b1: '#2f62a0', b2: '#0d1f40', h1: '#4a78b0', h2: '#9cc4f0', h3: '#14284a', grass: false },
+            over:   { sky: '#a6dcef', g1: '#8f6340', g2: '#5c3c22', g3: '#b98a5e', b1: '#c08a4e', b2: '#6a4420', h1: '#8c8a80', h2: '#c4c2b6', h3: '#4e4c46', grass: true, wood: ['#4a2c14', '#8a5a2e', '#b98250', '#e0b070'] },
+            under:  { sky: '#0c0a1c', g1: '#4a4466', g2: '#221e36', g3: '#7a74a0', b1: '#5a5478', b2: '#2a2440', h1: '#5e5a7a', h2: '#9a96ba', h3: '#2a2640', grass: false, wood: ['#22203a', '#4c4870', '#7a76a8', '#b4f0ff'] },
             castle: { sky: '#140b14', g1: '#8a8a98', g2: '#45454f', g3: '#c8c8d4', b1: '#8a8a98', b2: '#45454f', h1: '#9a9aa8', h2: '#d8d8e4', h3: '#4a4a56', grass: false }
         };
 
         const LEVELS = {
             1: {
-                name: '知識草原', theme: 'over', w: 240,
-                regions: [{ x0: 0, x1: 212, theme: 'over' }, { x0: 214, x1: 240, theme: 'under' }], time: 500, start: 3, startRow: 12, check: 96, checkRow: 12,
+                name: '晨光森林', theme: 'over', w: 232,
+                regions: [{ x0: 0, x1: 200, theme: 'over' }, { x0: 202, x1: 232, theme: 'under' }], time: 500, start: 3, startRow: 12, check: 101, checkRow: 12,
                 build(B, lv) {
-                    B.ground(0, 68); B.ground(71, 85); B.ground(89, 150); B.ground(153, 211);
-                    B.row(14, 8, '?');
-                    B.row(18, 8, 'B?K?B'); B.row(20, 4, '?');
-                    B.pipe(28, 2); B.pipe(38, 3); B.pipe(46, 4, true); B.pipe(57, 4);
-                    B.row(29, 6, 'oo'); B.row(39, 5, 'oo');
-                    B.row(76, 8, 'BKB'); B.row(79, 4, 'BBBBBBBB'); B.row(80, 3, 'oooooo');
-                    B.row(91, 4, 'BBB?'); B.row(94, 8, 'B');
-                    B.row(100, 8, 'BB'); B.row(106, 8, '?'); B.row(109, 8, '?'); B.row(109, 4, 'K'); B.row(112, 8, '?');
-                    B.row(118, 8, 'B'); B.row(121, 4, 'BBB'); B.row(128, 4, 'B??B'); B.row(129, 8, 'BB');
-                    B.stairs(134, 4, 1); B.stairs(140, 4, -1);
-                    B.stairs(146, 4, 1); B.col(150, 4); B.stairs(153, 4, -1);
-                    B.pipe(163, 2); B.row(168, 8, 'B?BB'); B.pipe(179, 2, true);
-                    B.stairs(181, 8, 1); B.col(189, 8);
-                    B.set(198, 11, 6);
-                    lv.flag = { x: 198 * T + 8, top: 3 * T, bottom: 11 * T, fy: 3 * T + 4 };
-                    lv.castle = 202;
-                    // 金幣密室：從第 57 格的水管鑽下去，從右邊水管出來，回到第 163 格的水管
-                    B.fill(214, 214, 1, 11, 2); B.fill(214, 239, 1, 1, 2); B.ground(214, 239);
-                    B.fill(217, 226, 10, 11, 2); B.row(217, 9, 'oooooooooo'); B.row(218, 7, 'oooooooo'); B.row(219, 5, 'oooooo');
-                    B.sidePipe(232); B.fill(236, 239, 2, 11, 2);
-                    lv.warps.push({ kind: 'down', tx: 57, top: 8 * T, to: { x: 216 * T, y: 3 * T, mode: 'drop' } });
-                    lv.warps.push({ kind: 'side', x: 232 * T, to: { x: 163 * T + 16, y: 10 * T, mode: 'rise' } });
-                    ['blob,22', 'hopper,40', 'blob,51', 'blob,53', 'blob,82,3', 'flyer,97,8', 'blob,99', 'beetle,107',
-                        'spiky,115', 'blob,125', 'hopper,131', 'flyer,172,8'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
+                    B.ground(0, 52); B.ground(55, 96); B.ground(100, 142); B.ground(146, 201);
+                    B.row(10, 8, '?'); B.row(16, 8, 'B?B'); B.row(16, 7, '');
+                    B.pipe(26, 3); B.pipe(35, 2, true); B.stairs(41, 3, 1);
+                    B.row(46, 8, 'BKBB'); B.row(47, 4, '?');
+                    B.row(60, 8, '??'); B.pipe(66, 4); B.pipe(74, 2);
+                    B.row(80, 8, 'BBBK'); B.row(80, 3, 'oooo');
+                    B.stairs(103, 3, 1);
+                    B.row(110, 8, 'B?B?B'); B.row(112, 4, 'K'); B.pipe(120, 3, true);
+                    B.row(126, 9, 'oooo'); B.stairs(131, 3, 1); B.stairs(135, 3, -1);
+                    B.row(150, 8, 'K??'); B.pipe(158, 2); B.row(164, 8, 'BB'); B.pipe(172, 3);
+                    B.stairs(178, 6, 1); B.col(184, 6);
+                    lv.flag = { x: 192 * T + 8, top: 9 * T, bottom: 12 * T, fy: 0 };
+                    lv.castle = 191;
+                    // 金幣密室：從第 66 格的樹洞鑽下去，從右邊的橫向樹洞出來，回到第 158 格的樹洞
+                    B.fill(202, 202, 1, 11, 2); B.fill(202, 231, 1, 1, 2); B.ground(202, 231);
+                    B.fill(205, 213, 10, 11, 2); B.row(205, 9, 'ooooooooo'); B.row(206, 7, 'ooooooo'); B.row(207, 5, 'ooooo');
+                    B.sidePipe(222); B.fill(226, 231, 2, 11, 2);
+                    lv.warps.push({ kind: 'down', tx: 66, top: 8 * T, to: { x: 204 * T, y: 3 * T, mode: 'drop' } });
+                    lv.warps.push({ kind: 'side', x: 222 * T, to: { x: 158 * T + 16, y: 10 * T, mode: 'rise' } });
+                    ['blob,20', 'hopper,31', 'blob,44', 'blob,58', 'beetle,70', 'flyer,88,8', 'blob,106', 'spiky,116',
+                        'hopper,128', 'blob,152', 'beetle,166', 'flyer,175,8'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
                 }
             },
             2: {
-                name: '地下水道', theme: 'under', w: 248, time: 500, start: 3, startRow: 12, check: 86, checkRow: 12,
-                regions: [{ x0: 0, x1: 178, theme: 'under' }, { x0: 180, x1: 220, theme: 'over' }, { x0: 222, x1: 248, theme: 'under' }],
+                name: '水晶礦坑', theme: 'under', w: 240, time: 500, start: 3, startRow: 12, check: 112, checkRow: 12,
+                regions: [{ x0: 0, x1: 177, theme: 'under' }, { x0: 177, x1: 215, theme: 'over' }, { x0: 216, x1: 240, theme: 'under' }],
                 build(B, lv) {
                     B.fill(0, 0, 2, 11, 2);
-                    B.fill(1, 177, 1, 1, 2);
-                    B.ground(0, 79); B.ground(82, 120); B.ground(124, 135); B.ground(148, 177);
-                    B.row(10, 8, '??K??');
-                    B.col(17, 1); B.col(19, 2); B.col(21, 3); B.col(23, 4); B.col(25, 4); B.col(27, 3); B.col(29, 2);
-                    B.row(36, 6, 'BBBBBB'); B.row(36, 5, 'oooooo');
-                    B.row(44, 7, 'BBKBB');
-                    B.row(56, 8, 'BBBBBBBB'); B.row(57, 7, 'oooooo');
-                    B.col(66, 3, 12, 2); B.col(73, 3, 12, 2); B.row(68, 9, 'oooo');
-                    B.pipe(86, 3, true); B.pipe(92, 4, true); B.pipe(98, 2);
-                    lv.warps.push({ kind: 'down', tx: 98, top: 10 * T, to: { x: 224 * T, y: 3 * T, mode: 'drop' } });
-                    B.pipe(150, 2);
-                    B.row(104, 6, 'BBBBBBBB'); B.row(105, 9, 'oooooo');
-                    B.row(114, 8, 'K');
-                    lv.lifts.push({ x: 137 * T, y: 9 * T, w: 48, mode: 'h', a: 137 * T, b: 141 * T, sp: 0.7, dir: 1, dx: 0, dy: 0 });
-                    lv.lifts.push({ x: 143 * T, y: 8 * T, w: 48, mode: 'v', a: 6 * T, b: 10 * T, sp: 0.6, dir: 1, dx: 0, dy: 0 });
-                    B.stairs(158, 4, 1); B.col(162, 4);
-                    // 橫向出口水管
-                    B.sidePipe(170); B.fill(174, 177, 2, 11, 2);
+                    B.fill(1, 176, 1, 1, 2);
+                    B.ground(0, 62); B.ground(65, 105); B.ground(108, 118); B.ground(130, 176);
+                    B.row(9, 8, '?K?');
+                    B.col(15, 1); B.col(17, 2); B.col(19, 3); B.col(21, 2); B.col(23, 1);
+                    B.row(30, 6, 'BBBBB'); B.row(30, 5, 'ooooo');
+                    B.row(40, 8, 'BKB');
+                    B.col(50, 4, 12, 2); B.col(56, 4, 12, 2); B.row(52, 9, 'ooo');
+                    B.pipe(70, 3, true); B.pipe(78, 2); B.pipe(86, 4, true);
+                    lv.warps.push({ kind: 'down', tx: 78, top: 10 * T, to: { x: 218 * T, y: 3 * T, mode: 'drop' } });
+                    B.row(92, 6, 'BBBBBB'); B.row(93, 5, 'oooo');
+                    B.row(100, 8, 'K');
+                    B.row(110, 8, '??');
+                    lv.lifts.push({ x: 120 * T, y: 12 * T, w: 48, mode: 'h', a: 119 * T, b: 127 * T, sp: 0.6, dir: 1, dx: 0, dy: 0 });   // 跟地面一樣高的木筏，走上去就好
+                    B.pipe(134, 2);
+                    B.row(140, 8, 'BKB'); B.stairs(150, 4, 1); B.col(154, 4);
+                    // 橫向出口樹洞
+                    B.sidePipe(162); B.fill(166, 176, 2, 11, 2);
                     // 地面出口
-                    B.ground(180, 219);
-                    B.pipe(182, 2);
-                    lv.warps.push({ kind: 'side', x: 170 * T, to: { x: 182 * T + 16, y: 10 * T, mode: 'rise' } });
-                    // 金幣密室：第 98 格水管鑽下去，出來在第 150 格的水管
-                    B.fill(222, 222, 1, 11, 2); B.fill(222, 247, 1, 1, 2); B.ground(222, 247);
-                    B.fill(225, 234, 10, 11, 2); B.row(225, 9, 'oooooooooo'); B.row(226, 7, 'oooooooo'); B.row(225, 4, 'BBBKBBBBBB');
-                    B.sidePipe(240); B.fill(244, 247, 2, 11, 2);
-                    lv.warps.push({ kind: 'side', x: 240 * T, to: { x: 150 * T + 16, y: 10 * T, mode: 'rise' } });
-                    B.stairs(188, 8, 1); B.col(196, 8);
-                    B.set(205, 11, 6);
-                    lv.flag = { x: 205 * T + 8, top: 3 * T, bottom: 11 * T, fy: 3 * T + 4 };
-                    lv.castle = 209;
-                    ['blob,38', 'hopper,40', 'beetle,52', 'blob,60', 'spiky,62', 'flyer,95,7', 'blob,108', 'hopper,110',
-                        'beetle,128', 'spiky,154', 'blob,156', 'flyer,165,8'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
+                    B.ground(177, 214);
+                    B.pipe(180, 2);
+                    lv.warps.push({ kind: 'side', x: 162 * T, to: { x: 180 * T + 16, y: 10 * T, mode: 'rise' } });
+                    // 金幣密室：第 78 格樹洞鑽下去，出來在第 134 格的樹洞
+                    B.fill(216, 216, 1, 11, 2); B.fill(216, 239, 1, 1, 2); B.ground(216, 239);
+                    B.fill(219, 228, 10, 11, 2); B.row(219, 9, 'oooooooooo'); B.row(220, 7, 'oooooooo'); B.row(219, 4, 'BBKBBBBBBB');
+                    B.sidePipe(234); B.fill(238, 239, 2, 11, 2);
+                    lv.warps.push({ kind: 'side', x: 234 * T, to: { x: 134 * T + 16, y: 10 * T, mode: 'rise' } });
+                    B.stairs(186, 7, 1); B.col(193, 7);
+                    lv.flag = { x: 202 * T + 8, top: 9 * T, bottom: 12 * T, fy: 0 };
+                    lv.castle = 201;
+                    ['blob,26', 'hopper,34', 'beetle,44', 'blob,60', 'spiky,68', 'flyer,96,7', 'blob,111', 'hopper,115',
+                        'beetle,138', 'spiky,146', 'blob,156', 'flyer,152,8'].forEach(s => { const [t, x, r] = s.split(','); B.en(t, +x, r ? +r : 11); });
                 }
             },
             3: {
-                name: '魔龍城堡', theme: 'castle', w: 170, time: 400, start: 2, startRow: 8, check: 84, checkRow: 10,
+                name: '魔龍城堡', theme: 'castle', w: 170, time: 400, start: 2, startRow: 9, check: 80, checkRow: 10,
                 build(B, lv) {
                     const C = 11;
                     B.fill(0, 169, 0, 1, C);
                     B.fill(0, 169, 12, 13, 13);
-                    B.ground(0, 12, 8, C);
-                    B.ground(16, 30, 10, C);
-                    B.set(23, 6, 6); lv.bars.push({ cx: 23 * T + 8, cy: 6 * T + 8, ang: 0, sp: 0.03, n: 6 });
-                    B.ground(34, 52, 10, C);
-                    B.fill(38, 48, 2, 4, C);
-                    B.row(50, 6, 'K');
-                    B.ground(55, 55, 9, C);
-                    B.ground(57, 75, 10, C);
-                    B.set(64, 9, 6); lv.bars.push({ cx: 64 * T + 8, cy: 9 * T + 8, ang: Math.PI, sp: -0.025, n: 5 });
-                    B.ground(78, 79, 9, C);
-                    B.ground(81, 112, 10, C);
-                    B.fill(95, 95, 2, 4, C); B.set(95, 5, 6); lv.bars.push({ cx: 95 * T + 8, cy: 5 * T + 8, ang: 1.2, sp: 0.03, n: 6 });
-                    B.row(90, 6, 'K');
-                    B.ground(117, 125, 10, C);
-                    B.fill(126, 145, 0, 3, C);
-                    for (let x = 126; x <= 145; x++) B.set(x, 10, 12);
-                    B.fill(126, 145, 11, 13, 13);
-                    B.ground(146, 169, 10, C);
+                    B.ground(0, 14, 9, C);
+                    B.ground(18, 35, 10, C);
+                    B.set(26, 6, 6); lv.bars.push({ cx: 26 * T + 8, cy: 6 * T + 8, ang: 0, sp: 0.03, n: 5 });
+                    B.ground(38, 40, 9, C);
+                    B.ground(43, 61, 10, C);
+                    B.fill(47, 55, 2, 4, C);
+                    B.row(57, 6, 'K');
+                    B.ground(64, 66, 9, C);
+                    B.ground(69, 91, 10, C);
+                    B.set(76, 9, 6); lv.bars.push({ cx: 76 * T + 8, cy: 9 * T + 8, ang: Math.PI, sp: -0.025, n: 5 });
+                    B.row(84, 6, 'K');
+                    B.ground(94, 96, 9, C);
+                    B.ground(99, 121, 10, C);
+                    B.fill(108, 108, 2, 4, C); B.set(108, 5, 6); lv.bars.push({ cx: 108 * T + 8, cy: 5 * T + 8, ang: 1.2, sp: 0.03, n: 6 });
+                    B.fill(122, 141, 0, 3, C);
+                    for (let x = 122; x <= 141; x++) B.set(x, 10, 12);
+                    B.fill(122, 141, 11, 13, 13);
+                    B.ground(142, 169, 10, C);
                     B.fill(165, 169, 2, 9, C);
-                    lv.bridge = [126, 145];
-                    lv.axe = { x: 146 * T + 2, y: 4 * T, w: 14, h: 6 * T, dy: 8 * T };
-                    lv.friend = { x: 158 * T, y: 8 * T };
-                    B.en('blob', 42, 9); B.en('hopper', 47, 9); B.en('beetle', 70, 9); B.en('spiky', 86, 9); B.en('flyer', 92, 7);
-                    B.en('blob', 102, 9); B.en('beetle', 106, 9);
-                    B.en('boss', 138, 9);
+                    lv.bridge = [122, 141];
+                    lv.axe = { x: 143 * T + 2, y: 6 * T, w: 14, h: 4 * T, dy: 7 * T };
+                    lv.friend = { x: 154 * T, y: 8 * T };
+                    B.en('blob', 22, 9); B.en('hopper', 30, 9); B.en('beetle', 50, 9); B.en('spiky', 56, 9); B.en('flyer', 74, 7);
+                    B.en('blob', 86, 9); B.en('beetle', 104, 9); B.en('blob', 114, 9);
+                    B.en('boss', 134, 9);
                 }
             }
         };
@@ -1379,7 +1374,7 @@ ${JSON.stringify(list)}
             const w = type === 'boss' ? 28 : 14;
             const e = { type, x, y: bottom - h, w, h, vx: type === 'boss' ? 0 : type === 'spiky' ? -0.4 : -0.5, vy: 0, active: false, dead: false, t: Math.floor(Math.random() * 60), dir: -1, edgeTurn: WALKERS.includes(type) };
             if (type === 'flyer') Object.assign(e, { baseY: e.y, x0: x, vx: -0.6 });
-            if (type === 'boss') Object.assign(e, { hp: 3, inv: 0, fireT: 150, minX: 130 * T, maxX: 143 * T });
+            if (type === 'boss') Object.assign(e, { hp: 3, inv: 0, fireT: 150, minX: x - 8 * T, maxX: x + 5 * T });
             return e;
         }
         function makeLevel(n) {
@@ -1467,7 +1462,7 @@ ${JSON.stringify(list)}
             showBanner(`<div class="text-[2.6em] font-black text-amber-300 drop-shadow">第 ${n} 關</div>
                 <div class="text-[1.8em] font-black mt-1">${def.name}</div>
                 <div class="text-[1.3em] font-bold mt-3">❤️ × ${game.lives}</div>
-                ${n === 1 && !fromCheck ? '<div class="text-[0.95em] font-bold text-sky-200 mt-3">← → 移動　空白鍵／↑ 跳　Shift 加速　↓ 鑽水管<br>踩到怪物要答題，答對才能打倒牠！</div>' : ''}`);
+                ${n === 1 && !fromCheck ? '<div class="text-[0.95em] font-bold text-sky-200 mt-3">← → 移動　空白鍵／↑ 跳　Shift 加速　↓ 鑽樹洞<br>踩到怪物要答題，答對才能打倒牠！</div>' : ''}`);
             updateHud(true);
         }
 
@@ -1575,7 +1570,7 @@ ${JSON.stringify(list)}
             heroPhysics();
             if (game.mode !== 'play') return;
             if (!game.checkReached && hero.x > lv.def.check * T) game.checkReached = true;
-            if (lv.bridge && !game.bridgeHint && hero.x > (lv.bridge[0] - 8) * T) { game.bridgeHint = true; toast('🐉 混亂魔龍出現！踩牠答題，或衝到後面碰 🪓 斧頭', '#fbbf24'); }
+            if (lv.bridge && !game.bridgeHint && hero.x > (lv.bridge[0] - 8) * T) { game.bridgeHint = true; toast('🐉 混亂魔龍出現！踩牠答題，或衝到後面碰 💎 封印水晶', '#fbbf24'); }
             updateEnts();
             if (game.mode !== 'play') return;
             heroInteract();
@@ -1636,7 +1631,7 @@ ${JSON.stringify(list)}
             if (h.vx < 0 || dirIn < 0) {
                 if (pts.some(py => solidPx(h.x, py))) { h.x = (Math.floor(h.x / T) + 1) * T; if (h.vx < 0) h.vx = 0; }
             }
-            // 進水管：橫向水管往右走進去；可以鑽的直水管站在上面按 ↓
+            // 進樹洞：橫向樹洞往右走進去；可以鑽的直樹洞站在上面按 ↓
             for (const w of lv.warps) {
                 if (w.kind === 'side' && h.onGround && I.right && h.x + h.w >= w.x - 1 && h.x < w.x && h.y + h.h > 10 * T) { enterPipe(w, 'side'); return; }
                 if (w.kind === 'down' && h.onGround && I.down && Math.abs(h.y + h.h - w.top) < 1 && h.x + h.w / 2 > w.tx * T + 6 && h.x + h.w / 2 < w.tx * T + 26) { enterPipe(w, 'down'); return; }
@@ -1771,7 +1766,7 @@ ${JSON.stringify(list)}
                 if (e.vx) e.dir = Math.sign(e.vx);
                 if (e.y > VH + 32) { e.removed = true; continue; }
             }
-            // 怪物互撞、龜殼撞怪
+            // 怪物互撞、盔甲球撞怪
             const list = lv.ents.filter(e => e.active && !e.dead && !e.removed && !e.flat && !e.stun && (WALKERS.includes(e.type) || e.type === 'shell'));
             for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
                 const a = list[i], b = list[j];
@@ -1867,7 +1862,7 @@ ${JSON.stringify(list)}
                     continue;
                 }
                 if (e.type === 'spiky') {
-                    if (stomp) { h.vy = -3.5; toast('🦔 刺刺球不能踩！跳過去或用龜殼撞牠', '#f87171'); }
+                    if (stomp) { h.vy = -3.5; toast('🦔 刺刺球不能踩！跳過去或用盔甲球撞牠', '#f87171'); }
                     hurt();
                     if (game.mode !== 'play') return;
                     continue;
@@ -1876,9 +1871,9 @@ ${JSON.stringify(list)}
                 hurt();
                 if (game.mode !== 'play') return;
             }
-            // 旗竿
+            // 終點傳送門
             if (lv.flag && h.x + h.w >= lv.flag.x - 1 && h.x < lv.flag.x + 48) { grabFlag(); return; }
-            // 斧頭
+            // 封印水晶
             if (lv.axe && !lv.axe.done && overlap(h, lv.axe)) { touchAxe(); return; }
         }
 
@@ -1925,17 +1920,15 @@ ${JSON.stringify(list)}
             toast(`❤️ 還有 ${game.lives} 條命，原地復活！`, '#f472b6');
         }
 
-        // ---------- 旗竿 ----------
+        // ---------- 終點傳送門 ----------
         function grabFlag() {
             const f = lv.flag, h = hero;
             game.mode = 'flag';
-            h.x = f.x - h.w + 1; h.vx = 0; h.vy = 0;
-            h.y = Math.max(f.top, Math.min(h.y, f.bottom - h.h));
-            const ratio = (f.bottom - (h.y + h.h)) / (f.bottom - f.top);
-            const pts = ratio > 0.9 ? 5000 : ratio > 0.7 ? 2000 : ratio > 0.45 ? 800 : ratio > 0.2 ? 400 : 100;
-            addScore(pts, f.x + 10, h.y);
-            game.flagSt = 'slide'; game.timer = 0;
+            h.vx = 0; h.vy = 0;
+            addScore(1000, f.x + 8, h.y);
+            game.flagSt = 'walk'; game.timer = 0;
             musicStop(); SFX.flag();
+            for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; particles.push({ kind: 'spark', x: f.x + 8, y: f.bottom - 24, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 1.6, t: 26 }); }
         }
         function updateFlag() {
             const f = lv.flag, h = hero;
@@ -1963,7 +1956,7 @@ ${JSON.stringify(list)}
             }
         }
 
-        // ---------- 水管 ----------
+        // ---------- 樹洞 ----------
         function enterPipe(w, how) {
             const h = hero;
             game.mode = 'pipe';
@@ -1995,13 +1988,13 @@ ${JSON.stringify(list)}
             if (p.rise > 0) { p.rise--; h.y -= 1; if (p.rise === 0) { game.mode = 'play'; game.safe = { x: h.x, y: h.y + h.h }; musicPlay(regionAt(h.x).theme); } }
         }
 
-        // ---------- 魔龍與斧頭 ----------
+        // ---------- 魔龍與封印水晶 ----------
         function touchAxe() {
             const b = lv.boss;
             hero.vx = 0;
             if (!b || b.removed || b.dead) { startCollapse(); return; }
             game.axeNeed = 3;
-            toast('🪓 答對 3 題就能斬斷吊橋的鎖鏈！', '#fbbf24');
+            toast('💎 答對 3 題就能啟動封印水晶！', '#fbbf24');
             askQ('axe', null);
         }
         function startCollapse() {
@@ -2016,12 +2009,16 @@ ${JSON.stringify(list)}
             if (b && !b.removed) { b.stun = false; b.vx = 0; }
         }
         function updateCollapse() {
-            if (++game.timer % 4 === 0 && game.colX >= lv.bridge[0]) { setTile(game.colX, 10, 0); game.colX--; SFX.bump(); }
+            // 封印：水晶發光，魔龍被光包住、慢慢縮小消失；橋不會斷
+            game.timer++;
             const b = lv.boss;
             if (b && !b.removed) {
-                if (game.colX < lv.bridge[0]) { b.vy = Math.min(4, b.vy + 0.15); b.y += b.vy; if (b.y > VH + 40) b.removed = true; }
+                b.sealT = (b.sealT || 0) + 1; b.vx = 0;
+                if (b.sealT % 5 === 0) { const a = Math.random() * Math.PI * 2; particles.push({ kind: 'spark', x: b.x + b.w / 2 + Math.cos(a) * 18, y: b.y + b.h / 2 + Math.sin(a) * 18, vx: -Math.cos(a) * 1.2, vy: -Math.sin(a) * 1.2, t: 18 }); }
+                if (b.sealT % 12 === 0) SFX.bump();
+                if (b.sealT > 100) b.removed = true;
             }
-            if (game.colX < lv.bridge[0] && (!b || b.removed)) {
+            if ((!b || b.removed) && game.timer > 40) {
                 game.mode = 'rescue'; game.timer = 0;
                 SFX.win();
             }
@@ -2058,7 +2055,7 @@ ${JSON.stringify(list)}
             if (!q) { toast('題庫是空的，這次直接通過', '#94a3b8'); resolveQ({ kind, payload }, true); return; }
             game.mode = 'question';
             musicPause();
-            const where = kind === 'enemy' ? ENEMY_NAME[payload.type] || '怪物' : kind === 'block' ? '知識磚' : kind === 'boss' ? '混亂魔龍' : '斬斷鎖鏈';
+            const where = kind === 'enemy' ? ENEMY_NAME[payload.type] || '怪物' : kind === 'block' ? '知識磚' : kind === 'boss' ? '混亂魔龍' : '封印水晶';
             game.qc = { kind, payload, q, tier: q.tier || tier, where, t0: performance.now(), limit: timeFor(q.tier || tier), done: false };
             renderQ();
             startQTimer();
@@ -2166,7 +2163,7 @@ ${JSON.stringify(list)}
                 if (ok) {
                     b.hp--; b.inv = 90; b.knock = 2; addScore(1000, b.x + 14, b.y);
                     h.vy = -4; h.vx = -1.5; SFX.bossHit();
-                    if (b.hp <= 0) { b.dead = true; b.flip = true; b.vy = -2; b.vx = 0; toast('🐉 混亂魔龍被打倒了！去碰斧頭吧！', '#fbbf24'); SFX.win(); }
+                    if (b.hp <= 0) { b.dead = true; b.flip = true; b.vy = -2; b.vx = 0; toast('🐉 混亂魔龍被打倒了！去碰封印水晶吧！', '#fbbf24'); SFX.win(); }
                 } else bounceOff(b);
             } else if (c.kind === 'axe') {
                 if (ok) {
@@ -2213,11 +2210,11 @@ ${JSON.stringify(list)}
         let hudCache = '';
         function updateHud(force) {
             if (!game) return;
-            const s = `<div>分數<br><b>${String(game.score).padStart(6, '0')}</b></div>
-                <div>🪙<br><b>× ${String(game.coins).padStart(2, '0')}</b></div>
-                <div>關卡<br><b>${game.level}-${LEVELS[game.level].name}</b></div>
-                <div>時間<br><b class="${game.time <= 100 ? 'text-red-300' : ''}">${game.time}</b></div>
-                <div>生命<br><b>❤️ × ${game.lives}</b></div>`;
+            const s = `<div>生命<br><b>❤️ ${game.lives}</b></div>
+                <div>金幣<br><b>🪙 ${game.coins}</b></div>
+                <div>第 ${game.level} 關<br><b>${LEVELS[game.level].name}</b></div>
+                <div>分數<br><b>${game.score}</b></div>
+                <div>時間<br><b class="${game.time <= 100 ? 'text-red-300' : ''}">${game.time}</b></div>`;
             if (force || s !== hudCache) { $('hud').innerHTML = s; hudCache = s; }
         }
 
@@ -2310,58 +2307,71 @@ ${JSON.stringify(list)}
         const QMARK = [' ### ', '#   #', '    #', '  ## ', '  #  ', '     ', '  #  '];
         function glyph(map, x, y, c) { ctx.fillStyle = c; map.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '#') ctx.fillRect(x + i, y + j, 1, 1); })); }
 
+        // 金幣磚、知識磚上的小圖案（取代問號）
+        const COINMARK = [' ### ', '## ##', '# # #', '# # #', '## ##', ' ### '];
+        const BOOKMARK = ['## ##', '#####', '## ##', '## ##', '#####', ' # # '];
         function drawTile(c, x, y, tx, ty, th) {
             const P = THEMES[th];
             switch (c) {
                 case 1: {
-                    R(x, y, 16, 16, P.g1); R(x, y, 16, 1, P.g3); R(x, y, 1, 16, P.g3); R(x + 15, y, 1, 16, P.g2); R(x, y + 15, 16, 1, P.g2);
-                    R(x + 3, y + 5, 4, 1, P.g2); R(x + 9, y + 10, 4, 1, P.g2); R(x + 11, y + 3, 1, 3, P.g2);
-                    if (P.grass && tileAt(tx, ty - 1) !== 1) { R(x, y, 16, 3, '#4cb94f'); R(x, y + 3, 16, 1, '#2e7d32'); R(x + 2, y + 3, 2, 1, '#4cb94f'); R(x + 9, y + 3, 3, 1, '#4cb94f'); }
+                    // 一整片泥土（不畫格線），上面一層草，零星的小石頭
+                    R(x, y, 16, 16, P.g1);
+                    const s1 = (tx * 7 + ty * 13) % 11, s2 = (tx * 3 + ty * 5) % 9;
+                    R(x + s1 % 12 + 1, y + 4 + s2 % 8, 3, 2, P.g2); R(x + (s2 * 3) % 13, y + 9 + s1 % 5, 2, 2, P.g3);
+                    if (P.grass && tileAt(tx, ty - 1) !== 1) { R(x, y, 16, 4, '#5cae3c'); R(x, y + 4, 16, 1, '#3d7e26'); R(x + (tx % 3) * 4 + 1, y + 4, 3, 2, '#5cae3c'); R(x + 3 + (tx % 2) * 6, y - 1, 1, 1, '#8ad860'); }
+                    else if (!P.grass && tileAt(tx, ty - 1) !== 1) { R(x, y, 16, 2, P.g3); }
                     break;
                 }
                 case 2: case 11: {
-                    const b1 = c === 11 ? THEMES.castle.b1 : P.b1, b2 = c === 11 ? THEMES.castle.b2 : P.b2;
-                    R(x, y, 16, 16, b1);
-                    R(x, y + 7, 16, 1, b2); R(x, y + 15, 16, 1, b2);
-                    R(x + 7, y, 1, 7, b2); R(x + 15, y, 1, 7, b2); R(x + 3, y + 8, 1, 7, b2); R(x + 11, y + 8, 1, 7, b2);
-                    R(x, y, 16, 1, 'rgba(255,255,255,.18)');
+                    if (c === 11) {
+                        const b1 = THEMES.castle.b1, b2 = THEMES.castle.b2;
+                        R(x, y, 16, 16, b1); R(x, y + 7, 16, 1, b2); R(x, y + 15, 16, 1, b2);
+                        R(x + 7, y, 1, 7, b2); R(x + 15, y, 1, 7, b2); R(x + 3, y + 8, 1, 7, b2); R(x + 11, y + 8, 1, 7, b2);
+                        R(x, y, 16, 1, 'rgba(255,255,255,.18)');
+                    } else {
+                        // 木箱：外框加一條斜撐
+                        R(x, y, 16, 16, P.b2); R(x + 1, y + 1, 14, 14, P.b1);
+                        R(x + 1, y + 5, 14, 1, P.b2); R(x + 1, y + 10, 14, 1, P.b2);
+                        for (let i = 0; i < 12; i++) R(x + 2 + i, y + 13 - i, 2, 1, P.b2);
+                        R(x + 2, y + 2, 2, 2, 'rgba(255,255,255,.25)');
+                    }
                     break;
                 }
                 case 3: case 4: {
                     const k = c === 3;
                     const sh = (Math.floor(frame / 10) % 6);
-                    const main = k ? ['#f7b928', '#f7b928', '#f7c548', '#ffd970', '#f7c548', '#f7b928'][sh] : ['#4f9cff', '#4f9cff', '#6aaeff', '#8fc4ff', '#6aaeff', '#4f9cff'][sh];
-                    const dark = k ? '#8a4b0f' : '#173c8c';
-                    R(x, y, 16, 16, dark); R(x + 1, y + 1, 14, 14, main);
-                    R(x + 2, y + 2, 1, 1, dark); R(x + 13, y + 2, 1, 1, dark); R(x + 2, y + 13, 1, 1, dark); R(x + 13, y + 13, 1, 1, dark);
-                    glyph(QMARK, x + 6, y + 4, k ? '#8a4b0f' : '#ffffff');
-                    if (!k && sh === 3) R(x + 3, y + 3, 2, 2, '#fff');
+                    const main = k ? ['#f2b632', '#f2b632', '#f5c450', '#ffd877', '#f5c450', '#f2b632'][sh] : ['#5b8fe8', '#5b8fe8', '#72a2f0', '#93bcf8', '#72a2f0', '#5b8fe8'][sh];
+                    const dark = k ? '#7a4a12' : '#1d3a80';
+                    R(x, y, 16, 16, dark); R(x + 1, y + 1, 14, 14, main); R(x + 1, y + 1, 14, 2, 'rgba(255,255,255,.3)');
+                    glyph(k ? COINMARK : BOOKMARK, x + 5, y + 5, k ? '#7a4a12' : '#ffffff');
+                    if (!k && sh === 3) R(x + 12, y + 3, 2, 2, '#fff');
                     break;
                 }
                 case 5:
-                    R(x, y, 16, 16, '#4a2a10'); R(x + 1, y + 1, 14, 14, '#9a6232');
-                    R(x + 2, y + 2, 1, 1, '#4a2a10'); R(x + 13, y + 2, 1, 1, '#4a2a10'); R(x + 2, y + 13, 1, 1, '#4a2a10'); R(x + 13, y + 13, 1, 1, '#4a2a10');
+                    R(x, y, 16, 16, '#4a3a2e'); R(x + 1, y + 1, 14, 14, '#8a7a66'); R(x + 1, y + 1, 14, 2, '#a89880');
                     break;
                 case 6:
                     R(x, y, 16, 16, P.h1); R(x, y, 16, 2, P.h2); R(x, y, 2, 16, P.h2); R(x, y + 14, 16, 2, P.h3); R(x + 14, y, 2, 16, P.h3);
-                    R(x + 4, y + 4, 8, 8, P.h1); R(x + 5, y + 5, 6, 1, P.h3);
+                    R(x + 5, y + 6, 3, 2, P.h3); R(x + 9, y + 9, 2, 2, P.h3);
                     break;
                 case 7: case 8: {
-                    const L = c === 7;
-                    R(x, y, 16, 16, '#145c2a'); R(x + (L ? 1 : 0), y + 1, 15, 14, '#2fa84f');
-                    if (L) { R(x + 3, y + 2, 3, 12, '#8ef0a0'); R(x + 7, y + 2, 1, 12, '#8ef0a0'); }
-                    else R(x + 10, y + 2, 3, 12, '#1a6e32');
+                    // 樹洞（樹樁）頂端：年輪＋中間黑黑的洞
+                    const [d, m, l, top] = P.wood || THEMES.over.wood, L = c === 7;
+                    R(x, y + 3, 16, 13, d); R(x + (L ? 1 : 0), y + 4, 15, 12, m);
+                    R(x, y, 16, 5, d); R(x + (L ? 1 : 0), y + 1, 15, 3, top);
+                    R(x + (L ? 5 : 0), y + 2, L ? 11 : 11, 1, '#1a0e06');
+                    if (L) { R(x + 3, y + 6, 2, 9, l); R(x + 8, y + 7, 1, 7, l); } else { R(x + 6, y + 6, 1, 8, d); R(x + 11, y + 5, 2, 10, d); }
                     break;
                 }
                 case 9: case 10: {
-                    const L = c === 9;
-                    if (L) { R(x + 2, y, 14, 16, '#145c2a'); R(x + 3, y, 13, 16, '#2fa84f'); R(x + 5, y, 3, 16, '#8ef0a0'); R(x + 9, y, 1, 16, '#8ef0a0'); }
-                    else { R(x, y, 14, 16, '#145c2a'); R(x, y, 13, 16, '#2fa84f'); R(x + 8, y, 3, 16, '#1a6e32'); }
+                    // 樹幹：直條樹皮紋
+                    const [d, m, l] = P.wood || THEMES.over.wood, L = c === 9;
+                    if (L) { R(x + 2, y, 14, 16, d); R(x + 3, y, 13, 16, m); R(x + 5, y + (tx + ty) % 5, 2, 8, l); R(x + 10, y + 3, 1, 10, d); }
+                    else { R(x, y, 14, 16, d); R(x, y, 13, 16, m); R(x + 4, y + 2, 1, 10, d); R(x + 8, y + (ty % 4), 2, 9, d); }
                     break;
                 }
                 case 12:
-                    R(x, y, 16, 6, '#8b4a1c'); R(x, y, 16, 2, '#d08a4a'); R(x + 7, y, 1, 6, '#4a2208'); R(x + 15, y, 1, 6, '#4a2208');
-                    R(x + 3, y - 3, 1, 3, '#c8c8d4');
+                    R(x, y, 16, 6, '#7a4a24'); R(x, y, 16, 2, '#c08a52'); R(x + 7, y, 1, 6, '#3e2210'); R(x + 15, y, 1, 6, '#3e2210');
                     break;
                 case 13: {
                     const top = tileAt(tx, ty - 1) !== 13;
@@ -2371,10 +2381,11 @@ ${JSON.stringify(list)}
                     break;
                 }
                 case 14: case 15: {
-                    const top = c === 14;
-                    R(x, y, 16, 16, '#145c2a'); R(x, y + (top ? 1 : 0), 16, 15, '#2fa84f');
-                    if (top) R(x, y + 3, 16, 3, '#8ef0a0'); else R(x, y + 10, 16, 3, '#1a6e32');
-                    if (tileAt(tx - 1, ty) !== 14 && tileAt(tx - 1, ty) !== 15) R(x, y, 2, 16, '#0e4420');
+                    // 橫向樹洞口
+                    const [d, m, l, topc] = P.wood || THEMES.over.wood, top = c === 14;
+                    R(x, y, 16, 16, d); R(x, y + (top ? 1 : 0), 16, 15, m);
+                    if (top) R(x, y + 3, 16, 2, l); else R(x, y + 11, 16, 2, d);
+                    if (tileAt(tx - 1, ty) !== 14 && tileAt(tx - 1, ty) !== 15) { R(x, y, 4, 16, topc); R(x + 1, y + 2, 2, 12, '#1a0e06'); }
                     break;
                 }
             }
@@ -2382,26 +2393,38 @@ ${JSON.stringify(list)}
 
         function drawBg(th) {
             if (th === 'over') {
-                const off = camX * 0.5;
+                // 遠山（三角形）＋一排松樹剪影＋扁扁的像素雲
+                const off = camX * 0.25;
                 for (let k = -1; k < 6; k++) {
-                    const base = Math.floor(off / 240) + k;
-                    const hx = base * 240 - off + ((base * 97) % 80);
-                    ctx.fillStyle = '#5cbf6a';
-                    ctx.beginPath(); ctx.ellipse(hx + 40, 192, 60, 36 + (base % 2) * 14, 0, Math.PI, 0); ctx.fill();
-                    ctx.fillStyle = '#3e9d4e'; R(hx + 30, 176, 3, 3, '#3e9d4e'); R(hx + 48, 170, 3, 3, '#3e9d4e');
-                    const cx = base * 240 - camX * 0.3 % 240 + 120 + ((base * 53) % 90);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath(); ctx.ellipse(cx, 40 + (base % 3) * 12, 22, 9, 0, 0, 7); ctx.ellipse(cx + 16, 34 + (base % 3) * 12, 14, 10, 0, 0, 7); ctx.ellipse(cx - 14, 37 + (base % 3) * 12, 12, 8, 0, 0, 7); ctx.fill();
+                    const base = Math.floor(off / 160) + k, mx = base * 160 - off;
+                    ctx.fillStyle = '#86bcd6'; ctx.beginPath(); ctx.moveTo(mx, 150); ctx.lineTo(mx + 70 + (base % 3) * 10, 70 + (base % 2) * 20); ctx.lineTo(mx + 160, 150); ctx.fill();
+                    R(mx + 62 + (base % 3) * 10, 74 + (base % 2) * 20, 16, 6, '#e8f4f8');
+                }
+                const off2 = camX * 0.5;
+                for (let k = -1; k < 14; k++) {
+                    const base = Math.floor(off2 / 36) + k, px = base * 36 - off2 + ((base * 17) % 12), h = 34 + (base * 7) % 18;
+                    ctx.fillStyle = '#3f8a5a'; ctx.beginPath(); ctx.moveTo(px, 192); ctx.lineTo(px + 12, 192 - h); ctx.lineTo(px + 24, 192); ctx.fill();
+                    R(px + 11, 186, 3, 6, '#5a3a22');
+                }
+                const off3 = camX * 0.15;
+                for (let k = -1; k < 5; k++) {
+                    const base = Math.floor(off3 / 200) + k, cx = base * 200 - off3 + ((base * 61) % 70), cy = 30 + (base % 3) * 14;
+                    R(cx, cy, 44, 6, '#ffffff'); R(cx + 8, cy - 4, 22, 4, '#ffffff'); R(cx + 4, cy + 6, 36, 2, '#dbeef6');
                 }
             } else if (th === 'castle') {
                 const off = camX * 0.6;
                 for (let k = 0; k < 6; k++) {
                     const base = Math.floor(off / 90) + k, wx = base * 90 - off;
-                    R(wx + 30, 80, 14, 22, '#2a1626'); R(wx + 33, 84, 8, 14, Math.floor(frame / 15 + base) % 3 ? '#ff8a2a' : '#ffb84a');
+                    R(wx + 30, 80, 14, 22, '#2a1626'); R(wx + 33, 84, 8, 14, Math.floor(frame / 15 + base) % 3 ? '#b07aff' : '#d8b4ff');
                 }
             } else {
+                // 礦坑：牆上會閃的小水晶
                 const off = camX * 0.5;
-                for (let k = 0; k < 10; k++) { const base = Math.floor(off / 50) + k; R(base * 50 - off + (base * 31 % 40), 36, 2, 6 + base % 4 * 3, '#1a2440'); }
+                for (let k = 0; k < 12; k++) {
+                    const base = Math.floor(off / 44) + k, cx = base * 44 - off + (base * 31 % 30), cy = 50 + (base * 37) % 120;
+                    const on = Math.floor(frame / 20 + base) % 4 === 0;
+                    R(cx + 2, cy, 2, 2, on ? '#ffffff' : '#7ae0ff'); R(cx, cy + 2, 6, 3, on ? '#b4f0ff' : '#3aa0d0'); R(cx + 2, cy + 5, 2, 2, '#2a6a9a');
+                }
             }
         }
 
@@ -2546,40 +2569,41 @@ ${JSON.stringify(list)}
         }
         function drawBeetle(e) {
             if (e.squash) { drawShell(e); return; }
+            // 盔甲蟲：紫色硬殼、頭上兩根觸角、六隻腳
             const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 24;
             ctx.save();
             if (e.dir > 0) { ctx.translate(x + 16, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
             if (e.flip) { ctx.translate(0, y * 2 + 24); ctx.scale(1, -1); }
-            // 頭
-            R(x + 1, y + 2, 6, 7, '#f2d16b'); R(x + 2, y + 4, 2, 2, '#111'); R(x + 1, y + 8, 4, 1, '#b8902a');
-            R(x + 2, y, 1, 3, '#2a2a2a'); R(x + 5, y, 1, 2, '#2a2a2a');
-            // 殼
-            R(x + 6, y + 6, 8, 1, '#0f6e64'); R(x + 4, y + 7, 12, 3, '#1f9e8f'); R(x + 3, y + 10, 13, 8, '#1f9e8f');
-            R(x + 6, y + 8, 4, 2, '#7fe8d8'); R(x + 5, y + 13, 10, 1, '#0f6e64'); R(x + 9, y + 10, 1, 8, '#0f6e64');
-            R(x + 3, y + 18, 13, 2, '#f2d16b');
+            R(x + 1, y + 1, 1, 6, '#2a1a3a'); R(x + 4, y, 1, 7, '#2a1a3a'); R(x, y, 2, 1, '#ffd23a'); R(x + 4, y - 1, 2, 1, '#ffd23a');
+            R(x + 1, y + 7, 7, 6, '#3a2a4a'); R(x + 2, y + 9, 2, 2, '#fff'); R(x + 3, y + 10, 1, 1, '#111');
+            R(x + 5, y + 6, 10, 2, '#4a2a7a'); R(x + 4, y + 8, 12, 10, '#6a3aa8'); R(x + 9, y + 8, 1, 10, '#3a1a6a');
+            R(x + 6, y + 10, 2, 2, '#ffd23a'); R(x + 12, y + 13, 2, 2, '#ffd23a'); R(x + 5, y + 9, 3, 1, '#b48ae8');
             const st = Math.floor(e.t / 9) % 2;
-            R(x + (st ? 3 : 5), y + 20, 3, 4, '#b8902a'); R(x + (st ? 11 : 9), y + 20, 3, 4, '#b8902a');
+            for (let i = 0; i < 3; i++) R(x + 5 + i * 4 + (st ? 1 : 0), y + 18, 2, 5 - (i + st) % 2, '#2a1a3a');
             if (e.stun) { R(x + 1, y - 4, 2, 2, '#ffd23a'); R(x + 12, y - 3, 2, 2, '#ffd23a'); }
             ctx.restore();
         }
         function drawShell(e) {
-            const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 14;
+            // 縮成一顆盔甲球
+            const x = Math.round(e.x) - 1, y = Math.round(e.y + e.h) - 14, sp = Math.abs(e.vx) > 0.1 ? Math.floor(frame / 3) % 2 : 0;
             ctx.save();
             if (e.flip) { ctx.translate(0, y * 2 + 14); ctx.scale(1, -1); }
-            R(x + 4, y, 8, 1, '#0f6e64'); R(x + 2, y + 1, 12, 3, '#1f9e8f'); R(x + 1, y + 4, 14, 7, '#1f9e8f');
-            R(x + 4, y + 2, 4, 2, '#7fe8d8'); R(x + 1, y + 7, 14, 1, '#0f6e64'); R(x + 7, y + 3, 1, 8, '#0f6e64');
-            R(x + 1, y + 11, 14, 3, '#f2d16b');
-            if (Math.abs(e.vx) < 0.1 && e.t % 60 > 40) { R(x + 4, y + 10, 2, 2, '#111'); R(x + 10, y + 10, 2, 2, '#111'); }
+            R(x + 4, y, 8, 2, '#4a2a7a'); R(x + 2, y + 2, 12, 10, '#6a3aa8'); R(x + 4, y + 12, 8, 2, '#4a2a7a');
+            R(x + 1, y + 4, 1, 6, '#4a2a7a'); R(x + 14, y + 4, 1, 6, '#4a2a7a');
+            R(x + (sp ? 9 : 5), y + 4, 2, 2, '#ffd23a'); R(x + (sp ? 5 : 10), y + 8, 2, 2, '#ffd23a'); R(x + 4, y + 3, 3, 1, '#b48ae8');
+            if (Math.abs(e.vx) < 0.1 && e.t % 60 > 40) { R(x + 5, y + 9, 2, 2, '#fff'); R(x + 9, y + 9, 2, 2, '#fff'); }
             ctx.restore();
         }
         function drawPlant(e) {
+            // 洞洞蟲：從樹洞探頭的綠色毛毛蟲
             if (e.off <= 0) return;
             const x = Math.round(e.x) - 2, y = Math.round(e.y);
             const open = Math.floor(e.t / 12) % 2;
-            R(x + 7, y + 10, 2, 14, '#2e8b3e'); R(x + 2, y + 14, 5, 3, '#4cb94f'); R(x + 9, y + 16, 5, 3, '#4cb94f');
-            R(x + 2, y + 1, 12, 9, '#d83a4a'); R(x + 4, y, 8, 11, '#d83a4a'); R(x + 5, y + 2, 2, 2, '#ff9aa5');
-            for (const [sx, sy] of [[1, 0], [14, 0], [0, 5], [15, 5], [1, 10], [14, 10], [7, -1]]) R(x + sx, y + sy, 1, 1, '#fff');
-            R(x + 5, y + (open ? 5 : 6), 6, open ? 3 : 1, '#3a0a12');
+            for (let i = 0; i < 3; i++) R(x + 3 + (i % 2), y + 10 + i * 5, 10, 5, i % 2 ? '#5aa83a' : '#78c850');
+            R(x + 2, y, 12, 11, '#8ad860'); R(x + 3, y - 1, 10, 1, '#8ad860');
+            R(x + 3, y + 3, 4, 4, '#fff'); R(x + 9, y + 3, 4, 4, '#fff'); R(x + 5, y + 4, 2, 2, '#111'); R(x + 11, y + 4, 2, 2, '#111');
+            R(x + 4, y - 4, 1, 3, '#3d7e26'); R(x + 11, y - 4, 1, 3, '#3d7e26'); R(x + 3, y - 5, 2, 2, '#ff7ab8'); R(x + 11, y - 5, 2, 2, '#ff7ab8');
+            R(x + 6, y + (open ? 8 : 9), 4, open ? 2 : 1, '#2a4a1a');
         }
         function drawBoss(e) {
             const x = Math.round(e.x) - 2, y = Math.round(e.y + e.h) - 32;
@@ -2588,6 +2612,7 @@ ${JSON.stringify(list)}
             ctx.save();
             if (e.dir > 0) { ctx.translate(x + 32, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
             if (e.flip) { ctx.translate(0, y * 2 + 32); ctx.scale(1, -1); }
+            if (e.sealT) { ctx.globalAlpha = Math.max(0, 1 - e.sealT / 100); }
             const body = '#8c1d3a', dark = '#4e0a1e', belly = '#f0b35a', wing = '#5a2a8a';
             // 翅膀
             const wf = Math.floor(e.t / 14) % 2;
@@ -2609,7 +2634,8 @@ ${JSON.stringify(list)}
             const st = Math.floor(e.t / 12) % 2;
             R(x + 9 + st * 2, y + 26, 6, 6, dark); R(x + 20 - st * 2, y + 26, 6, 6, dark);
             R(x + 8 + st * 2, y + 31, 2, 1, '#fff'); R(x + 19 - st * 2, y + 31, 2, 1, '#fff');
-            ctx.restore();
+            ctx.restore(); ctx.globalAlpha = 1;
+            if (e.sealT) { ctx.strokeStyle = 'rgba(180,240,255,' + (0.4 + 0.4 * Math.sin(e.sealT / 4)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + 16, y + 16, 22 - e.sealT / 8, 0, 7); ctx.stroke(); return; }
             // 血量
             for (let i = 0; i < 3; i++) R(x + 4 + i * 9, y - 7, 7, 4, i < e.hp ? '#ff4d6d' : '#3a2a30');
         }
@@ -2628,40 +2654,38 @@ ${JSON.stringify(list)}
             if (w > 2) R(x + 5 - w / 2 + 1, y + 2, 1, 4, '#fff6b0');
         }
         function drawFlag() {
+            // 終點傳送門：石頭拱門，中間是旋轉的光
             const f = lv.flag;
             if (!f) return;
-            R(f.x - 1, f.top, 2, f.bottom - f.top, '#d8f0d8');
-            R(f.x - 3, f.top - 6, 6, 6, '#4cb94f'); R(f.x - 2, f.top - 5, 2, 2, '#b8f0b8');
-            const fy = f.fy;
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath(); ctx.moveTo(f.x - 1, fy); ctx.lineTo(f.x - 17, fy + 7); ctx.lineTo(f.x - 1, fy + 14); ctx.fill();
-            R(f.x - 9, fy + 5, 4, 4, '#2fa84f');
-            // 城堡
-            const cx = lv.castle * T, by = 12 * T, P = THEMES.over;
-            const brick = (x, y, w, h) => { R(x, y, w, h, P.b1); for (let yy = y; yy < y + h; yy += 8) R(x, yy + 7, w, 1, P.b2); };
-            brick(cx, by - 48, 80, 48);
-            brick(cx + 16, by - 80, 48, 32);
-            for (let i = 0; i < 5; i++) R(cx + i * 16 + 2, by - 56, 12, 8, P.b1);
-            for (let i = 0; i < 3; i++) R(cx + 16 + i * 16 + 2, by - 88, 12, 8, P.b1);
-            R(cx + 32, by - 28, 16, 28, '#140804'); R(cx + 34, by - 32, 12, 4, '#140804');
-            R(cx + 24, by - 72, 8, 12, '#140804'); R(cx + 48, by - 72, 8, 12, '#140804');
+            const gx = f.x - 8, by = f.bottom;
+            R(gx - 4, by - 52, 8, 52, '#7a7a8a'); R(gx + 28, by - 52, 8, 52, '#7a7a8a');
+            R(gx - 6, by - 60, 44, 10, '#8c8c9c'); R(gx - 2, by - 66, 36, 6, '#8c8c9c'); R(gx + 12, by - 64, 8, 4, '#ffd23a');
+            R(gx - 4, by - 52, 2, 52, '#a8a8b8'); R(gx + 28, by - 52, 2, 52, '#a8a8b8');
+            for (let i = 0; i < 5; i++) {
+                const a = frame / 12 + i * 1.256, rx = 10 - i, ry = 18 - i * 2;
+                R(gx + 16 + Math.cos(a) * rx - 2, by - 26 + Math.sin(a) * ry - 2, 4, 4, i % 2 ? '#b07aff' : '#7ae0ff');
+            }
+            ctx.fillStyle = 'rgba(140,110,255,.35)'; ctx.fillRect(gx + 4, by - 50, 24, 50);
+            if (Math.floor(frame / 10) % 2) R(gx + 14, by - 30, 4, 4, '#ffffff');
         }
         function drawFriend() {
             const f = lv.friend; if (!f) return;
             const x = f.x, y = f.y + Math.sin(frame / 15) * 2;
             R(x - 4, y + 2, 5, 7, 'rgba(180,240,255,.7)'); R(x + 11, y + 2, 5, 7, 'rgba(180,240,255,.7)');
-            R(x + 3, y, 6, 6, '#f4c9a0'); R(x + 2, y - 1, 8, 3, '#ffd23a'); R(x + 4, y + 2, 1, 1, '#111'); R(x + 7, y + 2, 1, 1, '#111');
-            R(x + 2, y + 6, 8, 9, '#ff7ab8'); R(x + 1, y + 13, 10, 3, '#ff7ab8');
+            R(x + 3, y, 6, 6, '#ffe6d0'); R(x + 2, y - 2, 8, 3, '#7fd8ff'); R(x + 1, y - 1, 2, 5, '#7fd8ff'); R(x + 4, y + 2, 1, 1, '#111'); R(x + 7, y + 2, 1, 1, '#111');
+            R(x + 3, y + 6, 6, 8, '#b9f2ff'); R(x + 2, y + 12, 8, 3, '#8ad0f0');
             if (Math.floor(frame / 10) % 2) R(x + 12, y - 3, 2, 2, '#fff');
         }
         function drawAxe() {
+            // 封印水晶：石座上浮著一顆發光的大水晶
             const a = lv.axe; if (!a || a.done) return;
-            const x = a.x, y = a.dy + (Math.floor(frame / 20) % 2);
-            R(x + 5, y + 2, 2, 14, '#8b4a1c');
-            R(x, y, 6, 9, '#c8c8d4'); R(x + 1, y + 1, 3, 7, '#f0f0f8'); R(x + 7, y + 1, 4, 5, '#c8c8d4');
-            if (Math.floor(frame / 15) % 2) R(x + 12, y - 3, 2, 2, '#ffd23a');
+            const x = a.x, bob = Math.sin(frame / 15) * 2, y = a.dy - 18 + bob;
+            R(x - 3, a.dy + 8, 20, 8, '#5e5a7a'); R(x - 1, a.dy + 6, 16, 3, '#8a86a8');
+            ctx.fillStyle = '#2a6a9a'; ctx.beginPath(); ctx.moveTo(x + 7, y - 4); ctx.lineTo(x + 15, y + 8); ctx.lineTo(x + 7, y + 22); ctx.lineTo(x - 1, y + 8); ctx.fill();
+            ctx.fillStyle = Math.floor(frame / 12) % 2 ? '#7ae0ff' : '#a8ecff'; ctx.beginPath(); ctx.moveTo(x + 7, y - 1); ctx.lineTo(x + 13, y + 8); ctx.lineTo(x + 7, y + 19); ctx.lineTo(x + 1, y + 8); ctx.fill();
+            R(x + 4, y + 4, 2, 5, '#ffffff');
+            if (Math.floor(frame / 15) % 2) R(x + 14, y - 4, 2, 2, '#ffffff');
         }
-
         function render() {
             if (!ctx || !lv) return;
             const th = regionAt(hero.x).theme;
@@ -2688,7 +2712,7 @@ ${JSON.stringify(list)}
             for (const L of lv.lifts) { R(L.x, L.y, L.w, 6, '#e8e2d0'); for (let i = 0; i < L.w; i += 8) R(L.x + i + 3, L.y + 2, 2, 2, '#8a8a98'); }
             for (const b of lv.bars) for (let i = 0; i < b.n; i++) {
                 const bx = b.cx + Math.cos(b.ang) * i * 8, by = b.cy + Math.sin(b.ang) * i * 8;
-                R(bx - 3, by - 3, 6, 6, '#ff7a1a'); R(bx - 2, by - 2, 4, 4, '#ffd23a');
+                R(bx - 3, by - 3, 6, 6, '#6a3aa8'); R(bx - 2, by - 2, 4, 4, '#d8b4ff');
             }
             for (const c of lv.coins) if (!c.got) drawCoin(c.x, c.y);
             for (const it of lv.items) if (!it.gone) drawFruit(it);
@@ -2739,17 +2763,17 @@ ${JSON.stringify(list)}
         // ---------- 音效與背景音樂（原創旋律）----------
         Object.assign(SFX, {
             jump: () => tone([392, 587], 0.07, 'square', 0.04, 0.05),
-            coin: () => tone([988, 1319], 0.07, 'square', 0.06, 0.06),
+            coin: () => tone([880, 1175, 1760], 0.05, 'square', 0.05, 0.05),
             stomp: () => tone([330, 200], 0.07, 'square', 0.05, 0.09),
             bump: () => tone([130], 0.07, 'square', 0, 0.09),
             brk: () => tone([220, 140, 90], 0.06, 'sawtooth', 0.04, 0.08),
-            power: () => tone([392, 494, 587, 784, 988], 0.06, 'square', 0.05, 0.06),
-            shrink: () => tone([784, 587, 392, 294], 0.06, 'square', 0.05, 0.06),
-            sprout: () => tone([523, 784], 0.08, 'triangle', 0.08, 0.1),
-            oneup: () => tone([659, 784, 1319, 1047, 1175, 1568], 0.07, 'square', 0.07, 0.05),
-            die: () => tone([494, 466, 440, 392, 330, 262], 0.12, 'square', 0.13, 0.07),
-            flag: () => tone([392, 523, 659, 784, 1047], 0.09, 'square', 0.07, 0.06),
-            pipe: () => tone([300, 200, 300, 200], 0.06, 'square', 0.07, 0.07),
+            power: () => tone([330, 440, 554, 660, 880], 0.06, 'triangle', 0.08, 0.06),
+            shrink: () => tone([660, 494, 370, 277], 0.06, 'triangle', 0.08, 0.06),
+            sprout: () => tone([587, 880], 0.08, 'triangle', 0.08, 0.1),
+            oneup: () => tone([523, 659, 523, 784, 1047], 0.07, 'triangle', 0.08, 0.05),
+            die: () => tone([440, 392, 349, 330, 220], 0.14, 'triangle', 0.14, 0.08),
+            flag: () => tone([587, 740, 880, 1175, 1480], 0.08, 'triangle', 0.08, 0.06),
+            pipe: () => tone([260, 220, 180], 0.08, 'triangle', 0.08, 0.08),
             kick: () => tone([600, 300], 0.05, 'square', 0.03, 0.08),
             fire: () => tone([160, 110], 0.15, 'sawtooth', 0.08, 0.07),
             bossHit: () => tone([200, 400, 150], 0.1, 'sawtooth', 0.07, 0.1),
@@ -2760,8 +2784,8 @@ ${JSON.stringify(list)}
                 bass: [48, 0, 55, 0, 48, 0, 55, 0, 50, 0, 57, 0, 50, 0, 57, 0, 48, 0, 55, 0, 52, 0, 55, 0, 48, 0, 43, 0, 48, 0, 0, 0] },
             under: { ms: 170, lead: [57, 0, 60, 0, 64, 0, 63, 0, 62, 0, 60, 0, 57, 0, 0, 0, 55, 0, 58, 0, 62, 0, 61, 0, 60, 0, 57, 0, 55, 0, 0, 0],
                 bass: [45, 0, 0, 0, 45, 0, 0, 0, 43, 0, 0, 0, 43, 0, 0, 0, 41, 0, 0, 0, 41, 0, 0, 0, 40, 0, 0, 0, 40, 0, 0, 0] },
-            castle: { ms: 150, lead: [57, 58, 57, 58, 57, 58, 60, 61, 57, 58, 57, 58, 64, 63, 62, 61, 57, 58, 57, 58, 57, 58, 60, 61, 64, 0, 63, 0, 62, 0, 61, 0],
-                bass: [33, 0, 33, 0, 33, 0, 33, 0, 34, 0, 34, 0, 34, 0, 34, 0, 33, 0, 33, 0, 33, 0, 33, 0, 32, 0, 32, 0, 31, 0, 31, 0] }
+            castle: { ms: 190, lead: [62, 0, 65, 0, 69, 0, 68, 0, 65, 0, 62, 0, 61, 0, 0, 0, 62, 0, 65, 0, 70, 0, 69, 0, 67, 0, 65, 0, 64, 0, 0, 0],
+                bass: [38, 0, 0, 38, 0, 0, 38, 0, 34, 0, 0, 34, 0, 0, 33, 0, 38, 0, 0, 38, 0, 0, 38, 0, 36, 0, 0, 37, 0, 0, 37, 0] }
         };
         let musicTimer = null, musicStep = 0, musicTheme = null, musicPaused = false;
         function note(m, dur, type, vol) { if (m) tone([440 * Math.pow(2, (m - 69) / 12)], dur, type, 0, vol); }
