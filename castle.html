@@ -325,39 +325,49 @@
     //  ‧檢討時按「🚩 題目有錯」，這題以後四款都不會再出
     // =====================================================================
     const NLB = (() => {
-        const KEY = 'nl_shared_bank_v1', BAD = 'nl_bad_qs_v1', ASKED = 'nl_asked_v1';
+        const KEY = 'nl_shared_bank_v1', BAD = 'nl_bad_qs_v1', ASKED = 'nl_asked_v2';
         const norm = s => String(s || '').replace(/[\s，。、？！?!.,：:；;「」『』（）()\-—_"'“”]/g, '').toLowerCase();
         const grams = s => { const t = norm(s), g = new Set(); for (let i = 0; i < t.length - 1; i++) g.add(t.slice(i, i + 2)); return g; };
         const sim = (a, b) => { const A = grams(a), B = grams(b); if (!A.size || !B.size) return 0; let n = 0; A.forEach(x => { if (B.has(x)) n++; }); return n / Math.min(A.size, B.size); };
         const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
         const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
-        const today = () => new Date().toISOString().slice(0, 10);
         const bad = () => new Set(read(BAD, []));
-        const asked = () => { const a = read(ASKED, {}); return a.day === today() ? new Set(a.list || []) : new Set(); };
+        // 出過的紀錄（跨天保留）：{ 題目: [出過幾次, 最後一次的時間] }
+        const asked = () => read(ASKED, {});
+        // AI 偶爾混進簡體字：常見、不會有歧義的字直接轉成繁體
+        const S2T = '这這们們个個为為说說时時会會来來对對学學国國动動发發过過还還进進种種样樣现現经經头頭机機关關长長问問题題实實应應电電气氣体體认認东東车車书書热熱从從网網爱愛历歷区區边邊级級条條买買卖賣读讀写寫听聽页頁号號万萬门門马馬鸟鳥鱼魚龙龍众眾帮幫亲親见見觉覺视視颜顏红紅绿綠蓝藍黄黃运運远遠还還总總两兩办辦变變场場园園图圖岁歲转轉选選错錯谁誰叶葉虫蟲风風云雲阳陽阴陰温溫测測计計类類称稱礼禮节節乐樂华華饭飯鸡雞猪豬虾蝦钟鐘钱錢银銀铁鐵层層岛島湾灣' ;
+        const S2TM = (() => { const m = {}; for (let i = 0; i < S2T.length; i += 2) m[S2T[i]] = S2T[i + 1]; return m; })();
+        const toTrad = s => String(s ?? '').replace(/./g, c => S2TM[c] || c);
+        const clean = q => Object.assign({}, q, { q: toTrad(q.q).trim(), options: (q.options || []).map(o => toTrad(o).trim()), explanation: toTrad(q.explanation || '').trim(), point: q.point ? toTrad(q.point).trim() : q.point });
         // 題目「換句話說」也算重複：同一個知識點只留一題
         const ans = q => norm(q.options && q.options[q.answer]);
-        const sameAns = (a, b) => { const x = ans(a), y = ans(b); return x && y && (x === y || (x.length >= 1 && y.length >= 1 && (x.includes(y) || y.includes(x)) && Math.min(x.length, y.length) / Math.max(x.length, y.length) >= .5)); };
-        const same = (a, b) => norm(a.q) === norm(b.q) || (sameAns(a, b) && sim(a.q, b.q) > 0.3) || sim(a.q, b.q) > 0.72 && sim(a.options.join(''), b.options.join('')) > 0.5 || (a.point && b.point && norm(a.point) === norm(b.point) && sim(a.q, b.q) > 0.45);
+        const sameAns = (a, b) => { const x = ans(a), y = ans(b); return x && y && (x === y || (x.includes(y) || y.includes(x)) && Math.min(x.length, y.length) / Math.max(x.length, y.length) >= .5); };
+        const samePoint = (a, b) => a.point && b.point && (norm(a.point) === norm(b.point) || sim(a.point, b.point) > 0.7);
+        const same = (a, b) => norm(a.q) === norm(b.q) || (sameAns(a, b) && sim(a.q, b.q) > 0.3) || (sim(a.q, b.q) > 0.65 && sim(a.options.join(''), b.options.join('')) > 0.45) || (samePoint(a, b) && (sameAns(a, b) || sim(a.q, b.q) > 0.35));
+        const shared = () => { const s = read(KEY, null); return s ? [1, 2, 3].flatMap(t => s.all[t] || []) : []; };
         // 出題的切入角度：每批隨機抽幾個，讓題目長得不一樣
-        const ANGLES = ['生活中的例子', '比較兩件事的不同', '原因和結果', '判斷對錯的情境', '順序或步驟', '分類', '數字、單位或時間', '人物、地點或名稱', '看現象推原因', '實驗或觀察怎麼做', '常見的誤解', '應用到新情境', '找出例外', '圖表或資料的意思（用文字描述）'];
+        const ANGLES = ['生活中的例子', '比較兩件事的不同', '原因和結果', '判斷對錯的情境', '順序或步驟', '分類', '數字、單位或時間', '人物、地點或名稱', '看現象推原因', '實驗或觀察怎麼做', '常見的誤解', '圖表或資料判讀', '安全或保護', '用途和功能', '特徵和辨認'];
         return {
-            sim,
-            // 出題提示：避開已出過的題目、指定切入角度
+            sim, clean,
+            count() { return shared().length; },
+            // 出題提示：把出過的「知識點」整理給 AI，叫它換別的點（比整句題目省字，可以列更多）
             avoid(prev) {
-                const s = read(KEY, null), all = s ? [1, 2, 3].flatMap(t => (s.all[t] || []).map(q => q.q)) : [];
-                const list = [...new Set([...all, ...(prev || [])])];
-                return list.slice(-90).map(q => '- ' + q).join('\n');
+                const lines = [], seen = new Set();
+                const add = s => { const k = norm(s); if (!k || seen.has(k)) return; seen.add(k); lines.push('- ' + String(s).slice(0, 36)); };
+                shared().forEach(q => add(q.point || q.q));
+                (prev || []).forEach(add);
+                return lines.slice(-160).join('\n');
             },
             angles() {
                 const a = [...ANGLES].sort(() => Math.random() - .5).slice(0, 5);
-                return `\n- 這一批請盡量用這些切入角度出題（每題換一種）：${a.join('、')}。\n- 每一題考「不同的知識點」，同一個名詞或概念最多出現在一題的正確答案裡；在每題加一個 "point" 欄位，用 8 個字以內寫出這題考的知識點。\n- 題目句型要有變化，不要每題都是「下列哪一個……」。`;
+                return `\n- 這一批請盡量用這些切入角度出題（每題換一種）：${a.join('、')}。\n- 每一題考「不同的知識點」，同一個名詞或概念最多出現在一題的正確答案裡；在每題加一個 "point" 欄位，用 15 字以內寫出這題考的知識點。`;
             },
-            // 把新題目裡重複的（跟自己、跟題庫裡已有的）拿掉
+            // 把新題目裡重複的（跟自己、跟題庫裡已有的）拿掉，順便修正簡體字
             dedupe(qs, bankAll) {
                 const have = bankAll ? [1, 2, 3].flatMap(t => bankAll[t] || []) : [];
-                const s = read(KEY, null); if (s) have.push(...[1, 2, 3].flatMap(t => s.all[t] || []));
+                have.push(...shared());
                 const B = bad(), out = [];
-                qs.forEach(q => { if (B.has(norm(q.q))) return; if (have.some(h => same(h, q)) || out.some(h => same(h, q))) return; out.push(q); });
+                qs.map(clean).forEach(q => { if (B.has(norm(q.q))) return; if (have.some(h => same(h, q)) || out.some(h => same(h, q))) return; out.push(q); });
                 return out;
             },
             save(src, bankAll) {
@@ -372,19 +382,28 @@
             },
             load() {
                 const s = read(KEY, null); if (!s || !s.src || !s.all) return null;
-                const B = bad(); [1, 2, 3].forEach(t => { s.all[t] = (s.all[t] || []).filter(q => !B.has(norm(q.q))); });
+                const B = bad(); [1, 2, 3].forEach(t => { s.all[t] = (s.all[t] || []).filter(q => !B.has(norm(q.q))).map(clean); });
                 const n = [1, 2, 3].reduce((a, t) => a + s.all[t].length, 0);
                 if (n < 8) return null;
                 s.label = s.src.type === 'pdf' ? s.src.name : s.src.topic; s.n = n;
                 return s;
             },
-            // 抽題用：今天別的遊戲出過、或被標記有錯的題目排到最後
+            // 抽題用：出過越多次、越近期出過的排越前面；從沒出過的放在尾巴（pop() 先拿）
             fresh(arr) {
                 const A = asked(), B = bad();
-                const ok = arr.filter(q => !B.has(norm(q.q)));
-                return [...ok.filter(q => A.has(norm(q.q))), ...ok.filter(q => !A.has(norm(q.q)))];   // pop() 從尾巴拿，沒出過的在尾巴
+                const sc = q => { const r = A[norm(q.q)]; return r ? r[0] * 1e13 + r[1] : 0; };
+                return arr.filter(q => !B.has(norm(q.q))).map((q, i) => [q, sc(q), i]).sort((x, y) => (y[1] - x[1]) || (x[2] - y[2])).map(x => x[0]);
             },
-            mark(q) { if (!q) return; const a = read(ASKED, {}); const list = a.day === today() ? a.list || [] : []; list.push(norm(q.q)); write(ASKED, { day: today(), list: list.slice(-600) }); },
+            // 還沒出過的題目有幾題（少於一定數量就在背景補新題）
+            seen(q) { return !!(q && asked()[norm(q.q)]); },
+            // 依難度順序挑題：先找「沒出過」的（可以借相鄰難度），全部都出過才照原本順序拿
+            pick(bank, order) { for (const t of order) { const b = bank[t]; if (b.length && !this.seen(b[b.length - 1])) return t; } for (const t of order) if (bank[t].length) return t; return 0; },
+            unseen(bankAll) { const A = asked(); return [1, 2, 3].reduce((n, t) => n + ((bankAll && bankAll[t]) || []).filter(q => !A[norm(q.q)]).length, 0); },
+            mark(q) {
+                if (!q) return; const A = asked(), k = norm(q.q), r = A[k] || [0, 0]; A[k] = [r[0] + 1, Date.now()];
+                const keys = Object.keys(A); if (keys.length > 3000) keys.sort((a, b) => A[a][1] - A[b][1]).slice(0, keys.length - 3000).forEach(x => delete A[x]);
+                write(ASKED, A);
+            },
             flagBtn(q) { return q && q.q ? `<button type="button" class="nlb-flag" data-q="${encodeURIComponent(q.q)}" onclick="NLB.flag(this)">🚩 題目有錯</button>` : ''; },
             flag(btn) {
                 const text = decodeURIComponent(btn.dataset.q), k = norm(text), list = read(BAD, []);
@@ -398,7 +417,7 @@
             },
             isBad(q) { return q && bad().has(norm(q.q)); }
         };
-    })();
+        })();
     (() => { const st = document.createElement('style'); st.textContent = '.nlb-flag{margin-left:8px;font-size:12px;font-weight:900;padding:2px 8px;border-radius:8px;border:1px solid #f87171;color:#fca5a5;background:rgba(127,29,29,.35);cursor:pointer}.nlb-flag:hover{background:rgba(185,28,28,.6)}.nlb-flag.done{border-color:#64748b;color:#94a3b8;background:transparent;cursor:default}'; document.head.appendChild(st); })();
     </script>
     <script>
@@ -579,7 +598,7 @@
 
         // 單一模型呼叫：回傳 {ok, status, text, msg, reason}
         const noReasoningParam = new Set(), noThinkParam = new Set();   // 不支援 reasoning_effort 的模型
-        async function requestModel(model, promptText) {
+        async function requestModel(model, promptText, deep) {
             let url, options;
             if (provider === 'gemini') {
                 url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -588,7 +607,7 @@
                     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: promptText }] }],
-                        generationConfig: Object.assign({ responseMimeType: "application/json" }, noThinkParam.has(model) ? {} : { thinkingConfig: { thinkingBudget: 512 } })
+                        generationConfig: Object.assign({ responseMimeType: "application/json" }, noThinkParam.has(model) ? {} : { thinkingConfig: { thinkingBudget: deep ? 1024 : 512 } })
                     })
                 };
             } else {
@@ -604,7 +623,7 @@
                 };
                 if (P.jsonMode) body.response_format = { type: 'json_object' };
                 // GPT-5 系列是「推理模型」，預設會想很久，出一整批題目常常超過時間 → 改成低推理量，快很多
-                if (provider === 'openai' && /^(gpt-5|o\d)/i.test(model) && !noReasoningParam.has(model)) body.reasoning_effort = 'low';
+                if (provider === 'openai' && /^(gpt-5|o\d)/i.test(model) && !noReasoningParam.has(model)) body.reasoning_effort = deep ? 'medium' : 'low';
                 options = {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -661,7 +680,7 @@
         }
 
         // 呼叫 API：自動找能用的模型，錯誤訊息翻成看得懂的中文
-        async function callGeminiRaw(promptText, retries = 3, quiet = false) {
+        async function callGeminiRaw(promptText, retries = 3, quiet = false, deep = false) {
             const showLoadingIfOpen = quiet ? () => {} : window.showLoadingIfOpen;
             const P = PROVIDERS[provider];
             if (!apiKey) throw new Error(`請先在上方框框中輸入或貼上 ${P.name} API Key！`);
@@ -687,7 +706,7 @@
                 tried.add(model);
 
                 for (let i = 0; i < retries; i++) {
-                    const res = await requestModel(model, promptText);
+                    const res = await requestModel(model, promptText, deep);
 
                     if (res.ok) {
                         workingModel = model;
@@ -972,8 +991,8 @@
 - 每題只有一個正確答案，三個錯誤選項要看起來合理但明確是錯的，不可以有兩個都算對的選項。
 - 避免「以上皆是」「以上皆非」與否定句考法。
 - 10 題以上時，題目要涵蓋不同概念，不要重複考同一個知識點。${NLB.angles()}`;
-            const avoid = previousQs.length
-                ? `\n\n以下題目已經出過，請出不同的新題目：\n${NLB.avoid(previousQs)}`
+            const avoid = (previousQs.length || NLB.count())
+                ? `\n\n以下知識點（或題目）已經出過了，請改考「其他知識點」，不要只是換句話說再考一次：\n${NLB.avoid(previousQs)}`
                 : '';
             const tierText = `\n\n【難度：${T.name}】${T.desc}`;
             if (src.type === 'pdf') {
@@ -985,27 +1004,43 @@
 
         async function verifyQuestions(questions, quiet) {
             const { grade } = getQuizSettings();
-            const list = questions.map((q, i) => ({ id: i, q: q.q, options: q.options }));
-            const prompt = `你是嚴謹的國小${GRADE_NAMES[grade]}年級審題老師。請獨立作答下列四選一題目（依公認正確的知識判斷，不要猜出題者的意思），並檢查每題品質。
+            const G = GRADE_NAMES[grade];
+            // 審兩次：第二次把選項順序打亂，避免審題的 AI 只是附和原本的答案位置；兩次都認同才留下
+            const ask = async (perm) => {
+                const list = questions.map((q, i) => ({ id: i, q: q.q, options: perm[i].map(k => q.options[k]) }));
+                const prompt = `你是嚴謹的國小${G}年級審題老師。請獨立作答下列四選一題目（依公認正確、教科書等級的知識判斷，不要猜出題者的意思），並逐題檢查品質。
 對每一題回報（請先想清楚再回答）：
 - why：用一句話寫出你的解題理由（30 字內）
 - best：你認為唯一正確的選項索引（0~3）
-- ok：true 代表事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個選項都對、題意不清、超出${GRADE_NAMES[grade]}年級程度、用字太難）就填 false
+- ok：true 代表事實正確、只有一個正確答案、沒有爭議；只要有任何疑慮（事實可能錯誤、兩個以上選項都說得通、題意不清、數字或單位有誤、超出${G}年級程度、用字太難）就填 false
+- fix：只有在題目或選項有「錯字、簡體字、標點錯誤、語句不通順」這類小問題時才給，格式 {"q":"修正後的題目","options":["…","…","…","…"]}，選項順序不能改、意思不能改；沒有問題就不要給這個欄位
 - 年級程度參考：${GRADE_GUIDE[grade]}
 
 題目：
 ${JSON.stringify(list)}
 
 請嚴格以 JSON 格式輸出：{"results":[{"id":0,"why":"……","best":1,"ok":true}]}`;
-            const raw = await callGeminiRaw(prompt, 3, quiet);
-            const parsed = parseJsonLoose(raw);
-            const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
-                .filter(r => r && r.id !== undefined && r.best !== undefined);
-            if (results.length < questions.length / 2) throw new Error('審題結果格式不符');
-            const byId = new Map(results.map(r => [Number(r.id), r]));
-            const kept = questions.filter((q, i) => {
-                const r = byId.get(i);
-                return r && r.ok === true && Number(r.best) === q.answer;
+                const parsed = parseJsonLoose(await callGeminiRaw(prompt, 3, quiet, true));
+                const results = (Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed).find(Array.isArray) || []))
+                    .filter(r => r && r.id !== undefined && r.best !== undefined);
+                if (results.length < questions.length / 2) throw new Error('審題結果格式不符');
+                return new Map(results.map(r => [Number(r.id), r]));
+            };
+            const id4 = questions.map(() => [0, 1, 2, 3]);
+            const mix = questions.map(() => [0, 1, 2, 3].sort(() => Math.random() - .5));
+            const [a, b] = await Promise.all([ask(id4), ask(mix).catch(e => { console.warn('第二次審題失敗，只用第一次的結果', e); return null; })]);
+            const kept = [];
+            questions.forEach((q, i) => {
+                const r = a.get(i); if (!r || r.ok !== true || Number(r.best) !== q.answer) return;
+                if (b) { const r2 = b.get(i); if (!r2 || r2.ok !== true || mix[i][Number(r2.best)] !== q.answer) return; }
+                let out = q;
+                // 小修正（錯字、簡體字）：意思不能變，選項要一樣是 4 個
+                const f = r.fix;
+                if (f && typeof f.q === 'string' && f.q.trim() && NLB.sim(f.q, q.q) > 0.6) {
+                    const opts = Array.isArray(f.options) && f.options.length === 4 && f.options.every((o, k) => typeof o === 'string' && o.trim() && NLB.sim(o, q.options[k]) > 0.4) ? f.options : q.options;
+                    out = NLB.clean(Object.assign({}, q, { q: f.q, options: opts }));
+                }
+                kept.push(out);
             });
             return { kept, removed: questions.length - kept.length };
         }
@@ -1109,12 +1144,12 @@ ${JSON.stringify(list)}
         function drawQuestion(value) {
             const order = value === 1 ? [1, 2, 3] : value === 2 ? [2, 1, 3] : [3, 2, 1];
             let picked = null;
-            for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; NLB.mark(picked); break; }
+            { const t = NLB.pick(bank, order); if (t) { picked = { ...bank[t].pop(), tier: t }; NLB.mark(picked); } }
             if (!picked) {
                 // 真的全部用完（內建題目，或 AI 補題失敗）才重複使用
                 refillBank();
                 toast('新題目還沒補好，這題先重複使用舊題', '#38bdf8');
-                for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; NLB.mark(picked); break; }
+                { const t = NLB.pick(bank, order); if (t) { picked = { ...bank[t].pop(), tier: t }; NLB.mark(picked); } }
             }
             topUpBank();
             return picked ? shuffleOpts(picked) : picked;
@@ -1123,8 +1158,8 @@ ${JSON.stringify(list)}
         // 背景補題：剩下不到 12 題時，AI 依同一份教材再出一批新題（避開出過的題目），不打斷遊戲
         let toppingUp = false;
         async function topUpBank() {
-            if (toppingUp || !lastSource || isDemoBank || unusedCount() >= 12) return;
-            toppingUp = true;
+            if (toppingUp || !lastSource || isDemoBank || unusedCount() >= 12 || Date.now() - (window.__nlTopT || 0) < (window.__nlTopGap || 45000)) return;
+            toppingUp = true; window.__nlTopT = Date.now();
             const tiers = [1, 2, 3].sort((a, b) => bank[a].length - bank[b].length).slice(0, 2);
             try {
                 const results = await Promise.all(tiers.map(t => makeTier(lastSource, t, 8, () => {}, true).catch(() => ({ qs: [] }))));
@@ -1135,6 +1170,8 @@ ${JSON.stringify(list)}
                     bankAll[t].push(...r.qs);
                     added += r.qs.length;
                 });
+                // 補不太到新題（這個單元的知識點快出完了）：拉長下次補題的間隔，避免一直花 AI 額度
+                window.__nlTopGap = added < 3 ? Math.min(600000, (window.__nlTopGap || 45000) * 2) : 45000;
                 NLB.save(lastSource, bankAll);
                 if (added && game && !game.over) toast(`📚 AI 補了 ${added} 題新題目`, '#34d399');
             } finally {
