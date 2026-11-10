@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>數獨迷宮出題程式</title>
+<script id="engine">
+/* 天工負責的純邏輯區塊；不依賴 DOM、網路或外部套件。 */
+window.Engine = (() => {
+  'use strict';
+  // 數獨三級：依「需要的解題技巧」分級，提示數只是輔助。
+  //   低級（低年級）：只要「唯一候選」「這一排只剩這裡能放」就解得完
+  //   中級（中高年級）：同上，但提示比較少，要多想幾步
+  //   高級（高年級高程度～成人）：會用到「數對」「區塊排除」等進階推理，但一定不用猜
+  // tech：允許用到的最難技巧（0＝基本、1＝進階）；want：優先挑真的需要進階技巧的題目
+  const LEVEL_LABEL = Object.freeze({ easy: '低級（低年級）', medium: '中級（中高年級）', hard: '高級（高年級～成人）' });
+  const CLUES = Object.freeze({
+    9: Object.freeze({ easy: [45, 50], medium: [32, 37], hard: [24, 29] }),
+    6: Object.freeze({ easy: [20, 23], medium: [15, 18], hard: [11, 14] }),
+    4: Object.freeze({ easy: [9, 10], medium: [7, 8], hard: [5, 6] })
+  });
+  const TECH = Object.freeze({ easy: 0, medium: 0, hard: 1 });
+  const LEVELS = Object.freeze({
+    easy: Object.freeze({ label: LEVEL_LABEL.easy, min: 45, max: 50 }),
+    medium: Object.freeze({ label: LEVEL_LABEL.medium, min: 32, max: 37 }),
+    hard: Object.freeze({ label: LEVEL_LABEL.hard, min: 24, max: 29 })
+  });
+  const SUDOKU_SIZES = Object.freeze([9, 6, 4]);
+  // 產生器版本：演算法或難度規則有變動時加 1。題組檔會連同題目本身一起存，所以舊檔不靠重新產生也能還原。
+  const VERSION = 4, FILE_FORMAT = 1, FILE_APP = 'sudoku-maze-generator';
+  const SIZES = Object.freeze([5, 6, 7, 8, 10, 12, 15]);
+  // 小格數依可用空間縮放假路長度，仍保留三級的大岔路數差異。
+  function forkDepth(n, forks, factor) {
+    return Math.min(Math.ceil(factor * n), Math.floor((n * n - (2 * n - 1)) / (forks + 1)));
+  }
+  function largeForks(s, depth) {
+    // 假路至少有正路到下一個選擇點的一半長，短支線不能算成大岔路。
+    return s.forks.filter(f => f.falseLength >= depth && f.falseLength >= f.forwardLength / 2).length;
+  }
+  function mazePathMin(n, forks, factor, multiple) {
+    const shortest = 2 * n - 1, spare = n * n - shortest - forks * forkDepth(n, forks, factor);
+    // 除了預留假路，還要留接枝空間；避免小盤面門檻剛好卡在不可能的路徑奇偶數。
+    return Math.min(multiple * n, shortest + Math.floor(spare / 2));
+  }
+  const MAZE_LEVELS = Object.freeze({
+    easy: Object.freeze({ label: LEVEL_LABEL.easy, min: 5, max: 7, bias: .95, tries: 100, forks: 1, depth: n => forkDepth(n, 1, .7),
+      pass: (s, n) => s.pathLen >= 1.8 * n && s.junctions <= .6 * n + .5 &&
+        s.deadDepth >= forkDepth(n, 1, .7) && largeForks(s, forkDepth(n, 1, .7)) >= 1 }),
+    medium: Object.freeze({ label: LEVEL_LABEL.medium, min: 8, max: 11, bias: .85, tries: 160, forks: 2, depth: n => forkDepth(n, 2, 1),
+      pass: (s, n) => s.pathLen >= mazePathMin(n, 2, 1, 3) &&
+        s.deadDepth >= forkDepth(n, 2, 1) && largeForks(s, forkDepth(n, 2, 1)) >= 2 }),
+    hard: Object.freeze({ label: LEVEL_LABEL.hard, min: 12, max: 15, bias: .8, tries: 240, forks: 3, depth: n => forkDepth(n, 3, 1.4),
+      pass: (s, n) => s.pathLen >= mazePathMin(n, 3, 1.4, 4) &&
+        s.deadDepth >= forkDepth(n, 3, 1.4) && largeForks(s, forkDepth(n, 3, 1.4)) >= 3 })
+  });
+  // 盤面幾何：9×9 是 3×3 宮、6×6 是 2 列 × 3 行的宮、4×4 是 2×2 宮
+  const GEO = {};
+  function geo(n) {
+    if (GEO[n]) return GEO[n];
+    if (!SUDOKU_SIZES.includes(n)) throw new Error('數獨大小必須是 4、6 或 9。');
+    const bh = n === 9 ? 3 : 2, bw = n === 4 ? 2 : 3, N = n * n;
+    const ROW = Array.from({ length: N }, (_, i) => Math.floor(i / n)), COL = Array.from({ length: N }, (_, i) => i % n);
+    const BOX = ROW.map((r, i) => Math.floor(r / bh) * (n / bw) + Math.floor(COL[i] / bw));
+    const units = [];
+    for (let k = 0; k < n; k++) {
+      units.push(Array.from({ length: n }, (_, j) => k * n + j));
+      units.push(Array.from({ length: n }, (_, j) => j * n + k));
+    }
+    for (let b = 0; b < n; b++) units.push(Array.from({ length: N }, (_, i) => i).filter(i => BOX[i] === b));
+    const peers = Array.from({ length: N }, (_, i) => Array.from({ length: N }, (_, j) => j).filter(j => j !== i && (ROW[j] === ROW[i] || COL[j] === COL[i] || BOX[j] === BOX[i])));
+    return (GEO[n] = Object.freeze({ n, N, bh, bw, FULL: (1 << n) - 1, ROW, COL, BOX, units, peers }));
+  }
+  const POP = Array.from({ length: 512 }, (_, n) => {
+    let count = 0;
+    for (; n; n &= n - 1) count++;
+    return count;
+  });
+  const DIRS = [[-1, 0, 1, 4], [0, 1, 2, 8], [1, 0, 4, 1], [0, -1, 8, 2]];
+
+  function newSeed() {
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const words = new Uint32Array(6);
+    if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === 'function') {
+      globalThis.crypto.getRandomValues(words);
+    } else {
+      for (let i = 0; i < words.length; i++) words[i] = Math.floor(Math.random() * 4294967296);
+    }
+    return Array.from(words, n => chars[n % chars.length]).join('');
+  }
+  function validSeed(seed) {
+    if (typeof seed !== 'string' && !(typeof seed === 'number' && Number.isFinite(seed))) {
+      throw new Error('題組代碼必須是字串或有限數字。');
+    }
+    return seed;
+  }
+  // 題組代碼一律轉大寫、去頭尾空白，輸入框與實際讀取值才會一致。
+  function normSeed(seed) {
+    if (typeof seed !== 'string') return seed;
+    const s = seed.trim().toUpperCase();
+    if (!s) throw new Error('題組代碼不可空白。');
+    return s;
+  }
+  function makeRng(seed) {
+    validSeed(seed);
+    const source = typeof seed + ':' + String(seed);
+    let state = 2166136261;
+    for (let i = 0; i < source.length; i++) state = Math.imul(state ^ source.charCodeAt(i), 16777619);
+    return () => {
+      state = (state + 0x6d2b79f5) | 0;
+      let t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(items, rng) {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+  }
+  function options(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('出題設定必須是物件。');
+    const count = value.count === undefined ? 20 : value.count;
+    if (!Number.isInteger(count) || count < 1 || count > 60) throw new Error('題數必須是 1～60 的整數。');
+    const seed = value.seed === undefined ? newSeed() : normSeed(validSeed(value.seed));
+    return { count, seed, rng: makeRng(seed) };
+  }
+  // 盤面大小由格數判斷：16 格＝4×4、36 格＝6×6、81 格＝9×9
+  const sizeOf = grid => grid.length === 16 ? 4 : grid.length === 36 ? 6 : 9;
+  function validGrid(grid) {
+    if (!Array.isArray(grid) || ![16, 36, 81].includes(grid.length)) return false;
+    const n = sizeOf(grid);
+    return Array.from(grid).every(v => Number.isInteger(v) && v >= 0 && v <= n);
+  }
+  function requireGrid(grid) {
+    if (!validGrid(grid)) throw new Error('數獨盤面格式不正確（4×4、6×6 或 9×9，每格為 0～邊長的整數）。');
+  }
+  // MRV 選候選數最少的格子；解題只操作副本，所有呼叫都不更改輸入。
+  function search(grid, limit, rng) {
+    if (!validGrid(grid)) return { count: 0, solution: null };
+    const G = geo(sizeOf(grid)), { N, FULL, ROW, COL, BOX } = G;
+    const board = grid.slice(), rows = new Int32Array(9), cols = new Int32Array(9), boxes = new Int32Array(9);
+    for (let i = 0; i < N; i++) {
+      if (!board[i]) continue;
+      const bit = 1 << (board[i] - 1), r = ROW[i], c = COL[i], b = BOX[i];
+      if ((rows[r] | cols[c] | boxes[b]) & bit) return { count: 0, solution: null };
+      rows[r] |= bit; cols[c] |= bit; boxes[b] |= bit;
+    }
+    let count = 0, solution = null;
+    function visit() {
+      let index = -1, mask = 0, smallest = 10;
+      for (let i = 0; i < N; i++) {
+        if (board[i]) continue;
+        const available = FULL & ~(rows[ROW[i]] | cols[COL[i]] | boxes[BOX[i]]);
+        const n = POP[available];
+        if (!n) return;
+        if (n < smallest) { index = i; mask = available; smallest = n; if (n === 1) break; }
+      }
+      if (index < 0) { count++; if (!solution) solution = board.slice(); return; }
+      const candidates = [];
+      for (let bits = mask; bits; bits &= bits - 1) candidates.push(bits & -bits);
+      if (rng) shuffle(candidates, rng);
+      const r = ROW[index], c = COL[index], b = BOX[index];
+      for (const bit of candidates) {
+        board[index] = 32 - Math.clz32(bit);
+        rows[r] |= bit; cols[c] |= bit; boxes[b] |= bit;
+        visit();
+        rows[r] ^= bit; cols[c] ^= bit; boxes[b] ^= bit; board[index] = 0;
+        if (count >= limit) return;
+      }
+    }
+    visit();
+    return { count, solution };
+  }
+  function countSolutions(grid, limit = 2) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 2) throw new Error('解答計數上限必須是 1 或 2。');
+    return search(grid, limit).count;
+  }
+  // 模仿人類解題：回傳需要的最難技巧（0＝基本、1＝進階、2＝要猜或更難的技巧）
+  //   基本：唯一候選數（這格只剩一個數字能放）、隱藏單一（這一排／這一宮只剩這格能放某數字）
+  //   進階：數對（兩格只能放同樣兩個數字）、區塊排除（宮裡某數字只在同一排 → 那一排其他地方不能放）
+  function rate(givens) {
+    if (!validGrid(givens)) return 2;
+    const G = geo(sizeOf(givens)), { N, FULL, units, peers, ROW, COL, BOX } = G, g = givens.slice();
+    const cand = new Int32Array(N).fill(FULL);
+    let level = 0;
+    const prune = () => { for (let i = 0; i < N; i++) if (!g[i]) for (const j of peers[i]) if (g[j]) cand[i] &= ~(1 << (g[j] - 1)); };
+    for (let guard = 0; guard < 4 * N; guard++) {
+      prune();
+      if (g.every(Boolean)) return level;
+      let placed = false;
+      for (let i = 0; i < N && !placed; i++) if (!g[i]) {
+        if (!cand[i]) return 2;
+        if (POP[cand[i]] === 1) { g[i] = 32 - Math.clz32(cand[i]); placed = true; }
+      }
+      if (placed) continue;
+      for (const u of units) {
+        for (let d = 0; d < G.n && !placed; d++) {
+          const bit = 1 << d; let at = -1, n = 0;
+          for (const i of u) if (!g[i] && cand[i] & bit) { at = i; n++; }
+          if (n === 1) { g[at] = d + 1; placed = true; }
+        }
+        if (placed) break;
+      }
+      if (placed) continue;
+      let changed = false;
+      for (const u of units) {   // 數對
+        const open = u.filter(i => !g[i]);
+        for (let a = 0; a < open.length; a++) for (let b = a + 1; b < open.length; b++) {
+          const m = cand[open[a]];
+          if (m !== cand[open[b]] || POP[m] !== 2) continue;
+          for (const x of open) if (x !== open[a] && x !== open[b] && cand[x] & m) { cand[x] &= ~m; changed = true; }
+        }
+      }
+      for (const u of units) for (let d = 0; d < G.n; d++) {   // 區塊排除（宮→排、排→宮）
+        const bit = 1 << d, cells = u.filter(i => !g[i] && cand[i] & bit);
+        if (cells.length < 2) continue;
+        for (const key of [ROW, COL, BOX]) {
+          const v = key[cells[0]];
+          if (!cells.every(i => key[i] === v)) continue;
+          for (let i = 0; i < N; i++) if (key[i] === v && !g[i] && cand[i] & bit && !cells.includes(i)) { cand[i] &= ~bit; changed = true; }
+        }
+      }
+      if (!changed) return 2;
+      level = 1;
+    }
+    return 2;
+  }
+  function generateSudoku(settings = {}) {
+    const { count, seed, rng } = options(settings);
+    const level = settings.level === undefined ? 'easy' : settings.level;
+    if (typeof level !== 'string' || !Object.hasOwn(LEVEL_LABEL, level)) throw new Error('數獨難度必須是 easy、medium 或 hard。');
+    const size = settings.size === undefined ? 9 : settings.size;
+    if (!SUDOKU_SIZES.includes(size)) throw new Error('數獨大小必須是 4、6 或 9。');
+    const G = geo(size), [lo, hi] = CLUES[size][level], tech = TECH[level], wantHard = level === 'hard' && size === 9;
+    const puzzles = [];
+    for (let no = 1; no <= count; no++) {
+      const target = lo + Math.floor(rng() * (hi - lo + 1));
+      let best = null, fallback = null;
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const solution = search(Array(G.N).fill(0), 1, rng).solution;
+        const givens = solution.slice();
+        let clues = G.N;
+        for (const index of shuffle(Array.from({ length: G.N }, (_, i) => i), rng)) {
+          const old = givens[index];
+          givens[index] = 0;
+          // 拿掉後要「唯一解」而且「不超過這一級允許的技巧」才真的拿掉
+          if (countSolutions(givens, 2) === 1 && rate(givens) <= tech) clues--; else givens[index] = old;
+          if (clues === target) break;
+        }
+        if (clues < lo || clues > hi) continue;
+        const pick = { no, givens, solution, clues, tech: rate(givens) };
+        // 高級（9×9）優先挑真的要用到進階技巧的題目；試了幾次都沒有，就用提示最少的那一題
+        if (!wantHard || pick.tech === 1) { best = pick; break; }
+        if (!fallback || pick.clues < fallback.clues) fallback = pick;
+        if (attempt >= 24 && fallback) { best = fallback; break; }
+      }
+      best = best || fallback;
+      if (!best) throw new Error('無法在指定提示數內產生合適難度的數獨，請更換題組代碼重試。');
+      puzzles.push(best);
+    }
+    puzzles.sort((a, b) => b.clues - a.clues);
+    puzzles.forEach((p, i) => { p.no = i + 1; });
+    return { type: 'sudoku', version: VERSION, level, size, seed, puzzles };
+  }
+  function conflicts(grid) {
+    requireGrid(grid);
+    const { n, N, ROW, COL, BOX } = geo(sizeOf(grid)), groups = Array.from({ length: 3 * n }, () => new Map()), bad = new Set();
+    for (let i = 0; i < N; i++) {
+      if (!grid[i]) continue;
+      for (const group of [ROW[i], n + COL[i], 2 * n + BOX[i]]) {
+        const seen = groups[group];
+        if (seen.has(grid[i])) { bad.add(seen.get(grid[i])); bad.add(i); }
+        else seen.set(grid[i], i);
+      }
+    }
+    return [...bad].sort((a, b) => a - b);
+  }
+  function check(grid, solution) {
+    requireGrid(grid); requireGrid(solution);
+    if (grid.length !== solution.length) throw new Error('盤面和答案大小不一樣。');
+    const wrong = [], empty = [];
+    for (let i = 0; i < grid.length; i++) {
+      if (grid[i] === 0) empty.push(i); else if (grid[i] !== solution[i]) wrong.push(i);
+    }
+    return { wrong, empty, solved: wrong.length === 0 && empty.length === 0 };
+  }
+  function hint(grid, solution, preferIndex) {
+    const result = check(grid, solution);
+    let index;
+    if (Number.isInteger(preferIndex) && preferIndex >= 0 && preferIndex < grid.length && grid[preferIndex] !== solution[preferIndex]) index = preferIndex;
+    else index = result.wrong.length ? result.wrong[0] : result.empty[0];
+    return index === undefined ? null : { index, value: solution[index] };
+  }
+
+  function coordinate(maze, point) {
+    return Array.isArray(point) && point.length === 2 && Number.isInteger(point[0]) && Number.isInteger(point[1]) &&
+      point[0] >= 0 && point[0] < maze.rows && point[1] >= 0 && point[1] < maze.cols;
+  }
+  function mazeShape(maze) {
+    return !!maze && Number.isInteger(maze.rows) && Number.isInteger(maze.cols) &&
+      maze.rows >= 1 && maze.rows <= 15 && maze.cols >= 1 && maze.cols <= 15 &&
+      Array.isArray(maze.walls) && maze.walls.length === maze.rows * maze.cols &&
+      Array.from(maze.walls).every(n => Number.isInteger(n) && n >= 0 && n <= 15) &&
+      coordinate(maze, maze.start) && coordinate(maze, maze.end);
+  }
+  function same(a, b) { return !!a && !!b && a[0] === b[0] && a[1] === b[1]; }
+  function canMove(maze, from, to) {
+    if (!maze || !Array.isArray(maze.walls) || !coordinate(maze, from) || !coordinate(maze, to)) return false;
+    const direction = DIRS.find(d => from[0] + d[0] === to[0] && from[1] + d[1] === to[1]);
+    if (!direction) return false;
+    const a = maze.walls[from[0] * maze.cols + from[1]], b = maze.walls[to[0] * maze.cols + to[1]];
+    return Number.isInteger(a) && a >= 0 && a <= 15 && Number.isInteger(b) && b >= 0 && b <= 15 &&
+      !(a & direction[2]) && !(b & direction[3]);
+  }
+  function solve(maze) {
+    if (!mazeShape(maze)) return null;
+    const index = p => p[0] * maze.cols + p[1];
+    const start = index(maze.start), end = index(maze.end);
+    const parents = new Int32Array(maze.rows * maze.cols).fill(-1), queue = [start];
+    parents[start] = start;
+    for (let head = 0; head < queue.length; head++) {
+      const current = queue[head], p = [Math.floor(current / maze.cols), current % maze.cols];
+      if (current === end) {
+        const path = [];
+        for (let i = end;; i = parents[i]) {
+          path.push([Math.floor(i / maze.cols), i % maze.cols]);
+          if (i === start) break;
+        }
+        return path.reverse();
+      }
+      for (const d of DIRS) {
+        const next = [p[0] + d[0], p[1] + d[1]];
+        if (!canMove(maze, p, next)) continue;
+        const n = index(next);
+        if (parents[n] !== -1) continue;
+        parents[n] = current; queue.push(n);
+      }
+    }
+    return null;
+  }
+  function neighbors(maze, i) {
+    const p = [Math.floor(i / maze.cols), i % maze.cols], out = [];
+    for (const d of DIRS) { const q = [p[0] + d[0], p[1] + d[1]]; if (canMove(maze, p, q)) out.push(q[0] * maze.cols + q[1]); }
+    return out;
+  }
+  // 每個岔路記錄假路最大深度，與正路到下一個選擇點的長度比較。
+  function mazeStats(maze) {
+    const path = solve(maze);
+    if (!path) return null;
+    const cells = maze.rows * maze.cols, onPath = new Uint8Array(cells), seen = new Uint8Array(cells);
+    const indices = path.map(p => p[0] * maze.cols + p[1]), forks = [];
+    for (const i of indices) { onPath[i] = 1; seen[i] = 1; }
+    let junctions = 0, deadDepth = 0, deadEnds = 0;
+    for (let at = 0; at < indices.length; at++) {
+      let deepest = 0;
+      for (const next of neighbors(maze, indices[at])) {
+        if (seen[next]) continue;
+        const stack = [[next, 1]]; seen[next] = 1;
+        while (stack.length) {
+          const [i, depth] = stack.pop();
+          deepest = Math.max(deepest, depth);
+          for (const x of neighbors(maze, i)) if (!seen[x]) { seen[x] = 1; stack.push([x, depth + 1]); }
+        }
+      }
+      if (deepest) {
+        junctions++; deadDepth = Math.max(deadDepth, deepest);
+        // 起終點旁的支線不算途中兩選一。
+        if (at > 0 && at < indices.length - 1) forks.push({ at, falseLength: deepest, forwardLength: 0 });
+      }
+    }
+    for (let k = 0; k < forks.length; k++) forks[k].forwardLength = (k + 1 < forks.length ? forks[k + 1].at : indices.length - 1) - forks[k].at;
+    for (let i = 0; i < cells; i++) if (!onPath[i] && neighbors(maze, i).length === 1) deadEnds++;
+    return { cells, pathLen: path.length, junctions, deadDepth, deadEnds, forks };
+  }
+  // 完美迷宮：全部連通、沒有繞圈，所以起點到終點只有唯一一條路。
+  function isPerfect(maze) {
+    const cells = maze.rows * maze.cols, seen = new Uint8Array(cells), stack = [0];
+    let open = 0, reach = 1; seen[0] = 1;
+    for (let i = 0; i < cells; i++) open += neighbors(maze, i).length;
+    while (stack.length) for (const x of neighbors(maze, stack.pop())) if (!seen[x]) { seen[x] = 1; reach++; stack.push(x); }
+    return reach === cells && open / 2 === cells - 1;
+  }
+  // 成長樹法：bias 的機率接著最新的格子走（長走廊），否則從任意舊格子長出新岔路。
+  function carveMaze(n, rng, bias) {
+    const walls = Array(n * n).fill(15), visited = new Uint8Array(n * n), list = [0];
+    visited[0] = 1;
+    while (list.length) {
+      const k = rng() < bias ? list.length - 1 : Math.floor(rng() * list.length), current = list[k], r = Math.floor(current / n), c = current % n;
+      const choices = DIRS.filter(d => r + d[0] >= 0 && r + d[0] < n && c + d[1] >= 0 && c + d[1] < n && !visited[(r + d[0]) * n + c + d[1]]);
+      if (!choices.length) { list.splice(k, 1); continue; }
+      const d = choices[Math.floor(rng() * choices.length)], next = (r + d[0]) * n + c + d[1];
+      walls[current] &= ~d[2]; walls[next] &= ~d[3]; visited[next] = 1; list.push(next);
+    }
+    return walls;
+  }
+  // 先保留答案，再從答案中途預留長假路；只連接未使用格，保持生成樹。
+  function carveForkedMaze(n, rng, L) {
+    const base = { rows: n, cols: n, walls: carveMaze(n, rng, L.bias), start: [0, 0], end: [n - 1, n - 1] };
+    const path = solve(base).map(p => p[0] * n + p[1]);
+    const target = L.depth(n);
+    if (path.length + L.forks * target > n * n) return null;
+    const walls = Array(n * n).fill(15), used = new Uint8Array(n * n), active = [];
+    const adjacent = i => DIRS.map(d => ({ d, r: Math.floor(i / n) + d[0], c: i % n + d[1] }))
+      .filter(q => q.r >= 0 && q.r < n && q.c >= 0 && q.c < n).map(q => ({ i: q.r * n + q.c, d: q.d }));
+    function connect(a, b) {
+      const d = adjacent(a).find(q => q.i === b).d;
+      walls[a] &= ~d[2]; walls[b] &= ~d[3];
+    }
+    for (let k = 0; k < path.length; k++) {
+      used[path[k]] = 1; active.push(path[k]);
+      if (k) connect(path[k - 1], path[k]);
+    }
+    const roots = shuffle(path.slice(1, -1), rng);
+    let reserved = 0;
+    for (const root of roots) {
+      if (reserved === L.forks) break;
+      // 有界回溯找長支線；失敗不挖牆、不佔空間，換另一個岔路口。
+      const trail = [root], local = new Uint8Array(used), choices = [shuffle(adjacent(root), rng)];
+      let budget = 2 * n * n;
+      while (trail.length && trail.length <= target && budget-- > 0) {
+        const q = choices[choices.length - 1].pop();
+        if (!q) { const last = trail.pop(); choices.pop(); if (last !== root) local[last] = 0; continue; }
+        if (local[q.i]) continue;
+        local[q.i] = 1; trail.push(q.i); choices.push(shuffle(adjacent(q.i), rng));
+      }
+      if (trail.length <= target) continue;
+      for (let k = 1; k < trail.length; k++) { connect(trail[k - 1], trail[k]); used[trail[k]] = 1; active.push(trail[k]); }
+      reserved++;
+    }
+    // 剩餘格接到既有樹上，不接通兩條已存在的路線。
+    while (active.length) {
+      const k = rng() < L.bias ? active.length - 1 : Math.floor(rng() * active.length), current = active[k];
+      const choices = adjacent(current).filter(q => !used[q.i]);
+      if (!choices.length) { active.splice(k, 1); continue; }
+      const q = choices[Math.floor(rng() * choices.length)];
+      connect(current, q.i); used[q.i] = 1; active.push(q.i);
+    }
+    return walls;
+  }
+  function generateMaze(settings = {}) {
+    const { count, seed, rng } = options(settings);
+    const level = settings.level === undefined ? 'easy' : settings.level;
+    if (typeof level !== 'string' || !Object.hasOwn(MAZE_LEVELS, level)) throw new Error('迷宮難度必須是 easy、medium 或 hard。');
+    const L = MAZE_LEVELS[level];
+    let size = settings.size === undefined || settings.size === 'grow' ? 'auto' : settings.size;
+    if (size !== 'auto' && !SIZES.includes(size)) throw new Error('迷宮大小必須是 5、6、7、8、10、12、15 或 auto。');
+    const mazes = [];
+    for (let k = 0; k < count; k++) {
+      const n = size === 'auto' ? (count === 1 ? L.min : L.min + Math.round(k * (L.max - L.min) / (count - 1))) : size;
+      let picked = null;
+      for (let t = 0; t < L.tries; t++) {
+        const walls = carveForkedMaze(n, rng, L);
+        if (!walls) continue;
+        const maze = { rows: n, cols: n, walls, start: [0, 0], end: [n - 1, n - 1] };
+        const stats = mazeStats(maze);
+        if (!L.pass(stats, n)) continue;
+        maze.solution = solve(maze);
+        maze.stats = Object.assign(stats, { pass: true });
+        picked = maze; break;
+      }
+      if (!picked) throw new Error('無法產生符合難度指標的迷宮，請更換題組代碼重試。');
+      picked.no = k + 1;
+      mazes.push(picked);
+    }
+    return { type: 'maze', version: VERSION, level, size, seed, mazes };
+  }
+  function extendPath(maze, path, point) {
+    if (!Array.isArray(path)) throw new Error('迷宮路線必須是座標陣列。');
+    const copy = path.map(p => Array.isArray(p) ? p.slice() : p);
+    if (!maze || !coordinate(maze, point)) return copy;
+    if (!path.length) return same(point, maze.start) ? [point.slice()] : copy;
+    const previous = path.findIndex(p => same(p, point));
+    if (previous >= 0) return copy.slice(0, previous + 1);
+    return canMove(maze, path[path.length - 1], point) ? [...copy, point.slice()] : copy;
+  }
+  function isDone(maze, path) {
+    return !!maze && Array.isArray(path) && path.length > 0 && same(path[path.length - 1], maze.end);
+  }
+  // lenient：檢查匯入的舊題組用。只確認題目本身合法（唯一解／走得通），不套用現行版本的難度範圍與排序規則。
+  function selfTest(set, opts = {}) {
+    const lenient = !!opts.lenient, problems = [];
+    if (!set || !['sudoku', 'maze'].includes(set.type)) return { ok: false, total: 0, passed: 0, problems: ['題組格式不正確。'] };
+    const entries = set.type === 'sudoku' ? set.puzzles : set.mazes;
+    if (!Array.isArray(entries) || entries.length === 0) return { ok: false, total: 0, passed: 0, problems: ['題組沒有題目。'] };
+    let passed = 0;
+    Array.from(entries).forEach((entry, i) => {
+      const errors = [], fail = message => errors.push(`第 ${i + 1} 題：${message}`);
+      if (!entry || entry.no !== i + 1) fail('題號不正確');
+      if (set.type === 'sudoku') {
+        const size = set.size === undefined ? 9 : set.size;
+        const range = SUDOKU_SIZES.includes(size) && typeof set.level === 'string' && Object.hasOwn(LEVEL_LABEL, set.level) ? CLUES[size][set.level] : null;
+        if (!entry || !validGrid(entry.solution) || entry.solution.length !== size * size || entry.solution.includes(0) || countSolutions(entry.solution) !== 1) fail('答案不合法');
+        if (!entry || !validGrid(entry.givens) || entry.givens.length !== size * size) fail('題目格式不正確');
+        else {
+          const clues = entry.givens.filter(Boolean).length;
+          if (clues !== entry.clues || (!lenient && (!range || clues < range[0] || clues > range[1]))) fail('提示數不在指定範圍內或記錄不一致');
+          if (!lenient && range && rate(entry.givens) > TECH[set.level]) fail('需要的解題技巧超過這一級');
+          if (!validGrid(entry.solution) || entry.givens.some((n, j) => n !== 0 && n !== entry.solution[j])) fail('給定數字與答案不一致');
+          if (countSolutions(entry.givens, 2) !== 1) fail('不是唯一解');
+          if (!lenient && i > 0 && entries[i - 1] && entries[i - 1].clues < clues) fail('未按提示數由多到少排列');
+        }
+      } else if (!mazeShape(entry)) fail('迷宮格式不正確');
+      else {
+        if (!solve(entry)) fail('無法走到終點');
+        const path = entry.solution;
+        if (!Array.isArray(path) || !path.length || !same(path[0], entry.start) || !same(path[path.length - 1], entry.end) ||
+            path.some(p => !coordinate(entry, p)) || path.some((p, j) => j > 0 && !canMove(entry, path[j - 1], p))) fail('答案路線不合法或穿牆');
+        if (!lenient) {
+          const L = typeof set.level === 'string' && Object.hasOwn(MAZE_LEVELS, set.level) ? MAZE_LEVELS[set.level] : null, st = mazeStats(entry);
+          if (!isPerfect(entry)) fail('迷宮有繞圈或有走不到的格子');
+          if (!L) fail('迷宮難度不正確');
+          else if (!st || !L.pass(st, entry.rows)) fail('沒有達到難度指標');
+        }
+      }
+      if (!errors.length) passed++;
+      problems.push(...errors);
+    });
+    return { ok: problems.length === 0, total: entries.length, passed, problems };
+  }
+  // ---------- 題組檔（JSON）：存種子碼、設定、產生器版本，加上題目本身 ----------
+  function pack(set, settings = {}) {
+    if (!set || !['sudoku', 'maze'].includes(set.type)) throw new Error('沒有可以儲存的題組。');
+    const entries = set.type === 'sudoku'
+      ? { puzzles: set.puzzles.map(p => ({ no: p.no, givens: Array.from(p.givens), solution: Array.from(p.solution) })) }
+      : { mazes: set.mazes.map(m => ({ no: m.no, rows: m.rows, cols: m.cols, walls: Array.from(m.walls), start: m.start.slice(), end: m.end.slice() })) };
+    return { app: FILE_APP, format: FILE_FORMAT, generatorVersion: set.version || 1, savedAt: new Date().toISOString(),
+      type: set.type, seed: set.seed, settings: Object.assign({ level: set.level, size: set.size, count: (set.puzzles || set.mazes).length }, settings),
+      set: Object.assign({ type: set.type, version: set.version || 1, level: set.level, seed: set.seed, size: set.size }, entries) };
+  }
+  // 讀回題組檔。題目資料直接採用檔案裡的內容（不重新產生），所以產生器之後改版，舊題組一樣原樣還原。
+  // 若檔案只有種子碼沒有題目，只有在產生器版本相同時才能重新產生。
+  function unpack(data) {
+    if (!data || typeof data !== 'object' || data.app !== FILE_APP) throw new Error('這不是本程式存的題組檔。');
+    if (!Number.isInteger(data.format) || data.format < 1 || data.format > FILE_FORMAT) throw new Error('這個題組檔來自比較新的程式版本，請先更新程式。');
+    if (!['sudoku', 'maze'].includes(data.type)) throw new Error('題組檔裡的題型不正確。');
+    const st = data.settings && typeof data.settings === 'object' ? data.settings : {};
+    const gen = Number.isInteger(data.generatorVersion) ? data.generatorVersion : 1;
+    let set, regenerated = false;
+    if (data.set && typeof data.set === 'object') {
+      const raw = data.set, list = data.type === 'sudoku' ? raw.puzzles : raw.mazes;
+      if (!Array.isArray(list) || list.length < 1 || list.length > 60) throw new Error('題組檔裡的題目數量不正確（需要 1～60 題）。');
+      if (typeof raw.seed !== 'string' && typeof raw.seed !== 'number') throw new Error('題組檔裡的題組代碼不正確。');
+      if (data.type === 'sudoku') {
+        if (typeof raw.level !== 'string' || !Object.hasOwn(LEVELS, raw.level)) throw new Error('題組檔裡的難度不認得。');
+        const size = raw.size === undefined ? 9 : raw.size;   // 舊版題組檔沒有記大小，都是 9×9
+        if (!SUDOKU_SIZES.includes(size)) throw new Error('題組檔裡的數獨大小不認得。');
+        set = { type: 'sudoku', version: gen, level: raw.level, size, seed: String(raw.seed).slice(0, 64), puzzles: list.map((p, i) => {
+          if (!p || !validGrid(p.givens) || !validGrid(p.solution) || p.givens.length !== size * size || p.solution.length !== size * size) throw new Error(`第 ${i + 1} 題的盤面格式不正確。`);
+          return { no: i + 1, givens: Array.from(p.givens), solution: Array.from(p.solution), clues: p.givens.filter(Boolean).length };
+        }) };
+      } else {
+        if (typeof raw.level !== 'string' || !Object.hasOwn(MAZE_LEVELS, raw.level)) throw new Error('題組檔裡的難度不認得。');
+        const size = raw.size === 'auto' || raw.size === 'grow' ? 'auto' : SIZES.includes(raw.size) ? raw.size : 'auto';
+        set = { type: 'maze', version: gen, level: raw.level, size, seed: String(raw.seed).slice(0, 64), mazes: list.map((m, i) => {
+          if (!mazeShape(m)) throw new Error(`第 ${i + 1} 題的迷宮格式不正確。`);
+          const maze = { no: i + 1, rows: m.rows, cols: m.cols, walls: Array.from(m.walls), start: m.start.slice(), end: m.end.slice() };
+          maze.solution = solve(maze);
+          if (!maze.solution) throw new Error(`第 ${i + 1} 題的迷宮走不到終點。`);
+          maze.stats = Object.assign(mazeStats(maze), { pass: null });
+          return maze;
+        }) };
+      }
+    } else if (gen === VERSION && data.seed !== undefined) {
+      const o = Object.assign({}, st, { seed: data.seed });
+      set = data.type === 'sudoku' ? generateSudoku(o) : generateMaze(o); regenerated = true;
+    } else throw new Error('題組檔裡沒有題目資料，而且產生器版本不同，無法還原。');
+    const rep = selfTest(set, { lenient: !regenerated });
+    if (!rep.ok) throw new Error('題組檔的題目沒有通過檢查：' + rep.problems.slice(0, 2).join('；'));
+    return { set, settings: st, generatorVersion: gen, outdated: gen !== VERSION };
+  }
+  return Object.freeze({
+    VERSION, pack, unpack, mazeStats, normSeed,
+    makeRng, newSeed,
+    LEVEL_LABEL,
+    sudoku: Object.freeze({ LEVELS, SIZES: SUDOKU_SIZES, CLUES, geo, rate, generate: generateSudoku, countSolutions, conflicts, check, hint }),
+    maze: Object.freeze({ SIZES, LEVELS: MAZE_LEVELS, generate: generateMaze, canMove, extendPath, isDone, solve }),
+    selfTest
+  });
+})();
+</script>
+<style>
+:root{--ink:#2b3a55;--card:#fff;--pink:#ff7a8a;--sun:#ffd25a;--blue:#3b8cff;--mint:#46c28b;--red:#e5334b;--over:365px}
+body.fs{--over:215px}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font:18px/1.5 "Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;color:var(--ink);
+  background:radial-gradient(circle at 14px 14px,#ffe6b8 2.5px,transparent 3.5px) 0 0/38px 38px,#fff7ea;min-height:100vh}
+#app{max-width:1280px;margin:0 auto;padding:14px 18px 40px}
+.top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{width:42px;height:42px;flex:none}
+.ic{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:.3em;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ic.r{margin-right:0;margin-left:.3em}
+.cf{fill:currentColor;stroke:none}
+#sprite{position:absolute;width:0;height:0;overflow:hidden}
+.brand h1{margin:0;font-size:28px;white-space:nowrap;letter-spacing:.04em}
+.tabs{display:flex;gap:3px;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:3px}
+.tabs button{font:inherit;font-weight:700;color:var(--ink);border:0;background:transparent;border-radius:999px;padding:.3em 0;width:7.5em;cursor:pointer;white-space:nowrap}
+.tabs.mode button{width:10.5em}
+.tabs.mode{max-width:100%}
+.tabs button.on{background:var(--sun);box-shadow:inset 0 0 0 2px var(--ink)}
+.tabs button:focus-visible,.btn:focus-visible,.num:focus-visible{outline:4px solid var(--blue);outline-offset:2px}
+.panel{background:#fff;border:2px solid #f0dcb8;border-radius:20px;padding:12px 16px;margin-bottom:14px;box-shadow:0 3px 0 #f0dcb8}
+#settings{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.f{display:flex;flex-direction:column;font-size:15px;font-weight:700;gap:2px;white-space:nowrap}
+.f select,.f input{font:inherit;font-size:18px;color:var(--ink);border:2px solid var(--ink);border-radius:12px;padding:.25em .5em;background:#fffdf8;height:2.3em}
+#layout{width:11.5em}
+#size{width:14em}
+#count{width:5em}
+#seed{width:8.5em;letter-spacing:.1em;text-transform:uppercase}
+#ssize{width:11em}
+.credit{text-align:center;font-size:14px;font-weight:700;color:#9a8a6a;margin:18px 0 0}
+.lvnote{flex-basis:100%;font-size:15px;margin:0;color:#6a5a3a}
+#levelTabs button{width:5.6em}
+.adv{flex-basis:100%;border-top:2px dashed #f0dcb8;padding-top:8px}
+.adv summary{display:inline-flex;align-items:center;width:9.5em;font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap;list-style:none;padding:.2em 0}
+.adv summary::-webkit-details-marker{display:none}
+.adv summary:focus-visible{outline:4px solid var(--blue);outline-offset:2px}
+.adv summary .chev{transition:transform .15s;margin:0 0 0 .2em}
+.adv[open] summary .chev{transform:rotate(180deg)}
+.advbody{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-top:6px}
+.advbody .note{margin:0}
+.guide{max-width:640px;margin:10px auto 20px;text-align:center;background:#fff;border:3px dashed #e9c98d;border-radius:28px;padding:26px 24px 28px}
+.guide svg.big{width:150px;height:96px}
+.guide h2{margin:6px 0 4px;font-size:30px;white-space:nowrap}
+.guide p{margin:6px 0;font-size:17px}
+.gsteps{list-style:none;margin:14px auto 18px;padding:0;display:flex;flex-direction:column;gap:8px;width:20em;max-width:100%;text-align:left}
+.gsteps li{display:flex;align-items:center;gap:12px;font-weight:700;font-size:19px;white-space:nowrap}
+.gsteps b{flex:none;width:2em;height:2em;border-radius:50%;background:var(--sun);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:17px}
+.btn.big{width:12em;font-size:24px;padding:.45em 0;margin-bottom:14px}
+body:not([data-has="0"]) .guide,body:not([data-has="0"]) #expEmpty{display:none}
+body[data-has="0"] .navbar,body[data-has="0"] .play{display:none!important}
+body[data-has="0"] #sheets{display:none}
+#expEmpty{margin:0;padding:30px 10px;text-align:center;font-weight:700;font-size:18px}
+.btn{font:inherit;font-weight:700;color:var(--ink);border:2px solid var(--ink);background:#fff;border-radius:14px;padding:.35em 0;width:8.5em;
+  box-shadow:0 4px 0 var(--ink);cursor:pointer;white-space:nowrap;text-align:center;transition:transform .08s,box-shadow .08s}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--pink);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.btn.good{background:#bff0d6}.btn.sun{background:var(--sun)}.btn.blue{background:#cfe3ff}
+.btn.wide{width:10.5em}
+.btn.wide2{width:12.5em}
+#status{flex-basis:100%;min-height:1.6em;font-weight:700;font-size:17px}
+#status.ok{color:#117a4a}#status.err{color:var(--red)}#status.busy{color:#8a5a00}
+body[data-type=sudoku] .maze-only,body[data-type=maze] .sudoku-only{display:none!important}
+body[data-mode=screen] #exportView,body[data-mode=export] #screenView{display:none}
+.navbar{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+#qno{font-size:26px;font-weight:800;min-width:7.5em;text-align:center;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:.1em .6em;white-space:nowrap}
+.play{display:flex;gap:26px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.boardwrap{--bs:clamp(300px,min(calc(100vh - var(--over)),calc(100vw - 440px)),820px);width:var(--bs);height:var(--bs);flex:none}
+.side{width:360px;display:flex;flex-direction:column;gap:14px}
+@media(max-width:900px){.boardwrap{--bs:min(94vw,600px)}.side{width:min(94vw,600px)}}
+#board{--n:9;width:100%;height:100%;display:grid;grid-template-columns:repeat(var(--n),1fr);grid-template-rows:repeat(var(--n),1fr);background:#fff;border:4px solid var(--ink);border-radius:10px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.c{display:flex;align-items:center;justify-content:center;border:1px solid #aebbd3;border-width:1px;font-size:calc(var(--bs) / var(--n) * .55);font-weight:600;color:var(--blue);cursor:pointer;line-height:1;background:#fff}
+.c.rb{border-right:3px solid var(--ink)}.c.bb{border-bottom:3px solid var(--ink)}
+.c.rel{background:#eef5ff}.c.same{background:#cfe3ff}
+.c.given{color:var(--ink);font-weight:800;background:#f3efe6}
+.c.given.rel{background:#e6eefb}.c.given.same{background:#bdd7fb}
+.c.ans{color:#12935a;font-weight:800}
+.c.wrong{background:#ffd9a8!important;color:var(--red)}
+.c.conf{background:#ffe0e4!important;color:var(--red)}
+.c.hint{background:#c8f4d9!important;animation:flash .9s}
+.c.sel{background:#ffe27a!important;box-shadow:inset 0 0 0 3px var(--ink)}
+@keyframes flash{0%{transform:scale(1.25)}100%{transform:scale(1)}}
+.numpad{display:grid;grid-template-columns:repeat(var(--pc,3),1fr);gap:10px}
+.num{font:inherit;font-size:34px;font-weight:800;height:66px;border:2px solid var(--ink);border-radius:16px;background:#fff0c4;color:var(--ink);box-shadow:0 4px 0 var(--ink);cursor:pointer;touch-action:manipulation}
+.num:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.num.clr{grid-column:1 / -1;font-size:24px;height:56px;background:#ffd9de}
+.notebar{display:flex;align-items:center;gap:12px}
+.notebar .btn{flex:none;width:8.5em;height:46px;padding:0;font-size:20px;touch-action:manipulation}
+.notebar .btn[aria-pressed="true"]{background:var(--sun)}
+.noteauto{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;line-height:1.35;word-break:keep-all;cursor:pointer;touch-action:manipulation}
+.noteauto input{flex:none;width:22px;height:22px;accent-color:var(--blue);cursor:pointer}
+.numpad.noting .num:not(.clr){font-size:26px;color:#8a94a6}
+.nt{width:100%;height:100%;display:grid;grid-template-columns:repeat(var(--nc,3),1fr);grid-template-rows:repeat(var(--nr,3),1fr);pointer-events:none}
+.nt i{font-style:normal;display:flex;align-items:center;justify-content:center;font-size:calc(var(--bs) / 9 * .26);font-weight:600;color:#8a94a6;line-height:1}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.actions .btn{width:100%;font-size:20px;padding:.5em 0}
+#msg,#mmsg{min-height:4.6em;padding:10px 14px;border-radius:16px;background:#fff;border:2px dashed #e9c98d;font-weight:700;font-size:19px}
+#msg.ok,#mmsg.ok{border-color:var(--mint);color:#117a4a}#msg.err,#mmsg.err{border-color:var(--red);color:var(--red)}
+#mazeBox{width:100%;height:100%;background:#fff;border:4px solid var(--ink);border-radius:12px;padding:6px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
+#mazeBox svg{width:100%;height:100%;display:block;touch-action:none}
+#confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50}
+#confetti i{position:absolute;top:-40px;font-style:normal;animation:fall linear forwards}
+#confetti svg{width:100%;height:100%;display:block}
+#banner .ic{width:.8em;height:.8em;margin:0 .2em;vertical-align:-.05em;color:var(--sun);fill:var(--sun);stroke:var(--ink);stroke-width:1.6}
+@keyframes fall{to{transform:translateY(112vh) rotate(720deg)}}
+#banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.3);opacity:0;pointer-events:none;z-index:60;background:#fff;border:5px solid var(--ink);border-radius:30px;padding:.4em 1.2em;font-size:clamp(28px,6vw,60px);font-weight:900;white-space:nowrap;box-shadow:0 8px 0 var(--ink);color:var(--pink)}
+#banner.show{animation:pop 3s ease forwards}
+@keyframes pop{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}12%{transform:translate(-50%,-50%) scale(1.1);opacity:1}20%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+@media(prefers-reduced-motion:reduce){#confetti i,.c.hint{animation:none}#banner.show{animation:none;opacity:1;transform:translate(-50%,-50%)}}
+/* 匯出模式 */
+#expBar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.note{flex-basis:100%;font-size:16px;margin:0}
+#previewWrap{background:#dbe6f6;border-radius:20px;padding:18px 10px;overflow:hidden}
+#sheets{width:210mm;margin:0 auto}
+body[data-view=q] #aPages,body[data-view=a] #qPages{display:none}
+.sheet{position:relative;width:210mm;height:296mm;background:#fff;color:#000;margin:0 auto 18px;box-shadow:0 4px 18px rgba(0,0,0,.25);overflow:hidden;break-after:page;page-break-after:always;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif}
+.sheet:last-child{break-after:auto;page-break-after:auto}
+.sheet *{box-sizing:border-box}
+.sheet svg.frame{position:absolute;left:0;top:0;width:210mm;height:296mm}
+.sheet svg text{font-family:Arial,"Microsoft JhengHei","Noto Sans TC",sans-serif}
+/* 手冊版心：A4 直式，四邊留白一律 18mm（花邊內框在 13mm），頁尾放在下方留白內 */
+.sheet-in{position:absolute;left:18mm;right:18mm;top:18mm;bottom:18mm;display:flex;flex-direction:column}
+.pf{position:absolute;left:18mm;right:18mm;bottom:14.2mm;height:3.6mm;line-height:3.6mm;text-align:center;font-size:9pt;white-space:nowrap}
+.slot{flex:1;min-height:0;display:flex;flex-direction:column}
+.slot.s2{border-top:.35mm dashed #000;padding-top:3mm}
+.slot.empty{visibility:hidden}
+.ph{display:flex;align-items:center;justify-content:space-between;height:17mm;border-bottom:.3mm solid #000;white-space:nowrap}
+.ph.sm{height:13mm}
+.ph .no{font-size:22pt;font-weight:800;border:.6mm solid #000;border-radius:4mm;padding:0 4mm;line-height:1.3}
+.ph.sm .no{font-size:17pt}
+.ph .kind{font-size:12pt;font-weight:700}
+.ph .nm{font-size:14pt;font-weight:700}
+.ph .nm i{display:inline-block;width:40mm;border-bottom:.4mm solid #000;height:1em;vertical-align:baseline}
+.pz{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.pz svg{display:block}
+.tip{margin:0;text-align:center;font-size:12pt;height:10mm;white-space:nowrap}
+.at{margin:0;height:14mm;text-align:center;font-size:20pt;font-weight:800;border-bottom:.3mm solid #000;line-height:14mm;white-space:nowrap}
+.ag{flex:1;display:grid;grid-template-columns:1fr 1fr;align-content:space-evenly;justify-items:center}
+.ag figure{margin:0;padding:1.5mm 0}
+.ag figcaption{font-size:12pt;font-weight:800;text-align:center;margin-bottom:1mm}
+.ag svg{display:block;margin:0 auto}
+@page{size:A4 portrait;margin:0}
+@media print{
+  html,body{background:#fff!important;min-height:0!important}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #app{padding:0!important;max-width:none!important;display:block!important}
+  #app>*:not(#exportView){display:none!important}
+  #exportView{display:block!important}
+  #exportView>*:not(#previewWrap){display:none!important}
+  #previewWrap{padding:0!important;background:none!important;border-radius:0!important;overflow:visible!important}
+  #sheets{zoom:1!important;width:auto!important;margin:0!important}
+  .sheet{margin:0!important;box-shadow:none!important}
+  #confetti,#banner{display:none!important}
+}
+</style>
+</head>
+<body data-type="sudoku" data-mode="screen" data-view="q" data-has="0">
+<!-- 圖示：全部用 SVG 自行繪製，不使用 emoji；顏色跟著文字走 -->
+<svg id="sprite" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></symbol>
+  <symbol id="i-maze" viewBox="0 0 24 24"><path d="M3 21V3h18v18H7V7h10v10h-6v-4"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+  <symbol id="i-printer" viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><g fill="currentColor" stroke="none"><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8.5" cy="15.5" r="1.5"/><circle cx="15.5" cy="15.5" r="1.5"/></g></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></symbol>
+  <symbol id="i-erase" viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 6L4 11l5 5M4 11h10a6 6 0 0 1 0 12"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 3-2 6 4"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 17l-5.6 3 1.3-6.2L3 9.5l6.3-.7z"/></symbol>
+  <symbol id="c-star" viewBox="0 0 24 24"><path d="M12 1l3.2 7 7.8.9-5.8 5.3 1.6 7.6L12 17.8 5.2 21.8l1.6-7.6L1 8.9 8.8 8z"/></symbol>
+  <symbol id="c-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol>
+  <symbol id="c-square" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/></symbol>
+  <symbol id="c-heart" viewBox="0 0 24 24"><path d="M12 22C4 16 1 12 1 8a5.5 5.5 0 0 1 11-1.5A5.5 5.5 0 0 1 23 8c0 4-3 8-11 14z"/></symbol>
+  <symbol id="c-flower" viewBox="0 0 24 24"><circle cx="12" cy="6" r="5"/><circle cx="18.3" cy="10.6" r="5"/><circle cx="15.9" cy="18" r="5"/><circle cx="8.1" cy="18" r="5"/><circle cx="5.7" cy="10.6" r="5"/><circle cx="12" cy="12" r="4" fill="#fff"/></symbol>
+</defs></svg>
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="3" y="3" width="42" height="42" rx="9" fill="#ffd25a" stroke="#2b3a55" stroke-width="3"/><path d="M17 3v42M31 3v42M3 17h42M3 31h42" stroke="#2b3a55" stroke-width="2" opacity=".55"/><path d="M10 38V10h28v28H20V20h8v8" fill="none" stroke="#ff7a8a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h1>數獨迷宮出題程式</h1>
+    </div>
+    <div class="tabs" id="typeTabs" role="group" aria-label="題型">
+      <button type="button" data-type="sudoku" class="on"><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg>數獨</button>
+      <button type="button" data-type="maze"><svg class="ic" aria-hidden="true"><use href="#i-maze"/></svg>迷宮</button>
+    </div>
+    <div class="tabs mode" id="modeTabs" role="group" aria-label="模式">
+      <button type="button" data-mode="screen" class="on"><svg class="ic" aria-hidden="true"><use href="#i-monitor"/></svg>螢幕操作模式</button>
+      <button type="button" data-mode="export"><svg class="ic" aria-hidden="true"><use href="#i-printer"/></svg>匯出模式</button>
+    </div>
+  </header>
+
+  <section id="settings" class="panel" aria-label="出題設定">
+    <div class="f">難度
+      <div class="tabs" id="levelTabs" role="group" aria-label="難度">
+        <button type="button" data-level="easy" class="on">低級</button>
+        <button type="button" data-level="medium">中級</button>
+        <button type="button" data-level="hard">高級</button>
+      </div>
+    </div>
+    <label class="f sudoku-only">盤面大小<select id="ssize"><option value="9">9×9（標準）</option><option value="6">6×6（入門）</option><option value="4">4×4（最簡單）</option></select></label>
+    <label class="f">題數（1～60）<input id="count" type="number" min="1" max="60" step="1" value="20" inputmode="numeric"></label>
+    <button type="button" class="btn primary" id="btnNew"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg>出題</button>
+    <button type="button" class="btn wide" id="btnSave"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>存成題組檔</button>
+    <button type="button" class="btn wide" id="btnLoad"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>讀入題組檔</button>
+    <input type="file" id="fileLoad" accept=".json,application/json" hidden>
+    <details class="adv" id="adv">
+      <summary><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg>進階微調<svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+      <div class="advbody">
+        <label class="f maze-only">迷宮大小<select id="size"></select></label>
+        <label class="f">題組代碼（種子碼）<input id="seed" type="text" maxlength="24" spellcheck="false" autocomplete="off" autocapitalize="characters" placeholder="自動產生"></label>
+        <button type="button" class="btn wide" id="btnSeed">用代碼出題</button>
+        <p class="note">同樣的題組代碼、難度、題數（和迷宮大小）會出一模一樣的題。要確保以後一定能還原，請用「存成題組檔」。</p>
+      </div>
+    </details>
+    <p class="lvnote" id="lvNote"></p>
+    <div id="status" role="status" aria-live="polite">還沒有出題。</div>
+  </section>
+
+  <main id="screenView">
+    <div class="guide" id="guide">
+      <svg class="big" viewBox="0 0 150 96" aria-hidden="true">
+        <rect x="6" y="10" width="76" height="76" rx="8" fill="#fff0c4" stroke="#2b3a55" stroke-width="3"/>
+        <path d="M31.3 10v76M56.7 10v76M6 35.3h76M6 60.7h76" stroke="#2b3a55" stroke-width="2" opacity=".5"/>
+        <text x="19" y="30" font-size="16" font-weight="800" text-anchor="middle" fill="#2b3a55" font-family="Arial,sans-serif">5</text>
+        <text x="69" y="55" font-size="16" font-weight="800" text-anchor="middle" fill="#3b8cff" font-family="Arial,sans-serif">3</text>
+        <text x="44" y="80" font-size="16" font-weight="800" text-anchor="middle" fill="#2b3a55" font-family="Arial,sans-serif">8</text>
+        <rect x="94" y="10" width="50" height="76" rx="8" fill="#fff" stroke="#2b3a55" stroke-width="3"/>
+        <path d="M102 78V18h34v60h-22V32h10v28" fill="none" stroke="#ff7a8a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h2>還沒有題目喔</h2>
+      <p>三個步驟，馬上開始：</p>
+      <ol class="gsteps">
+        <li><b>1</b>選題型：數獨或迷宮</li>
+        <li><b>2</b>選難度和題數</li>
+        <li><b>3</b>按下「出題」</li>
+      </ol>
+      <button type="button" class="btn primary big" id="btnGuideNew"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg>出題</button>
+      <p>已經有存好的題組檔？按上面的「讀入題組檔」就能原樣還原。</p>
+    </div>
+    <div class="navbar">
+      <button type="button" class="btn" id="prev"><svg class="ic" aria-hidden="true"><use href="#i-left"/></svg>上一題</button>
+      <div id="qno">第 1／20 題</div>
+      <button type="button" class="btn" id="next">下一題<svg class="ic r" aria-hidden="true"><use href="#i-right"/></svg></button>
+      <button type="button" class="btn wide blue" id="btnFs"><svg class="ic" aria-hidden="true"><use href="#i-expand"/></svg>全螢幕</button>
+    </div>
+    <div id="sudokuPlay" class="play sudoku-only">
+      <div class="boardwrap"><div id="board" role="grid" aria-label="數獨盤面"></div></div>
+      <aside class="side">
+        <div class="notebar">
+          <button type="button" class="btn" id="btnNote" aria-pressed="false">草稿：關</button>
+          <label class="noteauto"><input type="checkbox" id="noteAuto">填入後自動移除同列、同行、同宮的草稿數字</label>
+        </div>
+        <div class="numpad" id="numpad"></div>
+        <div class="actions">
+          <button type="button" class="btn good" id="btnCheck"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>檢查</button>
+          <button type="button" class="btn sun" id="btnHint"><svg class="ic" aria-hidden="true"><use href="#i-bulb"/></svg>提示</button>
+          <button type="button" class="btn" id="btnRestart"><svg class="ic" aria-hidden="true"><use href="#i-redo"/></svg>重來</button>
+          <button type="button" class="btn blue" id="btnReveal"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>顯示答案</button>
+        </div>
+        <div id="msg" role="status" aria-live="polite"></div>
+      </aside>
+    </div>
+    <div id="mazePlay" class="play maze-only">
+      <div class="boardwrap"><div id="mazeBox"></div></div>
+      <aside class="side">
+        <div class="actions">
+          <button type="button" class="btn sun" id="btnUndo"><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg>退回一步</button>
+          <button type="button" class="btn" id="btnMReset"><svg class="ic" aria-hidden="true"><use href="#i-redo"/></svg>重來</button>
+          <button type="button" class="btn blue" id="btnMReveal" style="grid-column:span 2"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>顯示答案路線</button>
+        </div>
+        <div id="mmsg" role="status" aria-live="polite"></div>
+      </aside>
+    </div>
+  </main>
+
+  <main id="exportView">
+    <section class="panel" id="expBar" aria-label="匯出設定">
+      <label class="f">版面<select id="layout"><option value="1">一頁一題</option><option value="2">一頁兩題</option></select></label>
+      <div class="f">預覽
+        <div class="tabs" id="viewTabs"><button type="button" data-view="q" class="on">題目頁</button><button type="button" data-view="a">答案頁</button></div>
+      </div>
+      <button type="button" class="btn wide primary" id="btnPrintQ"><svg class="ic" aria-hidden="true"><use href="#i-printer"/></svg>列印題目</button>
+      <button type="button" class="btn wide" id="btnPrintA"><svg class="ic" aria-hidden="true"><use href="#i-printer"/></svg>列印答案</button>
+      <button type="button" class="btn wide2" id="btnPng"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg>匯出 PNG 圖檔</button>
+      <p class="note" id="expInfo"></p>
+      <p class="note">列印／存成 PDF 是向量格式，放大也不會糊，是正式手冊的主要輸出：按列印後，在列印視窗的「印表機」選「另存為 PDF」；紙張 A4、縮放 100%，並取消「頁首及頁尾」。</p>
+      <p class="note">PNG 圖檔給排版軟體用：每題一張 1800 點正方形圖（題目、答案各一組），打包成一個 zip 檔。</p>
+    </section>
+    <div id="previewWrap">
+      <p id="expEmpty">還沒有題目。請先回到「螢幕操作模式」按「出題」，或按上面的「讀入題組檔」。</p>
+      <div id="sheets"><div id="qPages"></div><div id="aPages"></div></div>
+    </div>
+  </main>
+</div>
+<p class="credit">秉亨老師 × Claude 協同製作</p>
+<div id="confetti" aria-hidden="true"></div>
+<div id="banner" aria-hidden="true"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const ST = { seeds: { sudoku: '', maze: '' }, type: 'sudoku', mode: 'screen', view: 'q', busy: false, sel: -1, lv: { sudoku: 'easy', maze: 'easy' },
+  sets: { sudoku: null, maze: null }, idx: { sudoku: 0, maze: 0 }, play: { sudoku: [], maze: [] },
+  noteMode: false, noteAuto: false };
+const INK = '#2b3a55';
+const f2 = v => +v.toFixed(2);
+const ic = (name, cls) => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const setBtn = (el, name, text, right) => { el.innerHTML = right ? text + ic(name, 'r') : ic(name) + text; };
+const LEVEL_NAME = { easy: '低級', medium: '中級', hard: '高級' };
+const LEVEL_NOTE = {
+  sudoku: { easy: '低級：適合低年級，只要基本推理就解得完。', medium: '中級：適合中高年級，提示比較少，要多想幾步。', hard: '高級：適合高年級高程度到成人，9×9 會用到「數對」「區塊排除」等進階推理，但一定不用猜。' },
+  maze: { easy: '低級：適合低年級，格子少、岔路少。', medium: '中級：適合中高年級，岔路變多、錯路比較長。', hard: '高級：適合高年級高程度到成人，格子多、錯路又長又深。' } };
+const geoOf = p => Engine.sudoku.geo(Math.round(Math.sqrt(p.givens.length)));
+
+/* ---------- 設定列 ---------- */
+if (!window.Engine) { $('status').textContent = '出題引擎載入失敗，請重新開啟檔案。'; $('status').className = 'err'; return; }
+const LV = Engine.sudoku.LEVELS;
+$('size').innerHTML = '<option value="auto">依難度自動（建議）</option>' + Engine.maze.SIZES.map(n => `<option value="${n}">${n}×${n} 格</option>`).join('');
+
+function setStatus(text, kind) {
+  const s = $('status'); s.textContent = ''; s.className = kind || '';
+  if (kind === 'ok') s.insertAdjacentHTML('beforeend', ic('check'));
+  s.appendChild(document.createTextNode(text));
+}
+function setBusy(b) {
+  ST.busy = b;
+  for (const id of ['btnNew', 'btnSeed', 'btnGuideNew', 'btnSave', 'btnLoad', 'btnPng', 'size', 'ssize', 'count', 'seed']) $(id).disabled = b;
+  $('btnSave').disabled = $('btnPng').disabled = b || !ST.sets[ST.type];
+  $('levelTabs').querySelectorAll('button').forEach(x => { x.disabled = b; });
+}
+function showLevel(level) { ST.lv[ST.type] = level; setActive($('levelTabs'), 'level', level); $('lvNote').textContent = LEVEL_NOTE[ST.type][level]; }
+function hintChanged() {
+  if (ST.busy) return;
+  setStatus(ST.sets[ST.type] ? '設定已更改，按「出題」才會換成新題目（目前畫面上的題目沒有變）。' : '設定好了，按「出題」開始。');
+}
+
+// 裝入一組題目（新出的或讀入的），並重設作答狀態
+function installSet(set) {
+  const type = set.type;
+  ST.type = type; document.body.dataset.type = type; setActive($('typeTabs'), 'type', type);
+  ST.sets[type] = set; ST.idx[type] = 0; ST.sel = -1;
+  ST.play[type] = type === 'sudoku'
+    ? set.puzzles.map(p => ({ grid: p.givens.slice(), wrong: [], revealed: false, done: false, hint: -1, notes: new Array(p.givens.length).fill(0) }))
+    : set.mazes.map(() => ({ path: [], revealed: false, done: false }));
+  reflectSettings(true);
+}
+function describe(set) {
+  const n = (set.puzzles || set.mazes).length, name = LEVEL_NAME[set.level];
+  if (set.type === 'sudoku') {
+    const cl = set.puzzles.map(p => p.clues);
+    const sz = set.size || 9, adv = set.puzzles.filter(p => Engine.sudoku.rate(p.givens) === 1).length;
+    return `${n} 題 ${sz}×${sz} 數獨都已確認唯一解、不用猜（${name}，提示數 ${Math.max(...cl)}→${Math.min(...cl)} 格${adv ? `，其中 ${adv} 題會用到進階推理` : ''}）`;
+  }
+  const avg = k => (set.mazes.reduce((a, m) => a + m.stats[k], 0) / n).toFixed(1);
+  const loose = set.mazes.some(m => m.stats.pass === false);
+  return `${n} 題迷宮都已確認${set.mazes.every(m => m.stats.pass === true) ? '只有一條路能走到終點' : '能走到終點'}（${name}，正確路線平均 ${avg('pathLen')} 格、岔路口 ${avg('junctions')} 個、錯路最深 ${avg('deadDepth')} 格${loose ? '；指定的格數和難度不搭，已盡量調整' : ''}）`;
+}
+
+function makeSet(useSeed) {
+  if (ST.busy) return;
+  const type = ST.type, raw = $('count').value.trim(), count = Number(raw);
+  if (!/^\d+$/.test(raw) || count < 1 || count > 60) { setStatus('題數請輸入 1～60 的整數。', 'err'); return; }
+  const seed = useSeed ? $('seed').value.trim().toUpperCase() : Engine.newSeed();
+  if (useSeed && !seed) { $('adv').open = true; setStatus('請先輸入題組代碼。', 'err'); return; }
+  const level = ST.lv[type];
+  const opts = type === 'sudoku' ? { level, size: Number($('ssize').value), count, seed }
+    : { level, size: $('size').value === 'auto' ? 'auto' : Number($('size').value), count, seed };
+  setBusy(true); setStatus('出題中…（高級和迷宮會花幾秒檢查難度，請稍等）', 'busy');
+  setTimeout(() => {
+    try {
+      const set = Engine[type].generate(opts);
+      const rep = Engine.selfTest(set);
+      if (!rep.ok) throw new Error('自我檢查沒有通過：' + rep.problems.slice(0, 3).join('；'));
+      installSet(set);
+      renderAll();
+    } catch (e) {
+      setStatus('出題失敗，已保留原本的題目：' + (e && e.message ? e.message : e), 'err');
+    } finally { setBusy(false); }
+  }, 40);
+}
+$('btnNew').onclick = () => makeSet(false);
+$('btnGuideNew').onclick = () => makeSet(false);
+$('btnSeed').onclick = () => makeSet(true);
+$('seed').addEventListener('keydown', e => { if (e.key === 'Enter') makeSet(true); });
+// 題組代碼輸入時自動轉大寫（輸入法組字中不動；讀取時另外再轉一次）
+$('seed').addEventListener('input', e => {
+  if (e.isComposing) return;
+  const el = e.target, a = el.selectionStart, b = el.selectionEnd, up = el.value.toUpperCase();
+  if (up !== el.value) { el.value = up; try { el.setSelectionRange(a, b); } catch (_) {} }
+  ST.seeds[ST.type] = el.value;
+});
+$('levelTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || ST.busy || b.dataset.level === ST.lv[ST.type]) return;
+  showLevel(b.dataset.level); hintChanged();
+});
+for (const id of ['size', 'ssize', 'count']) $(id).addEventListener('change', e => { if (id !== 'count') e.target.blur(); hintChanged(); });
+
+/* ---------- 題組檔：存成 JSON／讀入 ---------- */
+function download(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function fileTag(set) { return `${set.type === 'sudoku' ? `數獨${set.size || 9}x${set.size || 9}` : '迷宮'}${LEVEL_NAME[set.level]}_${String(set.seed).replace(/[^0-9A-Za-z]/g, '_')}`; }
+$('btnSave').onclick = () => {
+  const set = ST.sets[ST.type];
+  if (!set) { setStatus('還沒有題目可以存，請先按「出題」。', 'err'); return; }
+  try {
+    const data = Engine.pack(set, set.type === 'maze' ? { size: set.size } : {});
+    download(new Blob([JSON.stringify(data)], { type: 'application/json' }), `題組_${fileTag(set)}.json`);
+    setStatus(`已存成題組檔：題組代碼 ${set.seed}、${(set.puzzles || set.mazes).length} 題、產生器版本 ${set.version}。`, 'ok');
+  } catch (e) { setStatus('存檔失敗：' + (e && e.message ? e.message : e), 'err'); }
+};
+$('btnLoad').onclick = () => { if (!ST.busy) $('fileLoad').click(); };
+$('fileLoad').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  const fail = msg => setStatus('讀入失敗，已保留原本的題目：' + msg, 'err');
+  if (file.size > 8 * 1024 * 1024) { fail('檔案太大，不像是題組檔。'); return; }
+  const rd = new FileReader();
+  rd.onerror = () => fail('檔案讀不出來。');
+  rd.onload = () => {
+    let res;
+    try { res = Engine.unpack(JSON.parse(String(rd.result))); }
+    catch (err) { fail(err instanceof SyntaxError ? '檔案內容不是正確的題組檔。' : (err && err.message ? err.message : String(err))); return; }
+    installSet(res.set); renderAll();
+    const set = res.set;
+    setStatus(`已讀入題組檔：${set.type === 'sudoku' ? '數獨' : '迷宮'}${LEVEL_NAME[set.level]}、${(set.puzzles || set.mazes).length} 題、題組代碼 ${set.seed}、產生器版本 ${res.generatorVersion}` +
+      (res.outdated ? `（目前程式是 ${Engine.VERSION} 版，這組題目已原樣還原）` : '') + '。', 'ok');
+  };
+  rd.readAsText(file);
+});
+
+/* ---------- 分頁 ---------- */
+function setActive(box, attr, val) { box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset[attr] === val)); }
+$('typeTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || ST.busy || b.dataset.type === ST.type) return;
+  ST.type = b.dataset.type; ST.sel = -1; document.body.dataset.type = ST.type; setActive($('typeTabs'), 'type', ST.type);
+  $('seed').value = ST.seeds[ST.type];
+  if (ST.sets[ST.type]) reflectSettings(); else { showLevel(ST.lv[ST.type]); setStatus('還沒有出題。選好難度和題數，按「出題」開始。'); }
+  renderAll();
+});
+$('modeTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  ST.mode = b.dataset.mode; document.body.dataset.mode = ST.mode; setActive($('modeTabs'), 'mode', ST.mode);
+  renderAll();
+});
+$('viewTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.view); });
+function setView(v) { ST.view = v; document.body.dataset.view = v; setActive($('viewTabs'), 'view', v); }
+function reflectSettings(fresh) {
+  const set = ST.sets[ST.type]; if (!set) return;
+  ST.seeds[set.type] = String(set.seed); $('seed').value = ST.seeds[set.type]; $('count').value = (set.puzzles || set.mazes).length;
+  showLevel(set.level);
+  if (set.type === 'maze') $('size').value = String(set.size); else $('ssize').value = String(set.size || 9);
+  setStatus(describe(set) + `　題組代碼 ${set.seed}`, 'ok');
+}
+
+/* ---------- 慶祝 ---------- */
+function celebrate(text) {
+  const b = $('banner'); b.innerHTML = ic('star') + text + ic('star'); b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+  clearTimeout(celebrate.t); celebrate.t = setTimeout(() => b.classList.remove('show'), 3100);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = $('confetti'), cols = ['#ff7a8a', '#ffd25a', '#46c28b', '#3b8cff', '#b58cff', '#ff9f43'], marks = ['c-star', 'c-dot', 'c-square', 'c-flower', 'c-heart'];
+  let h = '';
+  for (let i = 0; i < 80; i++) {
+    h += `<i style="left:${Math.random() * 100}%;width:${16 + Math.random() * 22}px;height:${16 + Math.random() * 22}px;color:${cols[i % cols.length]};animation-duration:${2.2 + Math.random() * 2}s;animation-delay:${Math.random() * .8}s"><svg class="cf" viewBox="0 0 24 24"><use href="#${marks[i % marks.length]}"/></svg></i>`;
+  }
+  box.innerHTML = h; clearTimeout(celebrate.c); celebrate.c = setTimeout(() => { box.innerHTML = ''; }, 5200);
+}
+
+/* ---------- 螢幕操作：共用導覽 ---------- */
+function cur() { return ST.sets[ST.type]; }
+function total() { const s = cur(); return s ? (s.puzzles || s.mazes).length : 0; }
+function go(d) {
+  const n = total(), i = ST.idx[ST.type] + d; if (i < 0 || i >= n) return;
+  ST.idx[ST.type] = i; ST.sel = -1; renderPlay();
+}
+$('prev').onclick = () => go(-1); $('next').onclick = () => go(1);
+function renderNav() {
+  const i = ST.idx[ST.type], n = total();
+  $('qno').textContent = `第 ${i + 1}／${n} 題`; $('prev').disabled = i <= 0; $('next').disabled = i >= n - 1;
+  saveSoon();
+}
+if (!document.fullscreenEnabled || !document.documentElement.requestFullscreen) $('btnFs').style.display = 'none';
+$('btnFs').onclick = () => {
+  if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+};
+document.addEventListener('fullscreenchange', () => {
+  const on = !!document.fullscreenElement; document.body.classList.toggle('fs', on);
+  setBtn($('btnFs'), on ? 'shrink' : 'expand', on ? '離開全螢幕' : '全螢幕');
+});
+
+/* ---------- 數獨（螢幕） ---------- */
+const board = $('board'), cells = [];
+let boardN = 0;
+// 盤面大小改變時重畫格子和數字鍵（9×9、6×6、4×4）
+function buildBoard(G) {
+  if (boardN === G.n) return;
+  boardN = G.n; board.innerHTML = ''; cells.length = 0; board.style.setProperty('--n', G.n);
+  for (let i = 0; i < G.N; i++) {
+    const d = document.createElement('div');
+    d.dataset.i = i; d.setAttribute('role', 'gridcell'); board.appendChild(d); cells.push(d);
+  }
+  const pad = $('numpad');
+  pad.style.setProperty('--pc', G.n === 4 ? 2 : 3);
+  pad.innerHTML = Array.from({ length: G.n }, (_, k) => `<button type="button" class="num" data-n="${k + 1}">${k + 1}</button>`).join('') +
+    '<button type="button" class="num clr" id="btnClear" data-n="0">' + ic('erase') + '清除這格</button>';
+}
+const cellClass = (G, i) => { const r = G.ROW[i], c = G.COL[i]; return 'c' + ((c + 1) % G.bw === 0 && c < G.n - 1 ? ' rb' : '') + ((r + 1) % G.bh === 0 && r < G.n - 1 ? ' bb' : ''); };
+const sp = () => ST.sets.sudoku.puzzles[ST.idx.sudoku], ss = () => ST.play.sudoku[ST.idx.sudoku];
+function smsg(t, k) { const m = $('msg'); m.textContent = t; m.className = k || ''; }
+const DEFMSG = '點一格，再按右邊的數字（或用鍵盤）。藍色是你填的，黑色是題目給的。開啟草稿模式可以先寫小字筆記。';
+const RULE = n => `每一橫排、每一直排、每個粗線方框，1～${n} 都要剛好出現一次。`;
+
+function renderSudoku() {
+  if (!ST.sets.sudoku) return;
+  const p = sp(), st = ss(), view = st.revealed ? p.solution : st.grid, G = geoOf(p);
+  buildBoard(G);
+  const conf = new Set(st.revealed ? [] : Engine.sudoku.conflicts(view)), wrong = new Set(st.wrong);
+  const sel = ST.sel, sv = sel >= 0 ? view[sel] : 0;
+  const sr = sel >= 0 ? G.ROW[sel] : -1, sc = sel >= 0 ? G.COL[sel] : -1, sb = sel >= 0 ? G.BOX[sel] : -1;
+  for (let i = 0; i < G.N; i++) {
+    const r = G.ROW[i], c = G.COL[i], b = G.BOX[i], g = p.givens[i] !== 0;
+    let k = cellClass(G, i);
+    if (g) k += ' given'; else if (st.revealed) k += ' ans';
+    if (sel >= 0 && i !== sel && (r === sr || c === sc || b === sb)) k += ' rel';
+    if (sel >= 0 && sv && view[i] === sv && i !== sel) k += ' same';
+    if (conf.has(i)) k += ' conf';
+    if (wrong.has(i)) k += ' wrong';
+    if (i === st.hint) k += ' hint';
+    if (i === sel) k += ' sel';
+    cells[i].className = k; cells[i].textContent = view[i] || '';
+    const nm = st.notes ? st.notes[i] : 0;
+    if (!view[i] && !st.revealed && nm) {
+      const box = document.createElement('div'); box.className = 'nt';
+      box.style.setProperty('--nc', G.n === 4 ? 2 : 3); box.style.setProperty('--nr', G.n === 9 ? 3 : 2);
+      for (let d = 1; d <= G.n; d++) { const s = document.createElement('i'); s.textContent = nm & (1 << (d - 1)) ? d : ''; box.appendChild(s); }
+      cells[i].appendChild(box);
+    }
+  }
+  setBtn($('btnReveal'), st.revealed ? 'eyeoff' : 'eye', st.revealed ? '隱藏答案' : '顯示答案');
+  saveSoon();
+}
+function afterFill(st, p) {
+  const res = Engine.sudoku.check(st.grid, p.solution);
+  if (res.solved) {
+    const firstDone = !st.done;
+    st.done = true; renderSudoku(); smsg('全部填對了，太厲害了！', 'ok');
+    if (firstDone) celebrate('太棒了！完成囉！');
+    return;
+  }
+  else st.done = false;
+  const conf = Engine.sudoku.conflicts(st.grid);
+  renderSudoku();
+  if (conf.length) smsg('有重複的數字（紅色），再想一想。', 'err'); else smsg(`還有 ${res.empty.length} 格空格，加油！`);
+}
+function fillSel(n) {
+  if (!ST.sets.sudoku) return;
+  const p = sp(), st = ss(), i = ST.sel;
+  if (st.revealed) { smsg('現在是顯示答案的狀態，按「隱藏答案」就能繼續作答。', 'err'); return; }
+  if (i < 0) { smsg('請先點一格，再填數字。', 'err'); return; }
+  if (p.givens[i]) { smsg('這是題目給的數字，不能改喔。', 'err'); return; }
+  if (n > geoOf(p).n) return;
+  if (ST.noteMode && n >= 1) {
+    if (st.grid[i]) { smsg('這格已經填了數字，要寫草稿請先清除這格。', 'err'); return; }
+    st.notes[i] ^= 1 << (n - 1); renderSudoku(); return;
+  }
+  st.grid[i] = n; st.wrong = st.wrong.filter(x => x !== i); st.hint = -1;
+  clearNotes(st, i, n);
+  afterFill(st, p);
+}
+// 正式填入後：清掉該格草稿；勾選自動移除時，同列、同行、同宮的該數字草稿也移除
+function clearNotes(st, i, n) {
+  st.notes[i] = 0;
+  if (!ST.noteAuto || n < 1) return;
+  const G = geoOf(sp()), m = ~(1 << (n - 1));
+  for (let j = 0; j < G.N; j++) if (G.ROW[j] === G.ROW[i] || G.COL[j] === G.COL[i] || G.BOX[j] === G.BOX[i]) st.notes[j] &= m;
+}
+function setNoteMode(on) {
+  ST.noteMode = !!on; const b = $('btnNote');
+  b.setAttribute('aria-pressed', String(ST.noteMode)); b.textContent = ST.noteMode ? '草稿：開' : '草稿：關';
+  $('numpad').classList.toggle('noting', ST.noteMode);
+}
+$('btnNote').onclick = () => {
+  setNoteMode(!ST.noteMode);
+  smsg(ST.noteMode ? '草稿模式：按數字會在格子裡寫小字，再按一次就擦掉。' : DEFMSG);
+};
+$('noteAuto').checked = false;
+$('noteAuto').onchange = e => { ST.noteAuto = e.target.checked; };
+board.addEventListener('click', e => {
+  const c = e.target.closest('.c'); if (!c || !ST.sets.sudoku) return;
+  ST.sel = Number(c.dataset.i); renderSudoku();
+  if (ss().revealed || !sp().givens[ST.sel]) return; smsg('這是題目給的數字，不能改喔。');
+});
+$('numpad').addEventListener('click', e => { const b = e.target.closest('button'); if (b) fillSel(Number(b.dataset.n)); });
+$('btnCheck').onclick = () => {
+  const p = sp(), st = ss();
+  if (st.revealed) { smsg('現在是顯示答案的狀態。', 'err'); return; }
+  const res = Engine.sudoku.check(st.grid, p.solution); st.wrong = res.wrong; st.hint = -1;
+  renderSudoku();
+  if (res.solved) { smsg('全部填對了，太厲害了！', 'ok'); if (!st.done) { st.done = true; celebrate('太棒了！完成囉！'); } }
+  else if (res.wrong.length) smsg(`有 ${res.wrong.length} 格填錯了（橘色），還有 ${res.empty.length} 格空格。`, 'err');
+  else smsg(`目前填的都對！還有 ${res.empty.length} 格空格。`, 'ok');
+};
+$('btnHint').onclick = () => {
+  const p = sp(), st = ss();
+  if (st.revealed) { smsg('現在是顯示答案的狀態。', 'err'); return; }
+  const h = Engine.sudoku.hint(st.grid, p.solution, ST.sel);
+  if (!h) { smsg('這題已經完成囉！'); return; }
+  st.grid[h.index] = h.value; st.wrong = st.wrong.filter(x => x !== h.index); ST.sel = h.index;
+  clearNotes(st, h.index, h.value);
+  afterFill(st, p); st.hint = h.index; renderSudoku();
+};
+$('btnRestart').onclick = () => {
+  const p = sp(), st = ss();
+  if ((st.grid.some((v, i) => v !== p.givens[i]) || st.notes.some(v => v)) && !confirm('要把這題填的數字和草稿全部清掉，重新開始嗎？')) return;
+  st.grid = p.givens.slice(); st.notes.fill(0); st.wrong = []; st.revealed = false; st.done = false; st.hint = -1; ST.sel = -1;
+  renderSudoku(); smsg('已經重來，加油！');
+};
+$('btnReveal').onclick = () => { const st = ss(); st.revealed = !st.revealed; st.hint = -1; renderSudoku(); smsg(st.revealed ? '綠色是答案。再按一次可以繼續作答。' : DEFMSG); };
+
+/* ---------- 迷宮（SVG，投影與列印共用） ---------- */
+function pathMarkup(m, S, o, path, color, width, head) {
+  if (!path || !path.length) return '';
+  const cs = (S - 2 * o.pad) / m.rows, pt = p => `${f2(o.pad + (p[1] + .5) * cs)},${f2(o.pad + (p[0] + .5) * cs)}`;
+  let s = `<polyline points="${path.map(pt).join(' ')}" fill="none" stroke="${color}" stroke-width="${f2(width * cs)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if (head) { const l = path[path.length - 1], [x, y] = pt(l).split(','); s += `<circle cx="${x}" cy="${y}" r="${f2(cs * .26)}" fill="#fff" stroke="${color}" stroke-width="${f2(cs * .08)}"/>`; }
+  return s;
+}
+function mazeSVG(m, S, o) {
+  const n = m.rows, cs = (S - 2 * o.pad) / n, ink = o.ink, W = o.wall;
+  let d = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const w = m.walls[r * n + c], x = o.pad + c * cs, y = o.pad + r * cs;
+    if (w & 1) d += `M${f2(x)} ${f2(y)}h${f2(cs)}`;
+    if (w & 8) d += `M${f2(x)} ${f2(y)}v${f2(cs)}`;
+    if (r === n - 1 && (w & 4)) d += `M${f2(x)} ${f2(y + cs)}h${f2(cs)}`;
+    if (c === n - 1 && (w & 2)) d += `M${f2(x + cs)} ${f2(y)}v${f2(cs)}`;
+  }
+  const mk = (p, t, fill) => {
+    const x = f2(o.pad + (p[1] + .5) * cs), y = f2(o.pad + (p[0] + .5) * cs), fs = cs * .4;
+    return `<circle cx="${x}" cy="${y}" r="${f2(cs * .34)}" fill="${fill}" stroke="${ink}" stroke-width="${f2(W * .45)}"/><text x="${x}" y="${f2(y + fs * .36)}" font-size="${f2(fs)}" font-weight="800" text-anchor="middle" fill="${ink}">${t}</text>`;
+  };
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" ${o.attrs || ''}>` +
+    `<g class="solg">${o.sol ? pathMarkup(m, S, o, m.solution, o.solColor, o.solW, false) : ''}</g>` +
+    `<g class="pathg">${o.path ? pathMarkup(m, S, o, o.path, o.pathColor, .34, true) : ''}</g>` +
+    `<path d="${d}" fill="none" stroke="${ink}" stroke-width="${W}" stroke-linecap="round" stroke-linejoin="round"/>` +
+    mk(m.start, '起', o.startFill) + mk(m.end, '終', o.endFill) + '</svg>';
+}
+const mzBox = $('mazeBox');
+let mzSvg = null, mzGeom = null, drawing = false, lastCell = null, lastPt = null;
+const mm = () => ST.sets.maze.mazes[ST.idx.maze], ms = () => ST.play.maze[ST.idx.maze];
+function mmsg(t, k) { const e = $('mmsg'); e.textContent = t; e.className = k || ''; }
+const MDEF = '用手指或滑鼠，從「起」按住拖曳到「終」。走錯了可以按「退回一步」。';
+function mzOpts(m) {
+  return { pad: 1.6, wall: m.rows > 10 ? 1.1 : 1.5, ink: INK, startFill: '#8be3ac', endFill: '#ffb3bf', pathColor: '#ff7a59', solColor: '#3b8cff', solW: .3 };
+}
+function renderMaze() {
+  if (!ST.sets.maze) return;
+  const m = mm(), o = mzOpts(m);
+  mzBox.innerHTML = mazeSVG(m, 100, o); mzSvg = mzBox.querySelector('svg'); mzGeom = { n: m.rows, pad: o.pad, cs: (100 - 2 * o.pad) / m.rows, o };
+  drawMaze(); setBtn($('btnMReveal'), ms().revealed ? 'eyeoff' : 'eye', ms().revealed ? '隱藏答案路線' : '顯示答案路線');
+  mmsg(MDEF);
+}
+function drawMaze() {
+  const m = mm(), st = ms(), g = mzGeom;
+  mzSvg.querySelector('.pathg').innerHTML = pathMarkup(m, 100, g.o, st.path, st.done ? '#ffb703' : g.o.pathColor, .34, true);
+  mzSvg.querySelector('.solg').innerHTML = st.revealed ? pathMarkup(m, 100, g.o, m.solution, g.o.solColor, .3, false) : '';
+  saveSoon();
+}
+function cellAt(x, y) {
+  const g = mzGeom, c = Math.floor((x - g.pad) / g.cs), r = Math.floor((y - g.pad) / g.cs);
+  return r >= 0 && c >= 0 && r < g.n && c < g.n ? [r, c] : null;
+}
+function toUnits(e) { const b = mzSvg.getBoundingClientRect(); return { x: (e.clientX - b.left) / b.width * 100, y: (e.clientY - b.top) / b.height * 100 }; }
+function sameCell(a, b) { return !!a && !!b && a[0] === b[0] && a[1] === b[1]; }
+function applyCell(cell) {
+  const m = mm(), st = ms(); if (!cell || st.revealed) return;
+  const path = st.path, last = path[path.length - 1];
+  if (Engine.maze.isDone(m, path) && !path.some(p => sameCell(p, cell))) return;
+  let next = Engine.maze.extendPath(m, path, cell);
+  if (next.length === path.length && last && Math.abs(last[0] - cell[0]) === 1 && Math.abs(last[1] - cell[1]) === 1) {
+    for (const via of [[last[0], cell[1]], [cell[0], last[1]]]) {   // 斜著快速拖曳：補走轉角的格子
+      const a = Engine.maze.extendPath(m, path, via);
+      if (a.length > path.length) { const b = Engine.maze.extendPath(m, a, cell); if (b.length > a.length) { next = b; break; } }
+    }
+  }
+  if (next.length === path.length && (!path.length || sameCell(next[next.length - 1], last))) {
+    if (!path.length) mmsg('要從「起」那一格開始畫喔。', 'err');
+    return;
+  }
+  st.path = next;
+  const done = Engine.maze.isDone(m, next);
+  if (done && !st.done) { st.done = true; drawMaze(); mmsg('走到終點了，太厲害了！', 'ok'); celebrate('過關囉！'); return; }
+  if (!done) st.done = false;
+  drawMaze(); mmsg(done ? '走到終點了！' : `已經走了 ${next.length} 格。`);
+}
+mzBox.addEventListener('pointerdown', e => {
+  if (!mzSvg || e.button > 0) return; e.preventDefault();
+  try { mzBox.setPointerCapture(e.pointerId); } catch (_) {}
+  if (ms().revealed) { mmsg('現在是顯示答案的狀態，按「隱藏答案路線」就能繼續。', 'err'); return; }
+  drawing = true; lastPt = toUnits(e); lastCell = cellAt(lastPt.x, lastPt.y); applyCell(lastCell);
+});
+mzBox.addEventListener('pointermove', e => {
+  if (!drawing || !mzSvg) return; e.preventDefault();
+  const to = toUnits(e), from = lastPt, g = mzGeom;
+  const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / (g.cs * .25)));
+  for (let k = 1; k <= steps; k++) {
+    const c = cellAt(from.x + (to.x - from.x) * k / steps, from.y + (to.y - from.y) * k / steps);
+    if (c && !sameCell(c, lastCell)) { applyCell(c); lastCell = c; }
+  }
+  lastPt = to;
+});
+for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) mzBox.addEventListener(t, () => { drawing = false; });
+mzBox.addEventListener('contextmenu', e => e.preventDefault());
+function undoMaze() { const st = ms(); if (st.revealed || !st.path.length) return; st.path = st.path.slice(0, -1); st.done = false; drawMaze(); mmsg(st.path.length ? `退回一步，目前 ${st.path.length} 格。` : MDEF); }
+$('btnUndo').onclick = undoMaze;
+$('btnMReset').onclick = () => { const st = ms(); st.path = []; st.done = false; st.revealed = false; renderMaze(); mmsg('已經重來，從「起」開始吧！'); };
+$('btnMReveal').onclick = () => {
+  const st = ms(); st.revealed = !st.revealed; drawMaze();
+  setBtn($('btnMReveal'), st.revealed ? 'eyeoff' : 'eye', st.revealed ? '隱藏答案路線' : '顯示答案路線'); mmsg(st.revealed ? '藍色線是答案路線。' : MDEF);
+};
+
+/* ---------- 鍵盤 ---------- */
+document.addEventListener('keydown', e => {
+  if (ST.mode !== 'screen' || ST.busy || e.ctrlKey || e.metaKey || e.altKey || !ST.sets[ST.type]) return;
+  if (e.target.closest && e.target.closest('input,select,textarea')) return;
+  const k = e.key;
+  if (ST.type === 'sudoku') {
+    if (k === 'n' || k === 'N') { $('btnNote').click(); e.preventDefault(); }
+    else if (/^[0-9]$/.test(k)) { if (Number(k) <= geoOf(sp()).n) fillSel(Number(k)); e.preventDefault(); }
+    else if (k === 'Backspace' || k === 'Delete') { fillSel(0); e.preventDefault(); }
+    else if (k.startsWith('Arrow')) {
+      e.preventDefault(); const n = geoOf(sp()).n; let i = ST.sel < 0 ? Math.floor(n * n / 2) : ST.sel, r = Math.floor(i / n), c = i % n;
+      if (ST.sel >= 0) { if (k === 'ArrowUp') r = Math.max(0, r - 1); if (k === 'ArrowDown') r = Math.min(n - 1, r + 1); if (k === 'ArrowLeft') c = Math.max(0, c - 1); if (k === 'ArrowRight') c = Math.min(n - 1, c + 1); }
+      ST.sel = r * n + c; renderSudoku();
+    }
+  } else {
+    if (k === 'Backspace') { undoMaze(); e.preventDefault(); }
+    else if (k.startsWith('Arrow')) {
+      e.preventDefault(); const m = mm(), st = ms(); if (st.revealed) return;
+      if (!st.path.length) { applyCell(m.start); return; }
+      const l = st.path[st.path.length - 1], d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[k];
+      if (d) applyCell([l[0] + d[0], l[1] + d[1]]);
+    }
+  }
+});
+
+/* ---------- 匯出：花邊與頁面 ---------- */
+function starSVG(cx, cy, r) {
+  let p = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .45 : r; p += `${f2(cx + q * Math.cos(a))},${f2(cy + q * Math.sin(a))} `; }
+  return `<polygon points="${p}" fill="#fff" stroke="#000" stroke-width=".3" stroke-linejoin="round"/>`;
+}
+function flowerSVG(cx, cy, r) {
+  let s = ''; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; s += `<circle cx="${f2(cx + r * .56 * Math.cos(a))}" cy="${f2(cy + r * .56 * Math.sin(a))}" r="${f2(r * .43)}" fill="#fff" stroke="#000" stroke-width=".3"/>`; }
+  return s + `<circle cx="${cx}" cy="${cy}" r="${f2(r * .27)}" fill="#000"/>`;
+}
+const FRAME = (() => {
+  const W = 210, H = 296, c = 9.5, R = 2.4;
+  let s = `<svg class="frame" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" aria-hidden="true">` +
+    `<rect x="6" y="6" width="198" height="284" rx="3.5" fill="none" stroke="#000" stroke-width=".7"/>` +
+    `<rect x="13" y="13" width="184" height="270" rx="1.5" fill="none" stroke="#000" stroke-width=".35"/>`;
+  const motif = (i, x, y) => { const t = i % 4; s += t === 0 ? flowerSVG(x, y, R) : t === 2 ? starSVG(x, y, R + .3) : `<circle cx="${f2(x)}" cy="${f2(y)}" r=".8" fill="#000"/>`; };
+  for (let i = 0; i < 13; i++) { const x = 24 + i * (162 / 12); motif(i, x, c); motif(i, x, H - c); }
+  for (let i = 0; i < 21; i++) { const y = 24 + i * (248 / 20); motif(i, c, y); motif(i, W - c, y); }
+  for (const [x, y] of [[c, c], [W - c, c], [c, H - c], [W - c, H - c]]) s += `<circle cx="${x}" cy="${y}" r="3.4" fill="#fff" stroke="#000" stroke-width=".35"/>` + flowerSVG(x, y, 3);
+  return s + '</svg>';
+})();
+
+function sudokuSVG(S, p, o) {
+  const G = geoOf(p), n = G.n, th = o.thick, cs = (S - th) / n, off = th / 2; let thin = '', thick = '', t = '';
+  for (let k = 0; k <= n; k++) {
+    const q = f2(off + k * cs), v = `M${q} ${f2(off)}V${f2(off + n * cs)}`, h = `M${f2(off)} ${q}H${f2(off + n * cs)}`;
+    if (k % G.bw === 0) thick += v; else thin += v;   // 直線：每 bw 行一條粗線
+    if (k % G.bh === 0) thick += h; else thin += h;   // 橫線：每 bh 列一條粗線
+  }
+  for (let i = 0; i < G.N; i++) {
+    const g = p.givens[i], v = g || (o.answer ? p.solution[i] : 0); if (!v) continue;
+    const x = off + (i % n + .5) * cs, y = off + (Math.floor(i / n) + .5) * cs, fs = cs * (n === 9 ? .62 : .5);
+    // 黑白列印：題目給的數字用粗體，答案數字用細體，兩者都是純黑
+    t += `<text x="${f2(x)}" y="${f2(y + fs * .36)}" font-size="${f2(fs)}" text-anchor="middle" font-weight="${g ? 800 : 400}" fill="#000">${v}</text>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${S}mm" height="${S}mm" viewBox="0 0 ${S} ${S}">` +
+    `<path d="${thin}" fill="none" stroke="#000" stroke-width="${o.thin}"/><path d="${thick}" fill="none" stroke="#000" stroke-width="${th}" stroke-linecap="square"/>${t}</svg>`;
+}
+function itemSVG(set, it, S, answer) {
+  if (set.type === 'sudoku') return sudokuSVG(S, it, answer ? { thick: .7, thin: .25, answer: true } : { thick: .88, thin: .28, answer: false });
+  const o = answer ? { pad: .5, wall: .5, sol: true, solColor: '#000', solW: .17 } : { pad: .8, wall: .7 };
+  return mazeSVG(it, S, Object.assign({ ink: '#000', startFill: '#fff', endFill: '#fff', attrs: `width="${S}mm" height="${S}mm"` }, o));
+}
+function kindOf(set, it) { return set.type === 'sudoku' ? `數獨　${set.size || 9}×${set.size || 9}　${LV[set.level].label}` : `迷宮　${Engine.maze.LEVELS[set.level].label}　${it.rows}×${it.cols} 格`; }
+const pageFoot = (set, kind, p, total) => `<div class="pf">${kind}　第 ${p}／${total} 頁　題組代碼 ${String(set.seed).replace(/[^0-9A-Za-z_-]/g, '')}</div>`;
+function renderSheets() {
+  const set = ST.sets[ST.type], q = $('qPages'), a = $('aPages');
+  if (!set) { q.innerHTML = a.innerHTML = ''; $('expInfo').textContent = ''; return; }
+  const items = set.puzzles || set.mazes, per = Number($('layout').value) === 2 ? 2 : 1, sudoku = set.type === 'sudoku';
+  const tip = sudoku ? `把 1～${set.size || 9} 填進空格：每一橫排、每一直排、每個粗線方框，數字都不能重複。` : '用筆從「起」走到「終」，中間不能穿過牆壁。';
+  let qh = '';
+  for (let i = 0; i < items.length; i += per) {
+    let body = '';
+    for (let j = 0; j < per; j++) {
+      const it = items[i + j];
+      if (!it) { body += '<div class="slot s2 empty"></div>'; continue; }
+      body += `<div class="slot${j ? ' s2' : ''}"><div class="ph${per === 2 ? ' sm' : ''}"><span class="no">第 ${it.no} 題</span><span class="kind">${kindOf(set, it)}</span><span class="nm">姓名：<i></i></span></div>` +
+        `<div class="pz">${itemSVG(set, it, per === 1 ? 172 : 106, false)}</div>${per === 1 ? `<p class="tip">${tip}</p>` : ''}</div>`;
+    }
+    qh += `<section class="sheet">${FRAME}<div class="sheet-in">${body}</div>${pageFoot(set, '題目', i / per + 1, Math.ceil(items.length / per))}</section>`;
+  }
+  const ap = sudoku ? 6 : 4, apages = Math.ceil(items.length / ap); let ah = '';
+  for (let i = 0; i < items.length; i += ap) {
+    const part = items.slice(i, i + ap), figs = part.map(it => `<figure><figcaption>第 ${it.no} 題</figcaption>${itemSVG(set, it, sudoku ? 70 : 84, true)}</figure>`).join('');
+    const range = part.length > 1 ? `第 ${part[0].no}～${part[part.length - 1].no} 題` : `第 ${part[0].no} 題`;
+    ah += `<section class="sheet">${FRAME}<div class="sheet-in"><h2 class="at">答案　${sudoku ? `數獨 ${set.size || 9}×${set.size || 9}　` + LV[set.level].label : '迷宮　' + Engine.maze.LEVELS[set.level].label}　${range}</h2><div class="ag">${figs}</div></div>${pageFoot(set, '答案', i / ap + 1, apages)}</section>`;
+  }
+  q.innerHTML = qh; a.innerHTML = ah;
+  $('expInfo').textContent = `共 ${items.length} 題：題目 ${Math.ceil(items.length / per)} 頁、答案 ${apages} 頁（A4 直式，四邊留白 18mm）。答案頁的題號與題目頁相同，頁尾有題組代碼。`;
+}
+function fitPreview() {
+  const w = $('previewWrap').clientWidth - 24; if (w <= 0) return;
+  $('sheets').style.zoom = Math.min(1, w / (210 * 96 / 25.4));
+}
+$('layout').addEventListener('change', e => { e.target.blur(); renderSheets(); });
+function printPart(v) {
+  if (!ST.sets[ST.type]) return; setView(v); renderSheets(); fitPreview();
+  setTimeout(() => window.print(), 80);
+}
+$('btnPrintQ').onclick = () => printPart('q'); $('btnPrintA').onclick = () => printPart('a');
+
+/* ---------- PNG 匯出：每題一張圖，打包成不壓縮的 zip ---------- */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files) {
+  const enc = new TextEncoder(), parts = [], central = [], u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const common = [...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(size), ...u32(size), ...u16(name.length), ...u16(0)];
+    parts.push(new Uint8Array([0x50, 0x4b, 3, 4, ...common]), name, f.data);
+    central.push(new Uint8Array([0x50, 0x4b, 1, 2, ...u16(20), ...common, ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset)]), name);
+    offset += 30 + name.length + size;
+  }
+  const cdSize = central.reduce((a, b) => a + b.length, 0);
+  return new Blob([...parts, ...central, new Uint8Array([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(offset), 0, 0])], { type: 'application/zip' });
+}
+function svgToPng(svg, px, margin) {
+  return new Promise((resolve, reject) => {
+    const src = svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, `width="${px - 2 * margin}" height="${px - 2 * margin}" font-family="Arial, 'Microsoft JhengHei', sans-serif"`);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const cv = document.createElement('canvas'); cv.width = cv.height = px;
+        const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, px, px); g.drawImage(img, margin, margin, px - 2 * margin, px - 2 * margin);
+        cv.toBlob(b => b ? b.arrayBuffer().then(x => resolve(new Uint8Array(x)), reject) : reject(new Error('瀏覽器無法產生圖片。')), 'image/png');
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => reject(new Error('圖片轉換失敗。'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+  });
+}
+$('btnPng').onclick = async () => {
+  const set = ST.sets[ST.type]; if (!set || ST.busy) return;
+  const items = set.puzzles || set.mazes, files = [], pad = n => String(n).padStart(2, '0');
+  setBusy(true);
+  try {
+    for (const [i, it] of items.entries()) for (const ans of [false, true]) {
+      setStatus(`正在轉成 PNG：${i * 2 + (ans ? 2 : 1)}／${items.length * 2}…`, 'busy');
+      const data = await svgToPng(itemSVG(set, it, ans ? (set.type === 'sudoku' ? 70 : 84) : 172, ans), 1800, 50);
+      files.push({ name: `${ans ? '答案' : '題目'}_第${pad(it.no)}題.png`, data });
+    }
+    download(zipStore(files), `${fileTag(set)}_PNG.zip`);
+    setStatus(`已匯出 ${files.length} 張 PNG（題目、答案各 ${items.length} 張），打包在一個 zip 檔裡。`, 'ok');
+  } catch (e) { setStatus('PNG 匯出失敗：' + (e && e.message ? e.message : e), 'err'); }
+  finally { setBusy(false); }
+};
+window.addEventListener('resize', fitPreview);
+
+/* ---------- 總繪製 ---------- */
+function renderPlay() {
+  renderNav();
+  if (ST.type === 'sudoku') { renderSudoku(); smsg(DEFMSG); } else renderMaze();
+}
+function renderAll() {
+  const has = !!ST.sets[ST.type];
+  document.body.dataset.has = has ? '1' : '0';
+  $('btnPrintQ').disabled = $('btnPrintA').disabled = $('btnPng').disabled = $('btnSave').disabled = !has;
+  if (!has) { renderSheets(); return; }
+  renderSheets();
+  if (ST.mode === 'screen') renderPlay(); else fitPreview();
+}
+window.addEventListener('beforeprint', () => { if (ST.sets[ST.type] && !$('qPages').firstChild) renderSheets(); });
+
+/* ---------- 自動記住：題目和作答進度存在這台電腦的瀏覽器，不小心重新整理也接得回來 ---------- */
+const SAVE_KEY = 'nl_sudokumaze_v1';
+let saveT = 0, restoring = false;
+function saveSoon() { if (restoring) return; clearTimeout(saveT); saveT = setTimeout(saveNow, 400); }
+function saveNow() {
+  try {
+    const data = { type: ST.type, idx: ST.idx, sets: {}, play: {} };
+    for (const t of ['sudoku', 'maze']) {
+      if (!ST.sets[t]) continue;
+      data.sets[t] = Engine.pack(ST.sets[t], t === 'maze' ? { size: ST.sets[t].size } : {});
+      data.play[t] = ST.play[t].map(x => t === 'sudoku' ? { grid: x.grid, notes: x.notes } : { path: x.path });
+    }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (e) { /* 瀏覽器不給存就算了，不影響使用 */ }
+}
+addEventListener('pagehide', saveNow);
+function restore() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return false; }
+  if (!d || !d.sets) return false;
+  let any = false;
+  restoring = true;
+  for (const t of ['maze', 'sudoku']) {
+    if (!d.sets[t]) continue;
+    try {
+      const set = Engine.unpack(d.sets[t]).set; installSet(set);
+      const pl = d.play && d.play[t];
+      if (Array.isArray(pl) && pl.length === ST.play[t].length) pl.forEach((x, i) => {
+        const st = ST.play[t][i];
+        if (!x) return;
+        if (t === 'sudoku') {
+          const p = set.puzzles[i], n = Math.round(Math.sqrt(p.givens.length));
+          if (Array.isArray(x.grid) && x.grid.length === p.givens.length && x.grid.every((v, j) => Number.isInteger(v) && v >= 0 && v <= n && (!p.givens[j] || v === p.givens[j]))) st.grid = x.grid.slice();
+          if (Array.isArray(x.notes) && x.notes.length === p.givens.length) st.notes = x.notes.map(v => (v | 0) & ((1 << n) - 1));
+          st.done = Engine.sudoku.check(st.grid, p.solution).solved;
+        } else if (Array.isArray(x.path)) {
+          const m = set.mazes[i]; let path = [];
+          for (const pt of x.path) { const nx = Engine.maze.extendPath(m, path, pt); if (nx.length !== path.length + 1) break; path = nx; }
+          st.path = path; st.done = Engine.maze.isDone(m, path);
+        }
+      });
+      const ix = d.idx && Number.isInteger(d.idx[t]) ? d.idx[t] : 0;
+      ST.idx[t] = Math.min(Math.max(0, ix), ST.play[t].length - 1);
+      any = true;
+    } catch (e) { /* 存的資料壞掉就跳過這一種 */ }
+  }
+  if (any) {
+    const ty = d.type === 'maze' && ST.sets.maze ? 'maze' : ST.sets.sudoku ? 'sudoku' : 'maze';
+    ST.type = ty; document.body.dataset.type = ty; setActive($('typeTabs'), 'type', ty);
+    reflectSettings();
+    setStatus(describe(ST.sets[ty]) + '　（已接續上次的題目和作答進度）', 'ok');
+  }
+  restoring = false;
+  return any;
+}
+
+// 開啟時不自動出題：有上次的題目就接著用，沒有就顯示空白引導畫面，按「出題」才產生
+setActive($('typeTabs'), 'type', 'sudoku');
+showLevel('easy');
+if (!restore()) setStatus('還沒有出題。選好難度和題數，按「出題」開始。');
+renderAll();
+})();
+</script>
+</body>
+</html>
