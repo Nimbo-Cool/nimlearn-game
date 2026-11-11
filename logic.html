@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>邏輯遊戲區</title>
+<style>
+:root{--ink:#2b3a55;--bg:#fff6e5;--card:#fffdf7;--line:#e9d9b8;--pink:#ff7a8a;--yel:#ffd25a;--green:#6bcb77;--blue:#4d96ff;--sky:#d9efff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg) radial-gradient(#f3e3c3 1.5px,transparent 1.5px) 0 0/26px 26px;color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;font-weight:700;user-select:none;-webkit-user-select:none;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:3px solid var(--ink);border-radius:16px;background:#fff;box-shadow:0 4px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+button:disabled{opacity:.4;cursor:default;transform:none;box-shadow:0 4px 0 var(--ink)}
+.scr{position:fixed;inset:0;display:none;flex-direction:column}
+.scr.on{display:flex}
+.top{display:flex;align-items:center;gap:12px;padding:12px 18px;flex:0 0 auto}
+.top h1{margin:0;font-size:30px;font-weight:900;flex:1;display:flex;align-items:center;gap:10px}
+.top h1 small{font-size:16px;color:#8a7a5a}
+.chip{display:flex;align-items:center;gap:8px;height:52px;padding:0 14px 0 6px;width:220px;font-size:18px;justify-content:flex-start;overflow:hidden;white-space:nowrap}
+.chip svg{flex:0 0 44px}
+.btn{height:52px;padding:0 18px;font-size:19px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.y{background:var(--yel)}.btn.p{background:var(--pink);color:#fff}.btn.g{background:var(--green);color:#fff}.btn.b{background:#cfe6ff}
+.foot{text-align:center;font-size:13px;color:#a8977a;padding:6px}
+/* 首頁 */
+.games{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;padding:8px 40px 10px;max-width:1200px;width:100%;margin:0 auto;align-content:center}
+.gcard{height:clamp(170px,33vh,260px);border-radius:28px;display:flex;align-items:center;gap:22px;padding:18px 26px;text-align:left}
+.gcard .art{flex:0 0 auto;width:clamp(110px,20vh,170px);height:clamp(110px,20vh,170px)}
+.gcard .tx{flex:1;min-width:0}
+.gcard .nm{font-size:clamp(26px,4vh,36px);font-weight:900}
+.gcard .ds{font-size:17px;margin:6px 0 10px;color:#4a5878;line-height:1.45}
+.gcard .pg{display:inline-flex;gap:14px;font-size:18px;background:#ffffffaa;border-radius:12px;padding:4px 12px}
+.star{display:inline-block;width:1em;height:1em;vertical-align:-.12em}
+/* 選人 */
+.pick{flex:1;overflow:auto;padding:10px 40px 30px;max-width:1200px;width:100%;margin:0 auto}
+.pick h2{font-size:34px;text-align:center;margin:6px 0 18px}
+.plist{display:grid;grid-template-columns:repeat(auto-fill,170px);gap:16px;justify-content:center}
+.pcard{width:170px;height:190px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:20px;position:relative;padding:8px}
+.pcard .pn{width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.pcard .ps{font-size:15px;color:#7a6a4a}
+.pcard .del{position:absolute;top:-10px;right:-10px;width:40px;height:40px;border-radius:50%;background:var(--pink);color:#fff;font-size:22px;padding:0;display:none}
+.managing .pcard .del{display:block}
+.addp{display:flex;gap:10px;justify-content:center;margin:22px 0 4px}
+.addp input{width:260px;height:56px;border:3px solid var(--ink);border-radius:16px;font:inherit;font-size:22px;padding:0 14px;background:#fff}
+/* 關卡 */
+.lv{flex:1;overflow:auto;padding:6px 40px 24px;max-width:1200px;width:100%;margin:0 auto}
+.lvgrid{display:grid;grid-template-columns:repeat(auto-fill,96px);gap:14px;justify-content:center}
+.lvb{width:96px;height:96px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;font-weight:900;gap:2px}
+.lvb .s{font-size:14px;display:flex;gap:1px;height:16px}
+.lvb.new{background:var(--yel)}
+.lvb.lock{background:#eee3cf;color:#b8a888}
+.lvinfo{text-align:center;font-size:18px;margin:0 0 14px;color:#6a5a3a}
+/* 遊戲畫面 */
+#play .stage{flex:1;display:flex;align-items:center;justify-content:center;gap:24px;padding:0 20px 10px;min-height:0}
+#play .lvtag{font-size:24px;min-width:150px;text-align:center}
+#play .hud{font-size:20px;min-width:240px;text-align:right;color:#5a4a2a}
+.board{background:var(--card);border:4px solid var(--ink);border-radius:24px;box-shadow:0 6px 0 var(--ink);padding:12px;flex:0 0 auto}
+.board svg{display:block}
+.side{width:330px;display:flex;flex-direction:column;gap:12px;flex:0 0 auto}
+.tip{background:#fff;border:3px solid var(--ink);border-radius:18px;padding:12px 14px;font-size:18px;line-height:1.5;min-height:84px}
+.tip b{color:#e05a6a}
+.mask{position:fixed;inset:0;background:rgba(43,58,85,.45);display:none;align-items:center;justify-content:center;z-index:20}
+.mask.on{display:flex}
+.pop{background:var(--card);border:4px solid var(--ink);border-radius:30px;box-shadow:0 8px 0 var(--ink);padding:26px 34px;text-align:center;width:min(560px,92vw)}
+.pop h2{font-size:40px;margin:4px 0 10px}
+.pop .bigstars{display:flex;justify-content:center;gap:14px;margin:6px 0 10px}
+.pop .bigstars svg{width:78px;height:78px}
+.pop .bigstars .on{animation:pop .45s cubic-bezier(.3,1.6,.5,1) both}
+.pop .msg{font-size:20px;margin:0 0 16px;color:#5a4a2a;line-height:1.5}
+.pop .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.pop .row .btn{width:160px}
+.pop .newf{display:flex;align-items:center;gap:14px;justify-content:center;background:#fff4c9;border-radius:18px;padding:8px;margin:0 0 16px;font-size:20px}
+@keyframes pop{0%{transform:scale(0) rotate(-30deg)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.shake{animation:shake .3s 2}
+/* 收藏冊 */
+.book{flex:1;overflow:auto;padding:4px 40px 24px;max-width:1200px;width:100%;margin:0 auto}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,140px);gap:14px;justify-content:center}
+.bcell{width:140px;height:160px;border:3px solid var(--ink);border-radius:20px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px}
+.bcell.lock{background:#efe4cf;border-style:dashed;color:#b0a080}
+.bar{height:22px;background:#fff;border:3px solid var(--ink);border-radius:12px;overflow:hidden;width:360px;margin:0 auto}
+.bar i{display:block;height:100%;background:var(--yel)}
+.loading{font-size:26px;color:#8a7a5a}
+</style>
+</head>
+<body>
+<section class="scr" id="pick">
+  <div class="top"><h1><span id="logo1"></span>邏輯遊戲區</h1><button class="btn" id="btnManage">管理玩家</button></div>
+  <div class="pick" id="pickBox">
+    <h2>誰要玩？點自己的名字</h2>
+    <div class="plist" id="plist"></div>
+    <div class="addp"><input id="newName" maxlength="8" placeholder="輸入名字（8 個字以內）" autocomplete="off"><button class="btn g" id="btnAdd">加入新玩家</button></div>
+  </div>
+  <div class="foot">秉亨老師 × Claude 協同製作</div>
+</section>
+
+<section class="scr" id="home">
+  <div class="top"><h1><span id="logo2"></span>邏輯遊戲區</h1>
+    <button class="btn chip" id="btnWho"></button>
+    <button class="btn y" id="btnBook" style="width:200px"></button>
+    <button class="btn" id="btnSnd" style="width:120px"></button></div>
+  <div class="games" id="games"></div>
+  <div class="foot">秉亨老師 × Claude 協同製作</div>
+</section>
+
+<section class="scr" id="levels">
+  <div class="top"><button class="btn" id="lvBack" style="width:120px">返回</button><h1 id="lvTitle"></h1><button class="btn chip" id="lvWho" disabled></button></div>
+  <div class="lv"><p class="lvinfo" id="lvInfo"></p><div class="lvgrid" id="lvGrid"></div></div>
+</section>
+
+<section class="scr" id="play">
+  <div class="top"><button class="btn" id="plBack" style="width:120px">返回</button><div class="lvtag" id="plLv"></div><h1 id="plName" style="justify-content:center"></h1><div class="hud" id="plHud"></div></div>
+  <div class="stage" id="stage"></div>
+</section>
+
+<section class="scr" id="book">
+  <div class="top"><button class="btn" id="bkBack" style="width:120px">返回</button><h1>怪獸收藏冊</h1><button class="btn chip" id="bkWho" disabled></button></div>
+  <div class="book"><p class="lvinfo" id="bkInfo"></p><div class="bar" id="bkBar"><i></i></div><p></p><div class="bgrid" id="bkGrid"></div></div>
+</section>
+
+<div class="mask" id="done"><div class="pop">
+  <h2 id="dnTitle">過關了！</h2>
+  <div class="bigstars" id="dnStars"></div>
+  <p class="msg" id="dnMsg"></p>
+  <div class="newf" id="dnNew" style="display:none"></div>
+  <div class="row"><button class="btn" id="dnLevels">選關卡</button><button class="btn" id="dnAgain">再玩一次</button><button class="btn p" id="dnNext">下一關</button></div>
+</div></div>
+
+<div class="mask" id="ask"><div class="pop">
+  <h2 id="askT" style="font-size:30px"></h2><p class="msg" id="askM"></p>
+  <div class="row"><button class="btn" id="askNo">取消</button><button class="btn p" id="askYes">確定</button></div>
+</div></div>
+
+<script id="engine">
+// =====================================================================
+//  邏輯遊戲區：關卡產生器（純邏輯，不碰畫面）
+//  每一關用「遊戲名＋關卡號」當種子，同一關每個人玩到的都一樣；關卡號越大越難，玩不完
+// =====================================================================
+(function () {
+  'use strict';
+  function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function rng(seed) { let a = typeof seed === 'number' ? seed >>> 0 : hash(String(seed)); return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const pick = (r, a) => a[Math.floor(r() * a.length)];
+  const shuffle = (r, a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  // 方向：上右下左
+  const DR = [-1, 0, 1, 0], DC = [0, 1, 0, -1];
+
+  // ---------------- 小雞回家：排箭頭指令 ----------------
+  // 從第 20 關開始有「重複」：一張卡可以走好幾格，指令格子變少，逼你把同方向的步驟合起來
+  const CHICK_REP = 20;
+  function chickMinCards(L) {
+    const { n, rock, start, goal, corn, rep } = L, maxK = rep ? 5 : 1, full = (1 << corn.length) - 1;
+    const cornAt = new Map(corn.map((c, i) => [c, i]));
+    const seen = new Map(), q = [[start, cornAt.has(start) ? 1 << cornAt.get(start) : 0, 0]];
+    seen.set(q[0][0] * 16 + q[0][1], 0);
+    while (q.length) {
+      const [p, m, d] = q.shift();
+      if (p === goal && m === full) return d;
+      for (let dir = 0; dir < 4; dir++) {
+        let r = Math.floor(p / n), c = p % n, mm = m;
+        for (let k = 1; k <= maxK; k++) {
+          r += DR[dir]; c += DC[dir];
+          if (r < 0 || r >= n || c < 0 || c >= n || rock.has(r * n + c)) break;
+          const np = r * n + c;
+          if (cornAt.has(np)) mm |= 1 << cornAt.get(np);
+          const key = np * 16 + mm;
+          if (!seen.has(key)) { seen.set(key, d + 1); q.push([np, mm, d + 1]); }
+        }
+      }
+    }
+    return -1;
+  }
+  function makeChick(level) {
+    const r = rng('chick' + level);
+    const n = level <= 5 ? 4 : level <= 15 ? 5 : level <= 32 ? 6 : 7;
+    const cornN = level < 8 ? 0 : level < 22 ? 1 : level < 40 ? 2 : 3;
+    const rep = level >= CHICK_REP;
+    const target = clamp(2 + Math.floor(level * 0.45), 2, n * 2 + 2);
+    let best = null;
+    for (let t = 0; t < 400; t++) {
+      const rock = new Set(), dens = level <= 2 ? 0 : Math.min(0.1 + level * 0.004, 0.28);
+      for (let i = 0; i < n * n; i++) if (r() < dens) rock.add(i);
+      const free = [...Array(n * n).keys()].filter(i => !rock.has(i));
+      if (free.length < 4) continue;
+      const start = pick(r, free);
+      // 走路距離
+      const dist = new Map([[start, 0]]), q = [start];
+      while (q.length) { const p = q.shift(); for (let d = 0; d < 4; d++) { const rr = Math.floor(p / n) + DR[d], cc = p % n + DC[d], np = rr * n + cc; if (rr < 0 || rr >= n || cc < 0 || cc >= n || rock.has(np) || dist.has(np)) continue; dist.set(np, dist.get(p) + 1); q.push(np); } }
+      const reach = [...dist.keys()].filter(p => p !== start);
+      if (reach.length < 2 + cornN) continue;
+      let cand = reach.filter(p => Math.abs(dist.get(p) - target) <= 1);
+      if (!cand.length) cand = reach.filter(p => dist.get(p) >= Math.max(...reach.map(x => dist.get(x))) - 1);
+      const goal = pick(r, cand);
+      const corn = shuffle(r, reach.filter(p => p !== goal)).slice(0, cornN);
+      const L = { n, rock, start, goal, corn, rep };
+      const steps = chickMinCards(Object.assign({}, L, { rep: false }));
+      if (steps < 0) continue;
+      L.steps = steps; L.min = rep ? chickMinCards(L) : steps;
+      // 重複關卡要真的「省得到」卡片，才有學到重複的意義
+      if (rep && L.steps - L.min < 2) continue;
+      const score = Math.abs(steps - target - (cornN ? 2 : 0));
+      if (!best || score < best.score) best = Object.assign(L, { score });
+      if (score <= 1) break;
+    }
+    best.slots = best.rep ? best.min + 1 : best.min + 2;
+    best.rock = [...best.rock];
+    delete best.score;
+    return best;
+  }
+  // 執行指令卡：回傳每一步的位置；撞到就停在 fail
+  function chickRun(L, cards) {
+    const { n } = L, rock = new Set(L.rock), corn = new Set(L.corn), got = new Set();
+    let p = L.start; const steps = [];
+    for (let ci = 0; ci < cards.length; ci++) {
+      const { d, k } = cards[ci];
+      for (let s = 0; s < k; s++) {
+        const rr = Math.floor(p / n) + DR[d], cc = p % n + DC[d];
+        if (rr < 0 || rr >= n || cc < 0 || cc >= n) return { steps, fail: { card: ci, why: 'edge', at: p, d } };
+        if (rock.has(rr * n + cc)) return { steps, fail: { card: ci, why: 'rock', at: p, d } };
+        p = rr * n + cc; if (corn.has(p)) got.add(p);
+        steps.push({ p, card: ci, corn: corn.has(p) });
+      }
+    }
+    return { steps, end: p, home: p === L.goal, allCorn: got.size === corn.size };
+  }
+
+  // ---------------- 水管接接看：轉水管讓水流到花 ----------------
+  // 接口用位元：上 1、右 2、下 4、左 8；順時針轉一次＝位元往左移一格
+  const rot = m => ((m << 1) | (m >> 3)) & 15;
+  const rotN = (m, k) => { for (let i = 0; i < k; i++) m = rot(m); return m; };
+  const BIT = [1, 2, 4, 8], OPP = [4, 8, 1, 2];
+  function makePipe(level) {
+    const r = rng('pipe' + level);
+    const n = level <= 4 ? 3 : level <= 12 ? 4 : level <= 26 ? 5 : level <= 45 ? 6 : 7;
+    const flowersN = level <= 5 ? 1 : level <= 18 ? 2 : 3;
+    let out = null;
+    for (let t = 0; t < 200 && !out; t++) {
+      const src = Math.floor(r() * n) * n;   // 水龍頭接在最左邊某一格
+      const mask = new Array(n * n).fill(0), parent = new Array(n * n).fill(-1), inTree = new Set([src]);
+      mask[src] |= 8;
+      // 隨機長樹（每次從樹的邊緣隨機長一格），比較多彎
+      const frontier = [];
+      const addF = p => { for (let d = 0; d < 4; d++) { const rr = Math.floor(p / n) + DR[d], cc = p % n + DC[d]; if (rr >= 0 && rr < n && cc >= 0 && cc < n) frontier.push([p, rr * n + cc, d]); } };
+      addF(src);
+      while (inTree.size < n * n) {
+        const i = Math.floor(r() * frontier.length), [a, b, d] = frontier[i];
+        frontier.splice(i, 1);
+        if (inTree.has(b)) continue;
+        inTree.add(b); parent[b] = a; mask[a] |= BIT[d]; mask[b] |= OPP[d]; addF(b);
+      }
+      const depth = p => { let k = 0; while (p !== src) { p = parent[p]; k++; } return k; };
+      const leaves = [...Array(n * n).keys()].filter(p => p !== src && [1, 2, 4, 8].includes(mask[p]));
+      if (leaves.length < flowersN) continue;
+      // 花放在離水龍頭遠的末端
+      // 先算好每個末端的分數再排序（比較函式裡不能亂數，不然不同瀏覽器排出來不一樣）
+      const score = new Map(leaves.map(p => [p, depth(p) + r() * 2]));
+      leaves.sort((a, b) => score.get(b) - score.get(a) || a - b);
+      const flowers = leaves.slice(0, flowersN);
+      const need = new Set();
+      flowers.forEach(f => { let p = f; while (p !== -1) { need.add(p); p = parent[p]; } });
+      const turn = mask.map(() => 0);
+      let taps = 0;
+      for (let p = 0; p < n * n; p++) {
+        if (flowers.includes(p)) continue;
+        const k = Math.floor(r() * 4); turn[p] = k;   // 畫面上的接口＝正確接口轉 k 次
+      }
+      // 至少要有幾格是錯的，算最少要點幾下
+      for (const p of need) if (!flowers.includes(p)) {
+        const cur = rotN(mask[p], turn[p]);
+        let k = 0; while (rotN(cur, k) !== mask[p]) k++;
+        taps += k;
+      }
+      if (taps < Math.min(2 + Math.floor(level / 3), need.size, 12)) continue;
+      const tiles = mask.map((m, p) => rotN(m, turn[p]));
+      out = { n, src, flowers, tiles, sol: mask, need: [...need], min: taps };
+    }
+    return out;
+  }
+  // 現在哪些格子有水
+  function pipeWater(L, tiles) {
+    const { n, src } = L, wet = new Set();
+    if (!(tiles[src] & 8)) return wet;
+    const q = [src]; wet.add(src);
+    while (q.length) {
+      const p = q.shift();
+      for (let d = 0; d < 4; d++) {
+        if (!(tiles[p] & BIT[d])) continue;
+        const rr = Math.floor(p / n) + DR[d], cc = p % n + DC[d], np = rr * n + cc;
+        if (rr < 0 || rr >= n || cc < 0 || cc >= n || wet.has(np) || !(tiles[np] & OPP[d])) continue;
+        wet.add(np); q.push(np);
+      }
+    }
+    return wet;
+  }
+
+  // ---------------- 小熊搬蜂蜜：推箱子 ----------------
+  // 先把蜂蜜罐放在樹洞上，再讓小熊「倒著拉」打亂，保證一定推得回去；再用電腦解一次算最少推幾下
+  function bearTier(level) {
+    if (level <= 3) return { w: 4, h: 4, boxes: 1, lo: 1, hi: 3, walls: 1 };
+    if (level <= 10) return { w: 5, h: 5, boxes: 1, lo: 3, hi: 7, walls: 3 };
+    if (level <= 20) return { w: 6, h: 5, boxes: 2, lo: 4, hi: 9, walls: 4 };
+    if (level <= 35) return { w: 6, h: 6, boxes: 2, lo: 7, hi: 14, walls: 6 };
+    if (level <= 60) return { w: 7, h: 6, boxes: 3, lo: 9, hi: 18, walls: 7 };
+    return { w: 7, h: 7, boxes: 3, lo: 12, hi: 24, walls: 9 };
+  }
+  function bearSolve(L, cap) {
+    const { w, h, wall, goals } = L, W = w + 2, goalSet = new Set(goals);
+    const reachable = (player, boxes) => { const seen = new Set([player]), q = [player]; while (q.length) { const p = q.shift(); for (const d of [-W, 1, W, -1]) { const np = p + d; if (wall.has(np) || boxes.has(np) || seen.has(np)) continue; seen.add(np); q.push(np); } } return seen; };
+    const key = (boxes, reach) => [...boxes].sort((a, b) => a - b).join(',') + '|' + Math.min(...reach);
+    const start = new Set(L.boxes), r0 = reachable(L.player, start);
+    const seen = new Set([key(start, r0)]);
+    let layer = [[start, r0]], depth = 0, nodes = 0;
+    while (layer.length) {
+      const next = [];
+      for (const [boxes, reach] of layer) {
+        if ([...boxes].every(b => goalSet.has(b))) return depth;
+        for (const b of boxes) for (const d of [-W, 1, W, -1]) {
+          if (!reach.has(b - d)) continue;
+          const nb = b + d;
+          if (wall.has(nb) || boxes.has(nb)) continue;
+          const bs = new Set(boxes); bs.delete(b); bs.add(nb);
+          // 推到角落又不是樹洞＝死路，直接不考慮
+          if (!goalSet.has(nb)) { const wv = wall.has(nb - W) || wall.has(nb + W), wh = wall.has(nb - 1) || wall.has(nb + 1); if (wv && wh) continue; }
+          const rr = reachable(b, bs), k = key(bs, rr);
+          if (seen.has(k)) continue;
+          seen.add(k); next.push([bs, rr]);
+          if (++nodes > cap) return -1;
+        }
+      }
+      layer = next; depth++;
+    }
+    return -1;
+  }
+  function makeBear(level) {
+    const r = rng('bear' + level), T = bearTier(level), W = T.w + 2, H = T.h + 2;
+    let best = null;
+    for (let t = 0; t < 300; t++) {
+      const wall = new Set();
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (y === 0 || x === 0 || y === H - 1 || x === W - 1) wall.add(y * W + x);
+      const inner = []; for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) inner.push(y * W + x);
+      // 加幾塊石頭，但地板要連在一起
+      for (const c of shuffle(r, inner.slice()).slice(0, T.walls + Math.floor(r() * 3))) {
+        wall.add(c);
+        const floor = inner.filter(p => !wall.has(p)), seen = new Set([floor[0]]), q = [floor[0]];
+        while (q.length) { const p = q.shift(); for (const d of [-W, 1, W, -1]) { const np = p + d; if (!wall.has(np) && !seen.has(np)) { seen.add(np); q.push(np); } } }
+        if (seen.size !== floor.length) wall.delete(c);
+      }
+      const floor = inner.filter(p => !wall.has(p));
+      if (floor.length < T.boxes * 3 + 4) continue;
+      const goals = shuffle(r, floor.slice()).slice(0, T.boxes);
+      let boxes = new Set(goals), player = pick(r, floor.filter(p => !boxes.has(p)));
+      // 倒著拉
+      const pulls = T.hi * 3;
+      for (let i = 0; i < pulls; i++) {
+        const b = pick(r, [...boxes]), d = pick(r, [-W, 1, W, -1]);
+        const p1 = b + d, p2 = b + 2 * d;   // 小熊站 p1，往 p2 退，罐子跟到 p1
+        if (wall.has(p1) || wall.has(p2) || boxes.has(p1) || boxes.has(p2)) continue;
+        const seen = new Set([player]), q = [player];
+        while (q.length) { const p = q.shift(); for (const dd of [-W, 1, W, -1]) { const np = p + dd; if (wall.has(np) || boxes.has(np) || seen.has(np)) continue; seen.add(np); q.push(np); } }
+        if (!seen.has(p1)) continue;
+        boxes.delete(b); boxes.add(p1); player = p2;
+      }
+      if ([...boxes].some(b => goals.includes(b))) continue;
+      const L = { w: T.w, h: T.h, wall, goals, boxes: [...boxes], player };
+      const P = bearSolve(L, 120000);
+      if (P < 0) continue;
+      const score = P < T.lo ? T.lo - P : P > T.hi ? P - T.hi : 0;
+      if (!best || score < best.score) best = Object.assign(L, { min: P, score });
+      if (!score) break;
+    }
+    best.wall = [...best.wall]; delete best.score;
+    return best;
+  }
+
+  // ---------------- 猜猜我是誰：問問題、排除 ----------------
+  const MCOLORS = ['紅', '藍', '綠', '黃', '紫'];
+  function makeWho(level) {
+    const r = rng('who' + level);
+    const count = level <= 4 ? 6 : level <= 12 ? 9 : level <= 25 ? 12 : level <= 45 ? 16 : 20;
+    const colors = level <= 4 ? 3 : level <= 15 ? 4 : 5, eyesMax = level <= 6 ? 2 : 3;
+    const extra = level <= 3 ? ['horns'] : level <= 10 ? ['horns', 'hat'] : level <= 20 ? ['horns', 'hat', 'teeth'] : ['horns', 'hat', 'teeth', 'spots'];
+    const seen = new Set(), list = [];
+    let guard = 0;
+    while (list.length < count && guard++ < 5000) {
+      const m = { c: Math.floor(r() * colors), eyes: 1 + Math.floor(r() * eyesMax), horns: false, hat: false, teeth: false, spots: false, v: Math.floor(r() * 3) };
+      extra.forEach(k => { m[k] = r() < 0.5; });
+      const key = [m.c, m.eyes, m.horns, m.hat, m.teeth, m.spots].join();
+      if (seen.has(key)) continue;
+      seen.add(key); list.push(m);
+    }
+    const secret = Math.floor(r() * list.length);
+    // 問題：只列出這一關看得到的特徵
+    const qs = [];
+    for (let c = 0; c < colors; c++) if (list.some(m => m.c === c)) qs.push({ id: 'c' + c, t: `是${MCOLORS[c]}色的嗎？`, k: 'c', v: c });
+    for (let e = 1; e <= eyesMax; e++) if (list.some(m => m.eyes === e)) qs.push({ id: 'e' + e, t: `有 ${e} 隻眼睛嗎？`, k: 'eyes', v: e });
+    const T = { horns: '頭上有角嗎？', hat: '有戴帽子嗎？', teeth: '有露出牙齒嗎？', spots: '身上有斑點嗎？' };
+    extra.forEach(k => { if (list.some(m => m[k]) && list.some(m => !m[k])) qs.push({ id: k, t: T[k], k, v: true }); });
+    return { monsters: list, secret, qs, auto: level <= 8, best: Math.ceil(Math.log2(list.length)) };
+  }
+
+  // ---------------- 怪獸朋友（收藏冊）----------------
+  const SYL = ['噗', '咕', '嚕', '啾', '咪', '波', '嘟', '啦', '叮', '咚', '吉', '蹦', '呱', '嘿', '露', '比', '巴', '妮', '朵', '可', '樂', '皮', '歐', '莉', '多', '米', '奇', '寶', '圓', '球'];
+  function friend(i) {
+    const r = rng('friend' + i);
+    const a = pick(r, SYL), b = pick(r, SYL), name = r() < 0.35 ? a + a : a + b;
+    return { name, c: Math.floor(r() * 5), eyes: 1 + Math.floor(r() * 3), horns: r() < 0.5, hat: r() < 0.4, teeth: r() < 0.4, spots: r() < 0.5, v: Math.floor(r() * 3) };
+  }
+
+  const Engine = { hash, rng, DR, DC, CHICK_REP, makeChick, chickRun, chickMinCards, makePipe, pipeWater, rot, rotN, makeBear, bearSolve, bearTier, makeWho, friend, MCOLORS };
+  const root = typeof window !== 'undefined' ? window : typeof self !== 'undefined' ? self : null;
+  if (root) root.Engine = Engine;
+  if (typeof module !== 'undefined') module.exports = Engine;
+})();
+
+</script>
+<script>
+'use strict';
+const E = window.Engine;
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ================= 存檔：每位玩家各自的關卡進度和星星 ================= */
+const STORE = 'nl_logic_v1';
+let DB = { players: [], cur: null, snd: true };
+try { const d = JSON.parse(localStorage.getItem(STORE) || 'null'); if (d && Array.isArray(d.players)) DB = Object.assign(DB, d); } catch (e) {}
+if (!DB.players.some(p => p.id === 'guest')) DB.players.unshift({ id: 'guest', name: '訪客', prog: {} });
+function save() { try { localStorage.setItem(STORE, JSON.stringify(DB)); } catch (e) {} }
+const me = () => DB.players.find(p => p.id === DB.cur) || DB.players[0];
+const prog = (g, p = me()) => (p.prog[g] = p.prog[g] || { max: 0, st: {} });
+const starsOf = (p, g) => g ? Object.values(prog(g, p).st).reduce((a, b) => a + b, 0) : GAMES_ORDER.reduce((a, k) => a + starsOf(p, k), 0);
+const FRIEND_EVERY = 5;   // 每 5 顆星星多一隻怪獸朋友
+const friendsOf = p => Math.floor(starsOf(p) / FRIEND_EVERY);
+const avatarOf = p => E.friend(100000 + (E.hash(p.id) % 50000));
+
+/* ================= 音效 ================= */
+let AC = null;
+function tone(f, t, dur, type = 'square', vol = .05) {
+  if (!DB.snd) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain(), s = AC.currentTime + t;
+    o.type = type; o.frequency.setValueAtTime(f, s);
+    g.gain.setValueAtTime(vol, s); g.gain.exponentialRampToValueAtTime(.0001, s + dur);
+    o.connect(g).connect(AC.destination); o.start(s); o.stop(s + dur + .02);
+  } catch (e) {}
+}
+const SFX = {
+  tap: () => tone(660, 0, .06, 'square', .03),
+  step: () => tone(520 + Math.random() * 80, 0, .07, 'triangle', .06),
+  bad: () => { tone(220, 0, .14, 'sawtooth', .04); tone(160, .12, .2, 'sawtooth', .04); },
+  good: () => { tone(784, 0, .08); tone(1046, .08, .12); },
+  water: () => { for (let i = 0; i < 4; i++) tone(900 + i * 120, i * .05, .08, 'sine', .05); },
+  win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, i * .11, .22, 'square', .05)),
+  star: i => tone(880 + i * 220, 0, .15, 'triangle', .07)
+};
+
+/* ================= 圖：星星、怪獸 ================= */
+const STAR = (on, cls = '') => `<svg class="star ${cls}" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" fill="${on ? '#ffd25a' : '#e6dcc6'}" stroke="#2b3a55" stroke-width="2" stroke-linejoin="round"/></svg>`;
+const MC = ['#ff6b6b', '#4d96ff', '#6bcb77', '#ffd93d', '#b980f0'], MD = ['#c94848', '#2f6fd0', '#3e9b4b', '#d8a91a', '#8a55c9'];
+function monsterSVG(m, size = 100, extra = '') {
+  const c = MC[m.c], d = MD[m.c], k = '#2b3a55';
+  let body;
+  if (m.v === 1) body = `<rect x="20" y="26" width="60" height="64" rx="28" fill="${c}" stroke="${k}" stroke-width="3"/>`;
+  else if (m.v === 2) body = `<ellipse cx="50" cy="62" rx="40" ry="28" fill="${c}" stroke="${k}" stroke-width="3"/>`;
+  else body = `<ellipse cx="50" cy="58" rx="34" ry="32" fill="${c}" stroke="${k}" stroke-width="3"/>`;
+  const top = m.v === 2 ? 36 : m.v === 1 ? 28 : 28;
+  const horns = m.horns ? `<path d="M30 ${top + 8}L24 ${top - 12}L40 ${top + 2}Z M70 ${top + 8}L76 ${top - 12}L60 ${top + 2}Z" fill="#fff3c4" stroke="${k}" stroke-width="3" stroke-linejoin="round"/>` : '';
+  const hat = m.hat ? `<path d="M50 ${top - 22}L38 ${top + 2}L62 ${top + 2}Z" fill="#ff9fb0" stroke="${k}" stroke-width="3" stroke-linejoin="round"/><path d="M44 ${top - 8}L56 ${top - 8}" stroke="#fff" stroke-width="3"/><circle cx="50" cy="${top - 23}" r="4" fill="#ffd25a" stroke="${k}" stroke-width="2"/>` : '';
+  const spots = m.spots ? `<circle cx="31" cy="72" r="6" fill="${d}" opacity=".55"/><circle cx="69" cy="66" r="5" fill="${d}" opacity=".55"/><circle cx="58" cy="82" r="4" fill="${d}" opacity=".55"/>` : '';
+  const ey = m.v === 2 ? 56 : 50, ex = m.eyes === 1 ? [50] : m.eyes === 2 ? [38, 62] : [32, 50, 68], er = m.eyes === 1 ? 11 : m.eyes === 2 ? 9 : 7.5;
+  const eyes = ex.map(x => `<circle cx="${x}" cy="${ey}" r="${er}" fill="#fff" stroke="${k}" stroke-width="2.5"/><circle cx="${x + 1.5}" cy="${ey + 1}" r="${er * .45}" fill="${k}"/>`).join('');
+  const my = m.v === 2 ? 74 : 72;
+  const mouth = m.teeth ? `<path d="M37 ${my - 3}Q50 ${my + 13} 63 ${my - 3}Z" fill="${k}"/><path d="M42 ${my - 2}l3 6 3-6M52 ${my - 2}l3 6 3-6" fill="#fff"/>` : `<path d="M39 ${my - 2}Q50 ${my + 8} 61 ${my - 2}" fill="none" stroke="${k}" stroke-width="3" stroke-linecap="round"/>`;
+  const feet = `<ellipse cx="36" cy="90" rx="9" ry="5" fill="${d}" stroke="${k}" stroke-width="2.5"/><ellipse cx="64" cy="90" rx="9" ry="5" fill="${d}" stroke="${k}" stroke-width="2.5"/>`;
+  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" ${extra}>${feet}${horns}${body}${spots}${hat}${eyes}${mouth}</svg>`;
+}
+const LOGO = `<svg viewBox="0 0 48 48" width="44" height="44"><rect x="3" y="3" width="42" height="42" rx="11" fill="#ffd25a" stroke="#2b3a55" stroke-width="3"/><circle cx="17" cy="20" r="5" fill="#fff" stroke="#2b3a55" stroke-width="2.5"/><circle cx="31" cy="20" r="5" fill="#fff" stroke="#2b3a55" stroke-width="2.5"/><circle cx="18" cy="21" r="2" fill="#2b3a55"/><circle cx="32" cy="21" r="2" fill="#2b3a55"/><path d="M16 31q8 7 16 0" fill="none" stroke="#2b3a55" stroke-width="3" stroke-linecap="round"/></svg>`;
+
+/* ================= 換畫面 ================= */
+let CUR = null;
+function show(id) { document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); }
+function ask(title, msg, yes = '確定') {
+  return new Promise(res => {
+    $('askT').textContent = title; $('askM').textContent = msg; $('askYes').textContent = yes; $('ask').classList.add('on');
+    const done = v => { $('ask').classList.remove('on'); $('askYes').onclick = $('askNo').onclick = null; res(v); };
+    $('askYes').onclick = () => done(true); $('askNo').onclick = () => done(false);
+  });
+}
+
+/* ---------- 選玩家 ---------- */
+function renderPick() {
+  $('plist').innerHTML = DB.players.map(p => `<button class="pcard" data-id="${p.id}">${monsterSVG(avatarOf(p), 96)}<div class="pn">${esc(p.name)}</div><div class="ps">${STAR(true)} ${starsOf(p)}</div>${p.id === 'guest' ? '' : '<span class="del btn" data-del="1">×</span>'}</button>`).join('');
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+$('plist').onclick = async e => {
+  const card = e.target.closest('.pcard'); if (!card) return;
+  const p = DB.players.find(x => x.id === card.dataset.id); if (!p) return;
+  if (e.target.closest('[data-del]')) {
+    if (await ask('刪除玩家', `要刪除「${p.name}」嗎？他的星星和進度都會不見。`, '刪除')) { DB.players = DB.players.filter(x => x !== p); if (DB.cur === p.id) DB.cur = null; save(); renderPick(); }
+    return;
+  }
+  if ($('pickBox').classList.contains('managing')) return;
+  DB.cur = p.id; save(); SFX.good(); goHome();
+};
+$('btnManage').onclick = () => { const on = $('pickBox').classList.toggle('managing'); $('btnManage').textContent = on ? '管理好了' : '管理玩家'; };
+function addPlayer() {
+  const name = $('newName').value.trim().slice(0, 8);
+  if (!name) { $('newName').focus(); return; }
+  const p = { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), name, prog: {} };
+  DB.players.push(p); DB.cur = p.id; save(); $('newName').value = ''; SFX.good(); goHome();
+}
+$('btnAdd').onclick = addPlayer;
+$('newName').onkeydown = e => { if (e.key === 'Enter') addPlayer(); };
+
+/* ---------- 首頁 ---------- */
+const GAMES_ORDER = ['chick', 'pipe', 'bear', 'who'];
+function chipHTML() { const p = me(); return `${monsterSVG(avatarOf(p), 44)}<span style="overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</span>`; }
+function goHome() {
+  const p = me();
+  $('btnWho').innerHTML = chipHTML();
+  $('btnBook').innerHTML = `收藏冊 ${friendsOf(p)} 隻`;
+  $('btnSnd').textContent = DB.snd ? '音效：開' : '音效：關';
+  $('games').innerHTML = GAMES_ORDER.map(k => {
+    const G = GAMES[k], pr = prog(k);
+    return `<button class="gcard" data-g="${k}" style="background:${G.bg}"><div class="art">${G.art}</div><div class="tx"><div class="nm">${G.name}</div><div class="ds">${G.desc}</div><div class="pg"><span>過了 ${pr.max} 關</span><span>${STAR(true)} ${starsOf(p, k)}</span></div></div></button>`;
+  }).join('');
+  show('home');
+}
+$('games').onclick = e => { const b = e.target.closest('[data-g]'); if (b) { SFX.tap(); goLevels(b.dataset.g); } };
+$('btnWho').onclick = () => { renderPick(); show('pick'); };
+$('btnSnd').onclick = () => { DB.snd = !DB.snd; save(); goHome(); };
+$('btnBook').onclick = goBook;
+
+/* ---------- 選關卡 ---------- */
+function goLevels(g) {
+  CUR = g; const G = GAMES[g], pr = prog(g), top = pr.max + 1;
+  $('lvTitle').innerHTML = G.name; $('lvWho').innerHTML = chipHTML();
+  $('lvInfo').textContent = `已經過了 ${pr.max} 關，共 ${starsOf(me(), g)} 顆星星。關卡玩不完，越後面越難！`;
+  let h = '';
+  for (let L = 1; L <= top; L++) {
+    const s = pr.st[L] || 0;
+    h += `<button class="lvb ${L === top ? 'new' : ''}" data-l="${L}">${L}<span class="s">${[1, 2, 3].map(i => STAR(i <= s)).join('')}</span></button>`;
+  }
+  for (let L = top + 1; L <= top + 3; L++) h += `<button class="lvb lock" disabled>${L}<span class="s"></span></button>`;
+  $('lvGrid').innerHTML = h; show('levels');
+  const nb = $('lvGrid').querySelector('.new'); if (nb) nb.scrollIntoView({ block: 'center' });
+}
+$('lvGrid').onclick = e => { const b = e.target.closest('[data-l]'); if (b) { SFX.tap(); play(CUR, +b.dataset.l); } };
+$('lvBack').onclick = goHome;
+
+/* ---------- 收藏冊 ---------- */
+function goBook() {
+  const p = me(), n = friendsOf(p), total = starsOf(p), into = total % FRIEND_EVERY;
+  $('bkWho').innerHTML = chipHTML();
+  $('bkInfo').textContent = `${p.name} 已經收集了 ${n} 隻怪獸朋友！再拿 ${FRIEND_EVERY - into} 顆星星，就會有新朋友。`;
+  $('bkBar').firstElementChild.style.width = (into / FRIEND_EVERY * 100) + '%';
+  let h = '';
+  for (let i = 0; i < Math.max(n + 6, 12); i++) {
+    if (i < n) { const f = E.friend(i); h += `<div class="bcell">${monsterSVG(f, 104)}<div>${f.name}</div></div>`; }
+    else h += `<div class="bcell lock"><svg viewBox="0 0 100 100" width="104" height="104"><ellipse cx="50" cy="58" rx="34" ry="32" fill="#e3d6bd"/><text x="50" y="70" font-size="40" text-anchor="middle" fill="#b0a080" font-weight="900">?</text></svg><div>還沒遇到</div></div>`;
+  }
+  $('bkGrid').innerHTML = h; show('book');
+}
+$('bkBack').onclick = goHome;
+
+/* ================= 關卡產生：在背景做，畫面不會卡 ================= */
+let worker = null, wid = 0; const wcb = {};
+try {
+  const src = $('engine').textContent + `\nonmessage=e=>{const{id,g,l}=e.data;let r=null;try{r=Engine[g](l);}catch(er){}postMessage({id,r});};`;
+  worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  worker.onmessage = e => { const f = wcb[e.data.id]; delete wcb[e.data.id]; f && f(e.data.r); };
+  worker.onerror = () => { worker = null; };
+} catch (e) { worker = null; }
+const MAKER = { chick: 'makeChick', pipe: 'makePipe', bear: 'makeBear', who: 'makeWho' };
+const cache = {};
+function gen(g, L) {
+  const key = g + L;
+  if (cache[key]) return cache[key];
+  return (cache[key] = new Promise(res => {
+    const local = () => res(E[MAKER[g]](L));
+    if (!worker) return setTimeout(local, 30);
+    const id = ++wid; let done = false;
+    wcb[id] = r => { if (!done) { done = true; r ? res(r) : local(); } };
+    setTimeout(() => { if (!done) { done = true; delete wcb[id]; local(); } }, 15000);
+    worker.postMessage({ id, g: MAKER[g], l: L });
+  }));
+}
+
+/* ================= 玩一關 ================= */
+let PLAY = null;
+async function play(g, L) {
+  if (PLAY && PLAY.cleanup) PLAY.cleanup();
+  PLAY = { g, L };
+  const G = GAMES[g], token = PLAY;
+  $('plLv').textContent = `第 ${L} 關`; $('plName').innerHTML = G.name; $('plHud').innerHTML = '';
+  $('stage').innerHTML = '<div class="loading">準備關卡中……</div>';
+  show('play');
+  const lvl = await gen(g, L);
+  if (PLAY !== token) return;
+  gen(g, L + 1);   // 下一關先偷偷準備
+  const api = {
+    hud: h => { $('plHud').innerHTML = h; },
+    sfx: SFX,
+    win: (stars, msg) => { if (PLAY === token) finish(g, L, stars, msg); }
+  };
+  PLAY.cleanup = G.mount($('stage'), lvl, api, L) || null;
+}
+$('plBack').onclick = () => { if (PLAY && PLAY.cleanup) PLAY.cleanup(); PLAY = null; goLevels(CUR); };
+function finish(g, L, stars, msg) {
+  const p = me(), pr = prog(g), before = friendsOf(p);
+  pr.st[L] = Math.max(pr.st[L] || 0, stars);
+  pr.max = Math.max(pr.max, L);
+  save();
+  const after = friendsOf(p);
+  SFX.win();
+  $('dnTitle').textContent = stars === 3 ? '太厲害了！' : stars === 2 ? '過關了！' : '成功過關！';
+  $('dnStars').innerHTML = [1, 2, 3].map(i => STAR(i <= stars, i <= stars ? 'on' : '')).join('');
+  $('dnStars').querySelectorAll('.on').forEach((s, i) => { s.style.animationDelay = (0.25 + i * 0.25) + 's'; setTimeout(() => SFX.star(i), 250 + i * 250); });
+  $('dnMsg').innerHTML = msg || '';
+  if (after > before) { const f = E.friend(after - 1); $('dnNew').innerHTML = `${monsterSVG(f, 70)}<span>新朋友「${f.name}」加入收藏冊！</span>`; $('dnNew').style.display = 'flex'; }
+  else $('dnNew').style.display = 'none';
+  setTimeout(() => $('done').classList.add('on'), 500);
+}
+$('dnNext').onclick = () => { $('done').classList.remove('on'); play(PLAY.g, PLAY.L + 1); };
+$('dnAgain').onclick = () => { $('done').classList.remove('on'); play(PLAY.g, PLAY.L); };
+$('dnLevels').onclick = () => { $('done').classList.remove('on'); if (PLAY && PLAY.cleanup) PLAY.cleanup(); PLAY = null; goLevels(CUR); };
+
+/* ================= 四個遊戲 ================= */
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `
+.slots{display:flex;flex-wrap:wrap;gap:8px;min-height:64px;background:#fff;border:3px solid var(--ink);border-radius:18px;padding:8px}
+.slot{width:56px;height:56px;border:3px dashed #d8c8a8;border-radius:12px;position:relative;display:flex;align-items:center;justify-content:center;background:#fffaf0}
+.slot.f{border:3px solid var(--ink);background:#ffe9a8;cursor:pointer}
+.slot.f svg{width:40px;height:40px}
+.slot.cur{background:#bfe3ff;transform:scale(1.08)}
+.slot.err{background:#ffb3bd}
+.slot .k{position:absolute;right:-8px;bottom:-8px;background:var(--pink);color:#fff;border:2px solid var(--ink);border-radius:10px;font-size:15px;padding:0 5px;line-height:20px}
+.pad{display:grid;grid-template-columns:repeat(3,76px);grid-template-rows:repeat(2,64px);gap:8px;justify-content:center}
+.pad button{padding:0;display:flex;align-items:center;justify-content:center;background:#cfe6ff}
+.pad button svg{width:40px;height:40px}
+.row2{display:flex;gap:10px}.row2 .btn{flex:1;padding:0 6px}
+.go{height:64px;font-size:26px}
+#ck,.jar,#bear{transition:transform .26s ease}
+.jar,#bear{transition-duration:.13s}
+.pipe-t{cursor:pointer}
+.spin{animation:spin .18s ease-out;transform-box:fill-box;transform-origin:center}
+@keyframes spin{from{transform:rotate(-90deg)}to{transform:rotate(0)}}
+.bloom{animation:bloom .5s cubic-bezier(.3,1.6,.5,1) both;transform-box:fill-box;transform-origin:center bottom}
+@keyframes bloom{from{transform:scale(.3)}to{transform:scale(1)}}
+.mgrid{display:grid;gap:10px}
+.mcard{padding:0;border-radius:18px;background:#fff;position:relative;overflow:hidden}
+.mcard svg{display:block;margin:auto}
+.mcard .back{position:absolute;inset:0;background:repeating-linear-gradient(45deg,#8a6fd1 0 12px,#9d84dc 12px 24px);display:flex;align-items:center;justify-content:center;color:#fff;font-size:42px;font-weight:900;transform:scaleX(0);transition:transform .25s}
+.mcard.cov .back{transform:scaleX(1)}
+.mcard.win{background:#fff4c9;animation:bounce .6s 3}
+.qs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qs button{height:56px;font-size:17px;padding:0 6px;line-height:1.2}
+.qs button.yes{background:#c9f0cf}.qs button.no{background:#ffd0d6}
+.bubble{height:64px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;border:3px solid var(--ink);border-radius:18px;background:#fff}
+.bubble.yes{background:#c9f0cf}.bubble.no{background:#ffd0d6}
+`;
+  document.head.appendChild(st);
+})();
+const ARROW = d => `<svg viewBox="0 0 40 40"><path d="M20 5L34 20H25.5V35H14.5V20H6Z" fill="#fff" stroke="#2b3a55" stroke-width="3" stroke-linejoin="round" transform="rotate(${d * 90} 20 20)"/></svg>`;
+const fitBox = (vw, vh, maxW, maxH) => { const k = Math.min(maxW / vw, maxH / vh); return `width="${Math.floor(vw * k)}" height="${Math.floor(vh * k)}"`; };
+const boardMax = () => [Math.max(320, innerWidth - 470), Math.max(300, innerHeight - 150)];
+
+/* ---------- 畫圖零件 ---------- */
+const CHICK = `<ellipse cx="50" cy="88" rx="22" ry="5" fill="#0002"/><path d="M40 82v8M60 82v8" stroke="#f08a24" stroke-width="5" stroke-linecap="round"/><ellipse cx="50" cy="58" rx="27" ry="26" fill="#ffd93d" stroke="#2b3a55" stroke-width="3"/><path d="M28 58q-10 4-4 14q8 0 10-8" fill="#ffc21a" stroke="#2b3a55" stroke-width="2.5" stroke-linejoin="round"/><circle cx="58" cy="50" r="5" fill="#2b3a55"/><circle cx="59.5" cy="48.5" r="1.6" fill="#fff"/><path d="M70 56l12 4-12 5z" fill="#f08a24" stroke="#2b3a55" stroke-width="2.5" stroke-linejoin="round"/><path d="M46 33q4-10 10-2" fill="none" stroke="#2b3a55" stroke-width="3" stroke-linecap="round"/><circle cx="64" cy="62" r="4" fill="#ff9fb0" opacity=".7"/>`;
+const HOUSE = `<path d="M18 50L50 18L82 50" fill="#ff7a8a" stroke="#2b3a55" stroke-width="3.5" stroke-linejoin="round"/><rect x="26" y="48" width="48" height="38" fill="#fff3d6" stroke="#2b3a55" stroke-width="3.5"/><rect x="42" y="62" width="16" height="24" rx="3" fill="#b07a4a" stroke="#2b3a55" stroke-width="3"/>`;
+const ROCK = `<path d="M18 74q-6-22 12-34q10-14 26-8q20 2 24 22q6 18-10 24q-28 8-52-4z" fill="#a9b4c2" stroke="#2b3a55" stroke-width="3.5"/><path d="M36 46q8-6 16-2" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>`;
+const CORN = `<path d="M50 20q14 10 10 40q-4 22-10 26q-6-4-10-26q-4-30 10-40z" fill="#ffd93d" stroke="#2b3a55" stroke-width="3"/><path d="M44 36h12M43 48h14M44 60h12" stroke="#e0a800" stroke-width="2.5"/><path d="M50 86q-16-4-20-24q10 8 18 10M50 86q16-4 20-24q-10 8-18 10" fill="#6bcb77" stroke="#2b3a55" stroke-width="2.5" stroke-linejoin="round"/>`;
+const BEAR = `<ellipse cx="40" cy="74" rx="26" ry="5" fill="#0002"/><circle cx="20" cy="22" r="10" fill="#b07a4a" stroke="#2b3a55" stroke-width="3"/><circle cx="60" cy="22" r="10" fill="#b07a4a" stroke="#2b3a55" stroke-width="3"/><circle cx="20" cy="22" r="4" fill="#e8b98a"/><circle cx="60" cy="22" r="4" fill="#e8b98a"/><circle cx="40" cy="42" r="28" fill="#b07a4a" stroke="#2b3a55" stroke-width="3"/><ellipse cx="40" cy="52" rx="13" ry="10" fill="#f1d0a8" stroke="#2b3a55" stroke-width="2.5"/><ellipse cx="40" cy="47" rx="5" ry="3.5" fill="#2b3a55"/><circle cx="29" cy="36" r="3.6" fill="#2b3a55"/><circle cx="51" cy="36" r="3.6" fill="#2b3a55"/><path d="M36 56q4 4 8 0" fill="none" stroke="#2b3a55" stroke-width="2.5" stroke-linecap="round"/>`;
+const JAR = `<rect x="18" y="24" width="44" height="46" rx="14" fill="#ffb347" stroke="#2b3a55" stroke-width="3"/><rect x="22" y="12" width="36" height="14" rx="5" fill="#c97b2a" stroke="#2b3a55" stroke-width="3"/><rect x="26" y="36" width="28" height="20" rx="5" fill="#fff7dc" stroke="#2b3a55" stroke-width="2"/><path d="M30 46q5-6 10 0q5 6 10 0" fill="none" stroke="#e08a1a" stroke-width="3" stroke-linecap="round"/><path d="M22 28q4 8 8 0" fill="#ffd25a" stroke="#2b3a55" stroke-width="2"/>`;
+const HOLE = `<circle cx="40" cy="40" r="28" fill="#8a5a32" stroke="#2b3a55" stroke-width="3"/><circle cx="40" cy="42" r="17" fill="#3d2615"/><path d="M18 30q4-10 12-14" fill="none" stroke="#c99a6a" stroke-width="3" stroke-linecap="round"/>`;
+const BUSH = `<rect x="3" y="3" width="74" height="74" rx="20" fill="#5aa86a" stroke="#2b3a55" stroke-width="3"/><circle cx="26" cy="28" r="7" fill="#7cc98a"/><circle cx="52" cy="48" r="9" fill="#7cc98a"/><circle cx="30" cy="56" r="4" fill="#ff7a8a"/>`;
+
+/* ================= 1. 小雞回家 ================= */
+const GAME_CHICK = {
+  name: '小雞回家', bg: 'linear-gradient(135deg,#fff3b0,#ffe08a)',
+  desc: '排好箭頭指令，讓小雞自己走回家。想清楚再出發！',
+  art: `<svg viewBox="0 0 100 100" width="100%" height="100%"><rect x="4" y="60" width="92" height="34" rx="12" fill="#b0de97" stroke="#2b3a55" stroke-width="3"/><g transform="translate(46 4) scale(.55)">${HOUSE}</g><g transform="translate(-2 20) scale(.7)">${CHICK}</g></svg>`,
+  mount(stage, L, api, level) {
+    const n = L.n, S = 100, rock = new Set(L.rock);
+    let cards = [], running = false, gone = false;
+    const [mw, mh] = boardMax();
+    let cells = '';
+    for (let i = 0; i < n * n; i++) {
+      const x = (i % n) * S, y = Math.floor(i / n) * S;
+      cells += `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="${(i + Math.floor(i / n)) % 2 ? '#b0de97' : '#bfe8a8'}"/>`;
+      if (rock.has(i)) cells += `<g transform="translate(${x} ${y})">${ROCK}</g>`;
+      if (i === L.goal) cells += `<g transform="translate(${x} ${y})">${HOUSE}</g>`;
+      if (L.corn.includes(i)) cells += `<g id="corn${i}" transform="translate(${x} ${y})">${CORN}</g>`;
+    }
+    const pos = p => `translate(${(p % n) * S}px,${Math.floor(p / n) * S}px)`;
+    stage.innerHTML = `<div class="board"><svg viewBox="0 0 ${n * S} ${n * S}" ${fitBox(n * S, n * S, Math.min(mw, 620), Math.min(mh, 620))}>${cells}<g id="ck" style="transform:${pos(L.start)}"><g id="ckb">${CHICK}</g></g></svg></div>
+      <div class="side"><div class="tip" id="ckTip"></div><div class="slots" id="ckSlots"></div>
+        <div class="pad"><span></span><button data-d="0">${ARROW(0)}</button><span></span><button data-d="3">${ARROW(3)}</button><button data-d="2">${ARROW(2)}</button><button data-d="1">${ARROW(1)}</button></div>
+        ${L.rep ? '<div class="row2"><button class="btn y" id="ckMore">多走一格</button><button class="btn" id="ckLess">少走一格</button></div>' : ''}
+        <div class="row2"><button class="btn" id="ckDel">退一張</button><button class="btn" id="ckClr">全部清掉</button></div>
+        <button class="btn p go" id="ckGo">出發！</button></div>`;
+    const tip = h => { $('ckTip').innerHTML = h; };
+    const intro = (L.rep ? (level === E.CHICK_REP ? '新本領：<b>重複</b>！按「多走一格」，最後一張卡就能一次走好幾格。格子變少了，同方向的步驟要合起來。' : '格子不夠用？按「多走一格」把同方向的步驟合成一張卡。') : '按箭頭排好指令，再按「出發」，小雞會照著走回家。') + (L.corn.length ? `<br>路上要把 <b>${L.corn.length} 根玉米</b>全部吃掉！` : '');
+    tip(intro);
+    const draw = (cur = -1, err = -1) => {
+      let h = '';
+      for (let i = 0; i < L.slots; i++) {
+        const c = cards[i];
+        h += c ? `<div class="slot f ${i === cur ? 'cur' : ''} ${i === err ? 'err' : ''}" data-i="${i}">${ARROW(c.d)}${c.k > 1 ? `<span class="k">×${c.k}</span>` : ''}</div>` : '<div class="slot"></div>';
+      }
+      $('ckSlots').innerHTML = h;
+      api.hud(`指令卡 ${cards.length}／${L.slots}`);
+    };
+    const reset = () => { $('ck').style.transition = 'none'; $('ck').style.transform = pos(L.start); $('ck').getBoundingClientRect(); $('ck').style.transition = ''; L.corn.forEach(c => { $('corn' + c).style.display = ''; }); };
+    const add = d => { if (running) return; if (cards.length >= L.slots) { tip('格子滿了！' + (L.rep ? '試試用「多走一格」把同方向合起來。' : '退一張再試試。')); api.sfx.bad(); return; } cards.push({ d, k: 1 }); api.sfx.tap(); draw(); };
+    stage.querySelector('.pad').onclick = e => { const b = e.target.closest('[data-d]'); if (b) add(+b.dataset.d); };
+    $('ckSlots').onclick = e => { const s = e.target.closest('[data-i]'); if (!s || running) return; cards.splice(+s.dataset.i, 1); api.sfx.tap(); draw(); };
+    $('ckDel').onclick = () => { if (!running && cards.length) { cards.pop(); api.sfx.tap(); draw(); } };
+    $('ckClr').onclick = () => { if (!running) { cards = []; draw(); reset(); tip(intro); } };
+    if (L.rep) {
+      $('ckMore').onclick = () => { const c = cards[cards.length - 1]; if (!running && c && c.k < 5) { c.k++; api.sfx.tap(); draw(); } };
+      $('ckLess').onclick = () => { const c = cards[cards.length - 1]; if (!running && c && c.k > 1) { c.k--; api.sfx.tap(); draw(); } };
+    }
+    const go = async () => {
+      if (running || !cards.length) return;
+      running = true; reset(); await sleep(120);
+      const res = E.chickRun(L, cards);
+      for (const s of res.steps) {
+        if (gone) return;
+        draw(s.card); $('ck').style.transform = pos(s.p); api.sfx.step();
+        $('ckb').animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-12px)' }, { transform: 'translateY(0)' }], { duration: 260 });
+        await sleep(300);
+        if (s.corn && $('corn' + s.p).style.display !== 'none') { $('corn' + s.p).style.display = 'none'; api.sfx.good(); }
+      }
+      if (gone) return;
+      if (res.fail) {
+        draw(res.fail.card, res.fail.card);
+        const dx = E.DC[res.fail.d] * 30, dy = E.DR[res.fail.d] * 30;
+        $('ckb').animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx}px,${dy}px) rotate(20deg)` }, { transform: 'translate(0,0)' }], { duration: 420 });
+        api.sfx.bad();
+        tip(`${res.fail.why === 'rock' ? '哎呀！撞到石頭了' : '哎呀！差點走出草地'}。是<b>第 ${res.fail.card + 1} 張卡</b>出問題，改一改再出發！`);
+        await sleep(1300); if (gone) return; reset(); draw(); running = false; return;
+      }
+      if (res.home && res.allCorn) {
+        draw(); api.sfx.good();
+        $('ckb').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25) translateY(-14px)' }, { transform: 'scale(1)' }], { duration: 500, iterations: 2 });
+        const c = cards.length, stars = c <= L.min ? 3 : c <= L.min + 2 ? 2 : 1;
+        api.win(stars, `用了 ${c} 張指令卡${c <= L.min ? '，就是最少的走法！' : `。最少可以只用 ${L.min} 張喔！`}`);
+        return;
+      }
+      api.sfx.bad();
+      tip(res.home ? '回到家了，可是<b>還有玉米沒吃到</b>！' : '指令走完了，可是<b>小雞還沒到家</b>。還差幾步呢？');
+      await sleep(1300); if (gone) return; reset(); draw(); running = false;
+    };
+    $('ckGo').onclick = go;
+    const key = e => {
+      const m = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 };
+      if (e.key in m) { add(m[e.key]); e.preventDefault(); }
+      else if (e.key === 'Enter' || e.key === ' ') { go(); e.preventDefault(); }
+      else if (e.key === 'Backspace') { $('ckDel').click(); e.preventDefault(); }
+    };
+    addEventListener('keydown', key);
+    draw();
+    window.__game = { L, cards: () => cards, set: cs => { cards = cs.map(c => ({ d: c.d, k: c.k })); draw(); }, go, running: () => running };
+    return () => { gone = true; removeEventListener('keydown', key); };
+  }
+};
+
+/* ================= 2. 水管接接看 ================= */
+const PETAL = ['#ff7a8a', '#ffd25a', '#b980f0'];
+function pipeTile(mask, wet, flower, fi) {
+  const col = wet ? '#4d96ff' : '#cdbb9a', ends = [[50, 0], [100, 50], [50, 100], [0, 50]];
+  let ink = '', fill = '';
+  for (let d = 0; d < 4; d++) if (mask & (1 << d)) {
+    const [x, y] = ends[d];
+    ink += `<line x1="50" y1="50" x2="${x}" y2="${y}" stroke="#2b3a55" stroke-width="34"/>`;
+    fill += `<line x1="50" y1="50" x2="${x}" y2="${y}" stroke="${col}" stroke-width="24"/>`;
+  }
+  const hub = `<circle cx="50" cy="50" r="17" fill="#2b3a55"/><circle cx="50" cy="50" r="12" fill="${col}"/>`;
+  if (!flower) return ink + fill + hub;
+  const p = PETAL[fi % 3];
+  const head = wet
+    ? `<g class="bloom">${[0, 72, 144, 216, 288].map(a => `<circle cx="${50 + 13 * Math.cos(a * Math.PI / 180)}" cy="${30 + 13 * Math.sin(a * Math.PI / 180)}" r="10" fill="${p}" stroke="#2b3a55" stroke-width="2.5"/>`).join('')}<circle cx="50" cy="30" r="8" fill="#ffd25a" stroke="#2b3a55" stroke-width="2.5"/></g>`
+    : `<g transform="rotate(35 50 60)"><circle cx="50" cy="32" r="11" fill="#c9c2b4" stroke="#2b3a55" stroke-width="2.5"/></g>`;
+  return ink + fill + `<path d="M50 70V42" stroke="#3e9b4b" stroke-width="5"/><path d="M32 62h36l-5 26H37z" fill="#c97b4a" stroke="#2b3a55" stroke-width="3" stroke-linejoin="round"/>${head}`;
+}
+const GAME_PIPE = {
+  name: '水管接接看', bg: 'linear-gradient(135deg,#d9f0ff,#b5e0ff)',
+  desc: '點水管讓它轉向，把水接到每一朵花，讓花開出來！',
+  art: `<svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(0 30) scale(.5)">${pipeTile(10, true)}</g><g transform="translate(50 30) scale(.5)">${pipeTile(8, true, true, 0)}</g><rect x="2" y="50" width="12" height="20" fill="#9aa6b2" stroke="#2b3a55" stroke-width="3"/></svg>`,
+  mount(stage, L, api) {
+    const n = L.n, S = 100, tiles = L.tiles.slice(), flowers = new Set(L.flowers);
+    let taps = 0, doneFlag = false;
+    const [mw, mh] = boardMax(), vbW = n * S + 90;
+    const sy = Math.floor(L.src / n) * S;
+    stage.innerHTML = `<div class="board"><svg id="pvg" viewBox="-80 -6 ${vbW} ${n * S + 12}" ${fitBox(vbW, n * S + 12, Math.min(mw, 680), Math.min(mh, 640))}>
+      <g id="faucet"></g><g id="ptiles"></g></svg></div>
+      <div class="side"><div class="tip" id="pTip">點一下水管，它會轉一個方向。把水從左邊的水龍頭，接到 <b>${L.flowers.length} 朵花</b>那裡，花就會開！</div>
+        <button class="btn" id="pReset">重來</button></div>`;
+    const wetNow = () => E.pipeWater(L, tiles);
+    const drawFaucet = w => { $('faucet').innerHTML = `<rect x="-6" y="${sy + 38}" width="10" height="24" fill="${w ? '#4d96ff' : '#cdbb9a'}" stroke="#2b3a55" stroke-width="3"/><rect x="-70" y="${sy + 28}" width="64" height="44" rx="10" fill="#9aa6b2" stroke="#2b3a55" stroke-width="3.5"/><rect x="-50" y="${sy + 12}" width="24" height="18" rx="4" fill="#ff7a8a" stroke="#2b3a55" stroke-width="3"/><path d="M-44 ${sy + 82}q6 10 0 14q-6-4 0-14z" fill="#4d96ff" stroke="#2b3a55" stroke-width="2"/>`; };
+    const draw = (spinAt = -1) => {
+      const wet = wetNow(); let h = '';
+      for (let p = 0; p < n * n; p++) {
+        const x = (p % n) * S, y = Math.floor(p / n) * S, fl = flowers.has(p);
+        h += `<g transform="translate(${x} ${y})" class="${fl ? '' : 'pipe-t'}" data-p="${p}"><rect x="3" y="3" width="94" height="94" rx="14" fill="${fl ? '#e6f6dc' : '#fffaf0'}" stroke="#e3d2b0" stroke-width="3"/><g class="${p === spinAt ? 'spin' : ''}">${pipeTile(tiles[p], wet.has(p), fl, L.flowers.indexOf(p))}</g></g>`;
+      }
+      $('ptiles').innerHTML = h; drawFaucet(true);
+      api.hud(`轉了 ${taps} 次`);
+      return wet;
+    };
+    $('ptiles').onclick = e => {
+      const g = e.target.closest('.pipe-t'); if (!g || doneFlag) return;
+      const p = +g.dataset.p; tiles[p] = E.rot(tiles[p]); taps++; api.sfx.tap();
+      const wet = draw(p);
+      if (L.flowers.every(f => wet.has(f))) {
+        doneFlag = true; api.sfx.water();
+        const stars = taps <= L.min + 2 ? 3 : taps <= L.min * 1.6 + 4 ? 2 : 1;
+        $('pTip').innerHTML = '水流到每一朵花了，花都開了！';
+        setTimeout(() => api.win(stars, `轉了 ${taps} 次。${taps <= L.min + 2 ? '幾乎沒有多轉，超厲害！' : `最少轉 ${L.min} 次就可以喔！`}`), 700);
+      }
+    };
+    $('pReset').onclick = () => { if (doneFlag) return; for (let i = 0; i < tiles.length; i++) tiles[i] = L.tiles[i]; taps = 0; draw(); };
+    draw();
+    window.__game = { L, tiles, tap: p => $('ptiles').querySelector(`[data-p="${p}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true })) };
+    return () => {};
+  }
+};
+
+/* ================= 3. 小熊搬蜂蜜 ================= */
+const GAME_BEAR = {
+  name: '小熊搬蜂蜜', bg: 'linear-gradient(135deg,#ffe2c2,#ffc98f)',
+  desc: '小熊只能推、不能拉。把蜂蜜罐都推進樹洞，推到角落就卡住囉！',
+  art: `<svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(52 44) scale(.6)">${HOLE}</g><g transform="translate(30 30) scale(.62)">${JAR}</g><g transform="translate(-4 30) scale(.62)">${BEAR}</g></svg>`,
+  mount(stage, L, api) {
+    const W = L.w + 2, H = L.h + 2, S = 80, wall = new Set(L.wall), goals = new Set(L.goals);
+    let boxes = L.boxes.slice(), player = L.player, pushes = 0, moves = 0, hist = [], doneFlag = false, walking = false, gone = false;
+    const [mw, mh] = boardMax();
+    let bg = '';
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      bg += wall.has(i) ? `<g transform="translate(${x * S} ${y * S})">${BUSH}</g>` : `<rect x="${x * S}" y="${y * S}" width="${S}" height="${S}" fill="${(x + y) % 2 ? '#f6e3bd' : '#f1dbb0'}"/>`;
+      if (goals.has(i)) bg += `<g transform="translate(${x * S} ${y * S})">${HOLE}</g>`;
+    }
+    const tr = i => `transform:translate(${(i % W) * S}px,${Math.floor(i / W) * S}px)`;
+    stage.innerHTML = `<div class="board"><svg id="bsvg" viewBox="0 0 ${W * S} ${H * S}" ${fitBox(W * S, H * S, Math.min(mw, 680), Math.min(mh, 640))}>${bg}
+      ${boxes.map((b, k) => `<g class="jar" id="jar${k}" style="${tr(b)}"><g class="jb">${JAR}</g></g>`).join('')}<g id="bear" style="${tr(player)}">${BEAR}</g></svg></div>
+      <div class="side"><div class="tip" id="bTip">用方向鍵或下面的按鈕走路，也可以直接點地板。把 <b>${boxes.length} 罐蜂蜜</b>都推進樹洞！</div>
+        <div class="pad"><span></span><button data-d="0">${ARROW(0)}</button><span></span><button data-d="3">${ARROW(3)}</button><button data-d="2">${ARROW(2)}</button><button data-d="1">${ARROW(1)}</button></div>
+        <div class="row2"><button class="btn y" id="bUndo">退一步</button><button class="btn" id="bReset">重來</button></div></div>`;
+    const OFF = [-W, 1, W, -1];
+    const draw = () => {
+      boxes.forEach((b, k) => { const g = $('jar' + k); g.style.cssText = tr(b); g.querySelector('.jb').style.filter = goals.has(b) ? 'drop-shadow(0 0 6px #ffd25a) brightness(1.08)' : ''; });
+      $('bear').style.cssText = tr(player);
+      api.hud(`推了 ${pushes} 下`);
+    };
+    const tip = h => { $('bTip').innerHTML = h; };
+    const stuck = b => !goals.has(b) && (wall.has(b - W) || wall.has(b + W)) && (wall.has(b - 1) || wall.has(b + 1));
+    const move = d => {
+      if (doneFlag) return false;
+      const np = player + OFF[d];
+      if (wall.has(np)) { api.sfx.bad(); return false; }
+      const bi = boxes.indexOf(np);
+      if (bi >= 0) {
+        const nb = np + OFF[d];
+        if (wall.has(nb) || boxes.includes(nb)) { api.sfx.bad(); return false; }
+        hist.push({ boxes: boxes.slice(), player, pushes, moves });
+        boxes[bi] = nb; pushes++;
+        api.sfx.step();
+        if (goals.has(nb)) api.sfx.good();
+        if (stuck(nb)) tip('糟糕，這罐蜂蜜<b>卡在角落</b>，推不出來了！按「退一步」改走別條路。');
+      } else hist.push({ boxes: boxes.slice(), player, pushes, moves });
+      player = np; moves++; draw();
+      if (boxes.every(b => goals.has(b))) {
+        doneFlag = true;
+        const stars = pushes <= L.min ? 3 : pushes <= L.min + 4 ? 2 : 1;
+        tip('全部的蜂蜜都放進樹洞了！');
+        setTimeout(() => api.win(stars, `推了 ${pushes} 下。${pushes <= L.min ? '就是最少的推法！' : `最少只要推 ${L.min} 下喔！`}`), 500);
+      }
+      return true;
+    };
+    const walkTo = async t => {
+      if (walking || doneFlag || wall.has(t) || boxes.includes(t)) return;
+      // 相鄰就直接走（可以推）；遠的就找一條不用推的路走過去
+      for (let d = 0; d < 4; d++) if (player + OFF[d] === t) { move(d); return; }
+      const prev = new Map([[player, -1]]), q = [player];
+      while (q.length) { const p = q.shift(); if (p === t) break; for (let d = 0; d < 4; d++) { const np = p + OFF[d]; if (wall.has(np) || boxes.includes(np) || prev.has(np)) continue; prev.set(np, [p, d]); q.push(np); } }
+      if (!prev.has(t)) return;
+      const path = []; let c = t; while (c !== player) { const [p, d] = prev.get(c); path.unshift(d); c = p; }
+      walking = true;
+      for (const d of path) { if (gone) return; move(d); await sleep(110); }
+      walking = false;
+    };
+    $('bsvg').onclick = e => {
+      const r = $('bsvg').getBoundingClientRect(), x = Math.floor((e.clientX - r.left) / r.width * W), y = Math.floor((e.clientY - r.top) / r.height * H);
+      walkTo(y * W + x);
+    };
+    stage.querySelector('.pad').onclick = e => { const b = e.target.closest('[data-d]'); if (b && !walking) move(+b.dataset.d); };
+    const undo = () => { if (doneFlag || walking) return; const h = hist.pop(); if (!h) return; boxes = h.boxes; player = h.player; pushes = h.pushes; moves = h.moves; api.sfx.tap(); draw(); tip(`把 <b>${boxes.length} 罐蜂蜜</b>都推進樹洞！小熊只能推、不能拉。`); };
+    $('bUndo').onclick = undo;
+    $('bReset').onclick = () => { if (doneFlag || walking) return; boxes = L.boxes.slice(); player = L.player; pushes = moves = 0; hist = []; draw(); };
+    const key = e => {
+      const m = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3, w: 0, d: 1, s: 2, a: 3 };
+      if (e.key in m) { if (!walking) move(m[e.key]); e.preventDefault(); }
+      else if (e.key === 'z' || e.key === 'Backspace') { undo(); e.preventDefault(); }
+    };
+    addEventListener('keydown', key);
+    draw();
+    window.__game = { L, move, state: () => ({ boxes, player, pushes }) };
+    return () => { gone = true; removeEventListener('keydown', key); };
+  }
+};
+
+/* ================= 4. 猜猜我是誰 ================= */
+const GAME_WHO = {
+  name: '猜猜我是誰', bg: 'linear-gradient(135deg,#eadcff,#d4bfff)',
+  desc: '電腦偷偷選了一隻怪獸。問問題、蓋掉不是的，找出牠！',
+  art: `<svg viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(0 20) scale(.55)">${monsterSVG({ c: 1, eyes: 2, horns: true, hat: false, teeth: false, spots: true, v: 0 }).replace(/<\/?svg[^>]*>/g, '')}</g><g transform="translate(44 6) scale(.6)">${monsterSVG({ c: 4, eyes: 3, horns: false, hat: true, teeth: true, spots: false, v: 1 }).replace(/<\/?svg[^>]*>/g, '')}</g><text x="74" y="96" font-size="30" font-weight="900" fill="#2b3a55">?</text></svg>`,
+  mount(stage, L, api) {
+    const ms = L.monsters, sec = ms[L.secret], N = ms.length;
+    const cols = N <= 6 ? 3 : N <= 9 ? 3 : N <= 12 ? 4 : N <= 16 ? 4 : 5, rows = Math.ceil(N / cols);
+    const [mw, mh] = boardMax(), size = Math.floor(Math.min((Math.min(mw, 720) - 24 - (cols - 1) * 10) / cols, (mh - 24 - (rows - 1) * 10) / rows, 170));
+    const asked = new Map(), covered = new Set();
+    let qn = 0, doneFlag = false;
+    const fits = m => [...asked.entries()].every(([id, a]) => { const q = L.qs.find(x => x.id === id); return (m[q.k] === q.v) === a; });
+    stage.innerHTML = `<div class="board"><div class="mgrid" id="mg" style="grid-template-columns:repeat(${cols},${size}px)">${ms.map((m, i) => `<button class="mcard" data-i="${i}" style="width:${size}px;height:${size}px">${monsterSVG(m, size - 10)}<div class="back">?</div></button>`).join('')}</div></div>
+      <div class="side"><div class="tip" id="wTip"></div><div class="bubble" id="wBub">問一個問題吧！</div><div class="qs" id="wQs">${L.qs.map(q => `<button data-q="${q.id}">${q.t}</button>`).join('')}</div></div>`;
+    const tip = h => { $('wTip').innerHTML = h; };
+    tip(L.auto ? '電腦偷偷選了一隻怪獸。點右邊的問題來問，<b>不符合的怪獸會自動蓋起來</b>。' : '問一個問題，再<b>自己把不符合的怪獸點掉</b>。問越少題就猜到越厲害！');
+    const left = () => ms.filter((m, i) => !covered.has(i));
+    const check = () => {
+      if (doneFlag) return;
+      const l = ms.map((m, i) => i).filter(i => !covered.has(i));
+      if (l.length === 1) {
+        doneFlag = true;
+        const card = $('mg').children[L.secret]; card.classList.add('win');
+        $('wBub').className = 'bubble yes'; $('wBub').textContent = '就是牠！';
+        const stars = qn <= L.best ? 3 : qn <= L.best + 2 ? 2 : 1;
+        setTimeout(() => api.win(stars, `問了 ${qn} 題就找到了！${qn <= L.best ? '問題問得超聰明！' : `高手 ${L.best} 題就能找到喔。`}`), 1100);
+      }
+    };
+    const cover = i => { covered.add(i); $('mg').children[i].classList.add('cov'); };
+    $('wQs').onclick = async e => {
+      const b = e.target.closest('[data-q]'); if (!b || doneFlag || b.disabled) return;
+      const q = L.qs.find(x => x.id === b.dataset.q), ans = sec[q.k] === q.v;
+      const cand = ms.filter(fits), useless = cand.every(m => (m[q.k] === q.v) === ans);
+      asked.set(q.id, ans); qn++;
+      b.disabled = true; b.classList.add(ans ? 'yes' : 'no'); b.textContent = q.t.replace('嗎？', '') + (ans ? '：是' : '：不是');
+      $('wBub').className = 'bubble ' + (ans ? 'yes' : 'no'); $('wBub').textContent = ans ? '是！' : '不是！';
+      ans ? api.sfx.good() : api.sfx.tap();
+      api.hud(`問了 ${qn} 題`);
+      const remain = ms.filter(fits).length;
+      tip(useless ? '這一題<b>沒有幫上忙</b>：剩下的怪獸答案都一樣。下次換一題試試！' : `還有 <b>${remain}</b> 隻可能是牠。` + (L.auto ? '' : '把不符合的點掉吧！'));
+      if (L.auto) {
+        const to = ms.map((m, i) => i).filter(i => !covered.has(i) && !fits(ms[i]));
+        for (const i of to) { cover(i); await sleep(90); }
+        check();
+      }
+    };
+    $('mg').onclick = e => {
+      const c = e.target.closest('.mcard'); if (!c || L.auto || doneFlag) return;
+      const i = +c.dataset.i; if (covered.has(i)) return;
+      if (fits(ms[i])) { c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); api.sfx.bad(); tip(asked.size ? '<b>牠也符合</b>目前所有的答案，不能蓋喔！' : '先問一個問題，才知道要蓋哪一隻！'); return; }
+      cover(i); api.sfx.tap(); check();
+    };
+    api.hud('問了 0 題');
+    window.__game = { L, ask: id => $('wQs').querySelector(`[data-q="${id}"]`).click(), coverAll: () => ms.forEach((m, i) => { if (!fits(m) && !covered.has(i)) $('mg').children[i].click(); }), fits };
+    return () => { doneFlag = true; };
+  }
+};
+
+const GAMES = { chick: GAME_CHICK, pipe: GAME_PIPE, bear: GAME_BEAR, who: GAME_WHO };
+
+
+/* ================= 開始 ================= */
+$('logo1').innerHTML = $('logo2').innerHTML = LOGO;
+// 課照班大家輪流用同一台電腦：每次打開都先選人
+renderPick(); show('pick');
+
+</script>
+</body>
+</html>
